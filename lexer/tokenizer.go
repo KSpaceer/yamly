@@ -25,11 +25,6 @@ func (t *tokenizer) tryGetToken() (Token, bool) {
 	for !haveFormedToken {
 		r := t.rs.Next()
 		switch r {
-		case ' ':
-			if t.startOfLine || t.quoted {
-				t.buf = append(t.buf, r)
-			}
-
 		}
 	}
 }
