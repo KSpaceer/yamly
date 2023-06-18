@@ -65,9 +65,26 @@ const (
 	EOFType
 	DocumentEndType
 	DirectiveEndType
-	DecimalNumberType
 	DotType
-	UnquotedStringType
+	StringType
+	MinusType
+	PlusType
+)
+
+const (
+	StripChompingType = MinusType
+	KeepChompingType  = PlusType
+)
+
+type CharSetType byte
+
+const (
+	UnknownCharSetType CharSetType = 0
+	DecimalCharSetType CharSetType = 1 << iota
+	HexadecimalCharSetTYpe
+	WordCharSetType
+	URICharSetType
+	TagCharSetType
 )
 
 func IsWhiteSpace(tok Token) bool {
@@ -80,10 +97,15 @@ func IsWhiteSpace(tok Token) bool {
 }
 
 type Token struct {
-	Type   Type
-	Start  Position
-	End    Position
-	Origin string
+	Type             Type
+	Start            Position
+	End              Position
+	Origin           string
+	conformationBits byte
+}
+
+func (t Token) ConformsCharSet(cst CharSetType) bool {
+	return t.conformationBits&byte(cst) == 1
 }
 
 type Position struct {

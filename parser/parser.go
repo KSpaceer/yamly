@@ -1,9 +1,12 @@
 package parser
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/KSpaceer/fastyaml/ast"
 	"github.com/KSpaceer/fastyaml/lexer"
 	"github.com/KSpaceer/fastyaml/token"
+	"strconv"
 )
 
 type Context int8
@@ -168,9 +171,207 @@ func (p *parser) parseBlockScalar(indentation int, ctx Context) ast.Node {
 
 	switch p.tok.Type {
 	case token.LiteralType:
+		return p.parseLiteral(indentation)
 	case token.FoldedType:
+		return p.parseFolded(indentation)
 	default:
 		return ast.NewInvalidNode(start, p.tok.End)
+	}
+}
+
+func (p *parser) parseLiteral(indentation int) ast.Node {
+	start := p.tok.Start
+	if p.tok.Type != token.LiteralType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	header := p.parseBlockHeader()
+	if !ast.ValidNode(header) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	castedHeader, ok := header.(ast.BlockHeaderNode)
+	if !ok {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	content := p.parseLiteralContent(indentation+castedHeader.IndentationIndicator(), castedHeader.ChompingIndicator())
+}
+
+func (p *parser) parseLiteralContent(indentation int, chomping ast.ChompingType) ast.Node {
+	start := p.tok.Start
+	var literalBuf bytes.Buffer
+	txt := p.parseLiteralText(indentation, &literalBuf)
+	if ast.ValidNode(txt) {
+		for ast.ValidNode(p.parseLiteralNext(indentation, &literalBuf)) {
+		}
+		if !ast.ValidNode(p.parseChompedLast(chomping, &literalBuf)) {
+			return ast.NewInvalidNode(start, p.tok.End)
+		}
+	}
+	chompedEmpty := p.parseChompedEmpty(indentation, chomping, &literalBuf)
+}
+
+func (p *parser) parseChompedLast(chomping ast.ChompingType, buf *bytes.Buffer) ast.Node {
+	switch chomping {
+	case ast.StripChompingType:
+		switch p.tok.Type {
+		case token.LineBreakType, token.EOFType:
+		default:
+			return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+		}
+	case ast.ClipChompingType, ast.KeepChompingType:
+		switch p.tok.Type {
+		case token.LineBreakType:
+			buf.WriteString(p.tok.Origin)
+		case token.EOFType:
+		default:
+			return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+		}
+	}
+	start := p.tok.Start
+	p.next()
+	return ast.NewBasicNode(start, p.tok.Start, ast.TextType)
+}
+
+func (p *parser) parseChompedEmpty(indentation int, chomping ast.ChompingType, buf *bytes.Buffer) ast.Node {
+	switch chomping {
+	case ast.ClipChompingType, ast.StripChompingType:
+		return p.parseStripEmpty(indentation)
+	case ast.KeepChompingType:
+		return p.parseKeepEmpty(indentation, buf)
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+}
+
+func (p *parser) parseStripEmpty(indentation int) ast.Node {
+	if !ast.ValidNode(p.parseIndentLessThan(indentation)) {
+		return ast.NewTextNode(token.Position{}, token.Position{}, nil)
+	}
+	for {
+		if token.IsWhiteSpace(p.tok) {
+			p.next()
+		}
+		if p.tok.Type != token.LineBreakType {
+			break
+		}
+		// TODO
+	}
+}
+
+func (p *parser) parseLiteralNext(indentation int, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	if p.tok.Type != token.LineBreakType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	return p.parseLiteralText(indentation, buf)
+}
+
+func (p *parser) parseLiteralText(indentation int, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	for ast.ValidNode(p.parseEmpty(indentation, BlockInContext, buf)) {
+	}
+
+	if !ast.ValidNode(p.parseIndent(indentation)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	if p.tok.Type != token.StringType && !token.IsWhiteSpace(p.tok) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	for p.tok.Type == token.StringType || token.IsWhiteSpace(p.tok) {
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+	return ast.NewTextNode(start, p.tok.End, nil)
+}
+
+func (p *parser) parseEmpty(indentation int, ctx Context, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	lp := p.parseLinePrefix(indentation, ctx)
+	if !ast.ValidNode(lp) {
+		lp = p.parseIndentLessThan(indentation)
+		if !ast.ValidNode(lp) {
+			return ast.NewInvalidNode(start, p.tok.End)
+		}
+	}
+	if p.tok.Type != token.LineBreakType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	buf.WriteString(p.tok.Origin)
+	p.next()
+	return ast.NewBasicNode(start, p.tok.Start, ast.IndentType)
+}
+
+func (p *parser) parseLinePrefix(indentation int, ctx Context) ast.Node {
+	switch ctx {
+	case BlockOutContext, BlockInContext:
+		return p.parseBlockLinePrefix(indentation)
+	case FlowOutContext, FlowInContext:
+		return p.parseFlowLinePrefix(indentation)
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+}
+
+func (p *parser) parseBlockLinePrefix(indentation int) ast.Node {
+	return p.parseIndent(indentation)
+}
+
+func (p *parser) parseFlowLinePrefix(indentation int) ast.Node {
+	start := p.tok.Start
+	indent := p.parseIndent(indentation)
+	if !ast.ValidNode(indent) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	for token.IsWhiteSpace(p.tok) {
+		p.next()
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.IndentType)
+}
+
+func (p *parser) parseBlockHeader() ast.Node {
+	start := p.tok.Start
+
+	chompingIndicator := p.parseChompingIndicator()
+	indentationIndicator, err := p.parseIndentationIndicator()
+	if err != nil {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	if chompingIndicator == ast.ClipChompingType {
+		chompingIndicator = p.parseChompingIndicator()
+	}
+	if !ast.ValidNode(p.parseComment()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewBlockHeaderNode(start, p.tok.Start, chompingIndicator, indentationIndicator)
+}
+
+func (p *parser) parseChompingIndicator() ast.ChompingType {
+	result := ast.TokenChompingType(p.tok)
+	if result == ast.UnknownChompingType {
+		return ast.ClipChompingType
+	}
+	p.next()
+	return result
+}
+
+func (p *parser) parseIndentationIndicator() (int, error) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.DecimalCharSetType) {
+		return 0, nil
+	}
+
+	indentation, err := strconv.Atoi(p.tok.Origin)
+	switch {
+	case err != nil:
+		return 0, fmt.Errorf("failed to parse indentation indicator node: %w", err)
+	case indentation <= 0:
+		return 0, fmt.Errorf("failed to parse indentation indicator node: " +
+			"indentation must be omitted or greater than 0")
+	default:
+		p.next()
+		return indentation, nil
 	}
 }
 
@@ -250,6 +451,22 @@ func (p *parser) parseIndent(indentation int) ast.Node {
 	}
 }
 
+func (p *parser) parseIndentLessThan(indentation int) ast.Node {
+	start := p.tok.Start
+	switch {
+	case indentation == 1:
+		return ast.NewBasicNode(token.Position{}, token.Position{}, ast.IndentType)
+	case indentation > 1:
+		if p.tok.Type == token.SpaceType {
+			p.next()
+			return p.parseIndentLessThan(indentation - 1)
+		}
+		return ast.NewBasicNode(token.Position{}, token.Position{}, ast.IndentType)
+	default:
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+}
+
 func (p *parser) parseDirective() ast.Node {
 	start := p.tok.Start
 	if p.tok.Type != token.DirectiveType {
@@ -276,7 +493,7 @@ func (p *parser) parseDirective() ast.Node {
 
 func (p *parser) parseReservedDirective() ast.Node {
 	start := p.tok.Start
-	if p.tok.Type != token.UnquotedStringType {
+	if p.tok.Type != token.StringType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	p.next()
@@ -284,7 +501,7 @@ func (p *parser) parseReservedDirective() ast.Node {
 		for token.IsWhiteSpace(p.tok) {
 			p.next()
 		}
-		if p.tok.Type != token.UnquotedStringType {
+		if p.tok.Type != token.StringType {
 			break
 		}
 		p.next()
@@ -341,7 +558,7 @@ func (p *parser) parseYAMLDirective() ast.Node {
 
 func (p *parser) parseYAMLVersion() ast.Node {
 	start := p.tok.Start
-	if p.tok.Type != token.DecimalNumberType {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.DecimalCharSetType) {
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 	p.next()
@@ -349,7 +566,7 @@ func (p *parser) parseYAMLVersion() ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	p.next()
-	if p.tok.Type != token.DecimalNumberType {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.DecimalCharSetType) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	return ast.NewBasicNode(start, p.tok.End, ast.FloatNumberType)
