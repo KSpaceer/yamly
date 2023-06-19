@@ -1,5 +1,7 @@
 package lexer
 
+import "github.com/KSpaceer/fastyaml/token"
+
 type tokenizer struct {
 	rs          RuneStream
 	buf         []rune
@@ -12,14 +14,16 @@ func (t *tokenizer) EOF() bool {
 	return t.rs.EOF()
 }
 
-func (t *tokenizer) Next() Token {
-	token, ok := t.tryGetToken()
+func (t *tokenizer) Next() token.Token {
+	// token, ok := t.tryGetToken()
+	return token.Token{}
 }
 
-func (t *tokenizer) tryGetToken() (Token, bool) {
+func (t *tokenizer) tryGetToken() (token.Token, bool) {
 	if t.rs.EOF() {
-		return Token{}, false
+		return token.Token{}, false
 	}
+	return token.Token{}, false
 
 	var haveFormedToken bool
 	for !haveFormedToken {
@@ -27,4 +31,5 @@ func (t *tokenizer) tryGetToken() (Token, bool) {
 		switch r {
 		}
 	}
+	return token.Token{}, false
 }

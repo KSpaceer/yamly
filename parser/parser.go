@@ -22,25 +22,25 @@ const (
 )
 
 type parser struct {
-	ts          lexer.TokenStream
+	ta          TokenAccessor
 	tok         token.Token
 	startOfLine bool
 }
 
 func NewParser(ts lexer.TokenStream) *parser {
 	return &parser{
-		ts:          ts,
+		ta:          NewTokenAccessor(ts),
 		startOfLine: true,
 	}
 }
 
 func (p *parser) Parse() ast.Node {
 	p.next()
-
+	return ast.NewInvalidNode(token.Position{}, token.Position{})
 }
 
 func (p *parser) next() {
-	p.tok = p.ts.Next()
+	p.tok = p.ta.Next()
 }
 
 func (p *parser) parseStream() ast.Node {
@@ -68,7 +68,8 @@ docs:
 			}
 		case ast.ValidNode(p.parseComment()):
 		default:
-			doc := p.parseExplicitDoc()
+			// TODO: doc := p.parseExplicitDoc()
+			var doc ast.Node
 			if ast.ValidNode(doc) {
 				documents = append(documents, doc)
 			} else if p.tok.Type != token.EOFType {
@@ -79,11 +80,7 @@ docs:
 		}
 	}
 
-	return &ast.StreamNode{
-		StartPos:  start,
-		EndPos:    p.tok.End,
-		Documents: documents,
-	}
+	return &ast.StreamNode{}
 }
 
 func (p *parser) parseAnyDocument() ast.Node {
@@ -144,7 +141,9 @@ func (p *parser) parseBlockNode(indentation int, ctx Context) ast.Node {
 	if ast.ValidNode(blockInBlock) {
 		return blockInBlock
 	}
-	flowInBlock := p.parseFlowInBlock(indentation)
+	// TODO: !!!
+	// flowInBlock := p.parseFlowInBlock(indentation)
+	var flowInBlock ast.Node
 	if ast.ValidNode(flowInBlock) {
 		return flowInBlock
 	}
@@ -157,7 +156,9 @@ func (p *parser) parseBlockInBlock(indentation int, ctx Context) ast.Node {
 	if ast.ValidNode(scalar) {
 		return scalar
 	}
-	collection := p.parseBlockCollection(indentation, ctx)
+	// TODO: !!!
+	// collection := p.parseBlockCollection(indentation, ctx)
+	var collection ast.Node
 	if ast.ValidNode(collection) {
 		return collection
 	}
@@ -168,12 +169,15 @@ func (p *parser) parseBlockScalar(indentation int, ctx Context) ast.Node {
 	start := p.tok.Start
 	p.parseSeparate(indentation+1, ctx)
 	properties := p.parseProperties(indentation+1, ctx)
+	_ = properties
 
 	switch p.tok.Type {
 	case token.LiteralType:
 		return p.parseLiteral(indentation)
 	case token.FoldedType:
-		return p.parseFolded(indentation)
+		// TODO: !!!
+		// return p.parseFolded(indentation)
+		return ast.StreamNode{}
 	default:
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -194,6 +198,9 @@ func (p *parser) parseLiteral(indentation int) ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	content := p.parseLiteralContent(indentation+castedHeader.IndentationIndicator(), castedHeader.ChompingIndicator())
+	// TODO: !!!
+	_ = content
+	return content
 }
 
 func (p *parser) parseLiteralContent(indentation int, chomping ast.ChompingType) ast.Node {
@@ -208,6 +215,9 @@ func (p *parser) parseLiteralContent(indentation int, chomping ast.ChompingType)
 		}
 	}
 	chompedEmpty := p.parseChompedEmpty(indentation, chomping, &literalBuf)
+	// TODO: !!!
+	_ = chompedEmpty
+	return chompedEmpty
 }
 
 func (p *parser) parseChompedLast(chomping ast.ChompingType, buf *bytes.Buffer) ast.Node {
@@ -237,7 +247,9 @@ func (p *parser) parseChompedEmpty(indentation int, chomping ast.ChompingType, b
 	case ast.ClipChompingType, ast.StripChompingType:
 		return p.parseStripEmpty(indentation)
 	case ast.KeepChompingType:
-		return p.parseKeepEmpty(indentation, buf)
+		// TODO: !!!
+		// return p.parseKeepEmpty(indentation, buf)
+		return ast.StreamNode{}
 	default:
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
@@ -254,8 +266,13 @@ func (p *parser) parseStripEmpty(indentation int) ast.Node {
 		if p.tok.Type != token.LineBreakType {
 			break
 		}
-		// TODO
+		p.next()
+		if !ast.ValidNode(p.parseIndentLessThan(indentation)) {
+			break
+		}
 	}
+	// TODO: !!!
+	return ast.StreamNode{}
 }
 
 func (p *parser) parseLiteralNext(indentation int, buf *bytes.Buffer) ast.Node {
