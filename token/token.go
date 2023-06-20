@@ -85,6 +85,7 @@ const (
 	WordCharSetType
 	URICharSetType
 	TagCharSetType
+	AnchorCharSetType
 )
 
 func IsWhiteSpace(tok Token) bool {

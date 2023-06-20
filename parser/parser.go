@@ -7,6 +7,7 @@ import (
 	"github.com/KSpaceer/fastyaml/lexer"
 	"github.com/KSpaceer/fastyaml/token"
 	"strconv"
+	"strings"
 )
 
 type Context int8
@@ -24,13 +25,20 @@ const (
 type parser struct {
 	ta          TokenAccessor
 	tok         token.Token
+	savedStates []state
+	state
+}
+
+type state struct {
 	startOfLine bool
 }
 
 func NewParser(ts lexer.TokenStream) *parser {
 	return &parser{
-		ta:          NewTokenAccessor(ts),
-		startOfLine: true,
+		ta: NewTokenAccessor(ts),
+		state: state{
+			startOfLine: true,
+		},
 	}
 }
 
@@ -41,6 +49,29 @@ func (p *parser) Parse() ast.Node {
 
 func (p *parser) next() {
 	p.tok = p.ta.Next()
+	p.startOfLine = p.tok.Type == token.LineBreakType
+}
+
+func (p *parser) setCheckpoint() {
+	p.ta.SetCheckpoint()
+	p.savedStates = append(p.savedStates, state{
+		startOfLine: p.startOfLine,
+	})
+}
+
+func (p *parser) commit() {
+	p.ta.Commit()
+	if savedStatesLen := len(p.savedStates); savedStatesLen > 0 {
+		p.savedStates = p.savedStates[:savedStatesLen-1]
+	}
+}
+
+func (p *parser) rollback() {
+	p.ta.Rollback()
+	if savedStatesLen := len(p.savedStates); savedStatesLen > 0 {
+		p.state = p.savedStates[savedStatesLen-1]
+		p.savedStates = p.savedStates[:savedStatesLen-1]
+	}
 }
 
 func (p *parser) parseStream() ast.Node {
@@ -68,8 +99,7 @@ docs:
 			}
 		case ast.ValidNode(p.parseComment()):
 		default:
-			// TODO: doc := p.parseExplicitDoc()
-			var doc ast.Node
+			doc := p.parseExplicitDoc()
 			if ast.ValidNode(doc) {
 				documents = append(documents, doc)
 			} else if p.tok.Type != token.EOFType {
@@ -156,8 +186,7 @@ func (p *parser) parseBlockInBlock(indentation int, ctx Context) ast.Node {
 	if ast.ValidNode(scalar) {
 		return scalar
 	}
-	// TODO: !!!
-	// collection := p.parseBlockCollection(indentation, ctx)
+	collection := p.parseBlockCollection(indentation, ctx)
 	var collection ast.Node
 	if ast.ValidNode(collection) {
 		return collection
@@ -175,9 +204,7 @@ func (p *parser) parseBlockScalar(indentation int, ctx Context) ast.Node {
 	case token.LiteralType:
 		return p.parseLiteral(indentation)
 	case token.FoldedType:
-		// TODO: !!!
-		// return p.parseFolded(indentation)
-		return ast.StreamNode{}
+		return p.parseFolded(indentation)
 	default:
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -198,26 +225,39 @@ func (p *parser) parseLiteral(indentation int) ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	content := p.parseLiteralContent(indentation+castedHeader.IndentationIndicator(), castedHeader.ChompingIndicator())
-	// TODO: !!!
-	_ = content
-	return content
+	castedContent, ok := content.(ast.TextNode)
+	if !ok {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewTextNode(start, p.tok.End, castedContent.Text())
 }
 
 func (p *parser) parseLiteralContent(indentation int, chomping ast.ChompingType) ast.Node {
 	start := p.tok.Start
 	var literalBuf bytes.Buffer
-	txt := p.parseLiteralText(indentation, &literalBuf)
-	if ast.ValidNode(txt) {
-		for ast.ValidNode(p.parseLiteralNext(indentation, &literalBuf)) {
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseLiteralText(indentation, &literalBuf)) {
+		for {
+			p.setCheckpoint()
+			if !ast.ValidNode(p.parseLiteralNext(indentation, &literalBuf)) {
+				p.rollback()
+				break
+			}
+			p.commit()
 		}
 		if !ast.ValidNode(p.parseChompedLast(chomping, &literalBuf)) {
-			return ast.NewInvalidNode(start, p.tok.End)
+			p.rollback()
+		} else {
+			p.commit()
 		}
+	} else {
+		p.rollback()
 	}
-	chompedEmpty := p.parseChompedEmpty(indentation, chomping, &literalBuf)
-	// TODO: !!!
-	_ = chompedEmpty
-	return chompedEmpty
+	if !ast.ValidNode(p.parseChompedEmpty(indentation, chomping, &literalBuf)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewTextNode(start, p.tok.End, literalBuf.Bytes())
 }
 
 func (p *parser) parseChompedLast(chomping ast.ChompingType, buf *bytes.Buffer) ast.Node {
@@ -247,32 +287,76 @@ func (p *parser) parseChompedEmpty(indentation int, chomping ast.ChompingType, b
 	case ast.ClipChompingType, ast.StripChompingType:
 		return p.parseStripEmpty(indentation)
 	case ast.KeepChompingType:
-		// TODO: !!!
-		// return p.parseKeepEmpty(indentation, buf)
-		return ast.StreamNode{}
+		return p.parseKeepEmpty(indentation, buf)
 	default:
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 }
 
-func (p *parser) parseStripEmpty(indentation int) ast.Node {
-	if !ast.ValidNode(p.parseIndentLessThan(indentation)) {
-		return ast.NewTextNode(token.Position{}, token.Position{}, nil)
-	}
+func (p *parser) parseKeepEmpty(indentation int, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
 	for {
-		if token.IsWhiteSpace(p.tok) {
-			p.next()
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseEmpty(indentation, BlockInContext, buf)) {
+			p.rollback()
+			break
+		}
+		p.commit()
+	}
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseTrailComments(indentation)) {
+		p.rollback()
+	} else {
+		p.commit()
+	}
+	return ast.NewTextNode(start, p.tok.End, nil)
+}
+
+func (p *parser) parseStripEmpty(indentation int) ast.Node {
+	start := p.tok.Start
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseIndentLessThanOrEqual(indentation)) {
+			p.rollback()
+			break
 		}
 		if p.tok.Type != token.LineBreakType {
+			p.rollback()
 			break
 		}
-		p.next()
-		if !ast.ValidNode(p.parseIndentLessThan(indentation)) {
-			break
-		}
+		p.commit()
 	}
-	// TODO: !!!
-	return ast.StreamNode{}
+
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseTrailComments(indentation)) {
+		p.rollback()
+	} else {
+		p.commit()
+	}
+	return ast.NewTextNode(start, p.tok.End, nil)
+}
+
+func (p *parser) parseTrailComments(indentation int) ast.Node {
+	start := p.tok.Start
+	if !ast.ValidNode(p.parseIndentLessThan(indentation)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	if !ast.ValidNode(p.parseCommentText()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	if p.tok.Type != token.LineBreakType && p.tok.Type != token.EOFType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseCommentLine()) {
+			p.rollback()
+			break
+		}
+		p.commit()
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.CommentType)
 }
 
 func (p *parser) parseLiteralNext(indentation int, buf *bytes.Buffer) ast.Node {
@@ -280,24 +364,34 @@ func (p *parser) parseLiteralNext(indentation int, buf *bytes.Buffer) ast.Node {
 	if p.tok.Type != token.LineBreakType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	var localBuf bytes.Buffer
+	localBuf.WriteString(p.tok.Origin)
 	p.next()
-	return p.parseLiteralText(indentation, buf)
+	if !ast.ValidNode(p.parseLiteralText(indentation, &localBuf)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	buf.Grow(localBuf.Len())
+	buf.Write(localBuf.Bytes())
+	return ast.NewTextNode(start, p.tok.End, nil)
 }
 
 func (p *parser) parseLiteralText(indentation int, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
-	for ast.ValidNode(p.parseEmpty(indentation, BlockInContext, buf)) {
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseEmpty(indentation, BlockInContext, buf)) {
+			p.rollback()
+			break
+		}
+		p.commit()
 	}
-
 	if !ast.ValidNode(p.parseIndent(indentation)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-
-	if p.tok.Type != token.StringType && !token.IsWhiteSpace(p.tok) {
+	if p.tok.Type != token.StringType && p.tok.Type != token.IsWhiteSpace(p.tok) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-
-	for p.tok.Type == token.StringType || token.IsWhiteSpace(p.tok) {
+	for p.tok.Type == token.StringType || p.tok.Type == token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
@@ -306,12 +400,16 @@ func (p *parser) parseLiteralText(indentation int, buf *bytes.Buffer) ast.Node {
 
 func (p *parser) parseEmpty(indentation int, ctx Context, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
+	p.setCheckpoint()
 	lp := p.parseLinePrefix(indentation, ctx)
 	if !ast.ValidNode(lp) {
+		p.rollback()
 		lp = p.parseIndentLessThan(indentation)
 		if !ast.ValidNode(lp) {
 			return ast.NewInvalidNode(start, p.tok.End)
 		}
+	} else {
+		p.commit()
 	}
 	if p.tok.Type != token.LineBreakType {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -342,8 +440,12 @@ func (p *parser) parseFlowLinePrefix(indentation int) ast.Node {
 	if !ast.ValidNode(indent) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	for token.IsWhiteSpace(p.tok) {
-		p.next()
+
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseSeparateInLine()) {
+		p.rollback()
+	} else {
+		p.commit()
 	}
 	return ast.NewBasicNode(start, p.tok.End, ast.IndentType)
 }
@@ -359,9 +461,12 @@ func (p *parser) parseBlockHeader() ast.Node {
 	if chompingIndicator == ast.ClipChompingType {
 		chompingIndicator = p.parseChompingIndicator()
 	}
-	if !ast.ValidNode(p.parseComment()) {
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseSeparatedComment()) {
+		p.rollback()
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	p.commit()
 	return ast.NewBlockHeaderNode(start, p.tok.Start, chompingIndicator, indentationIndicator)
 }
 
@@ -399,34 +504,88 @@ func (p *parser) parseProperties(indentation int, ctx Context) ast.Node {
 	)
 	switch p.tok.Type {
 	case token.TagType:
-		tag = ast.NewTagNode(p.tok)
-		p.next()
+		tag = p.parseTagProperty()
 	case token.AnchorType:
-		anchor = ast.NewAnchorNode(p.tok)
-		p.next()
+		anchor = p.parseAnchorProperty()
 	default:
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 
-	if !ast.ValidNode(p.parseSeparate(indentation, ctx)) {
+	if !ast.ValidNode(tag) && !ast.ValidNode(anchor) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	switch {
-	case p.tok.Type == token.TagType && tag == nil:
-		tag = ast.NewTagNode(p.tok)
-		p.next()
-		if !ast.ValidNode(p.parseSeparate(indentation, ctx)) {
-			return ast.NewInvalidNode(start, p.tok.End)
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparate(indentation, ctx)) {
+		switch {
+		case tag != nil:
+			anchor = p.parseAnchorProperty()
+		case anchor != nil:
+			tag = p.parseTagProperty()
 		}
-	case p.tok.Type == token.AnchorType && anchor == nil:
-		anchor = ast.NewAnchorNode(p.tok)
-		p.next()
-		if !ast.ValidNode(p.parseSeparate(indentation, ctx)) {
-			return ast.NewInvalidNode(start, p.tok.End)
-		}
+	}
+	if ast.ValidNode(tag) && ast.ValidNode(anchor) {
+		p.commit()
+	} else {
+		p.rollback()
 	}
 
 	return ast.NewPropertiesNode(start, p.tok.Start, tag, anchor)
+}
+
+func (p *parser) parseAnchorProperty() ast.Node {
+	start := p.tok.Start
+	if p.tok.Type != token.AnchorType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.setCheckpoint()
+	p.next()
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.AnchorCharSetType) {
+		anchor := ast.NewAnchorNode(start, p.tok.End, p.tok.Origin)
+		p.next()
+		p.commit()
+		return anchor
+	}
+
+	p.rollback()
+	return ast.NewInvalidNode(start, p.tok.End)
+}
+
+func (p *parser) parseTagProperty() ast.Node {
+	start := p.tok.Start
+	p.setCheckpoint()
+	// shorthand tag
+	if ast.ValidNode(p.parseTagHandle()) && p.tok.Type == token.StringType &&
+		p.tok.ConformsCharSet(token.TagCharSetType) {
+		p.commit()
+		text := p.tok.Origin
+		p.next()
+		return ast.NewTagNode(start, p.tok.End, text)
+	}
+	p.rollback()
+
+	if p.tok.Type != token.TagType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+
+	// verbatim tag
+	if p.tok.Type == token.StringType && strings.HasPrefix(p.tok.Origin, "<") && len(p.tok.Origin) > 2 {
+		cutToken := token.Token{
+			Type:   token.StringType,
+			Start:  p.tok.Start,
+			End:    p.tok.End,
+			Origin: p.tok.Origin[1 : len(p.tok.Origin)-1],
+		}
+		if len(cutToken.Origin) > 0 && cutToken.ConformsCharSet(token.URICharSetType) &&
+			p.tok.Origin[len(p.tok.Origin)-1] == '>' {
+			p.next()
+			return ast.NewTagNode(start, p.tok.End, cutToken.Origin)
+		}
+	}
+
+	// non specific tag
+	return ast.NewTagNode(start, p.tok.End, "")
 }
 
 func (p *parser) parseSeparate(indentation int, ctx Context) ast.Node {
@@ -434,19 +593,31 @@ func (p *parser) parseSeparate(indentation int, ctx Context) ast.Node {
 	case BlockInContext, BlockOutContext, FlowInContext, FlowOutContext:
 		return p.parseSeparateLines(indentation)
 	case BlockKeyContext, FlowKeyContext:
-		for token.IsWhiteSpace(p.tok) {
-			p.next()
-		}
+		return p.parseSeparateInLine()
 	}
 	return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 }
 
 func (p *parser) parseSeparateLines(indentation int) ast.Node {
 	start := p.tok.Start
-	for ast.ValidNode(p.parseComment()) {
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseComments()) && ast.ValidNode(p.parseFlowLinePrefix(indentation)) {
+		p.commit()
+		return ast.NewBasicNode(start, p.tok.End, ast.IndentType)
 	}
-	p.parseIndent(indentation)
-	for token.IsWhiteSpace(p.tok) {
+	p.rollback()
+	if !ast.ValidNode(p.parseSeparateInLine()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.IndentType)
+}
+
+func (p *parser) parseSeparateInLine() ast.Node {
+	if p.tok.Type != token.SpaceType && !p.startOfLine {
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+	start := p.tok.Start
+	for p.tok.Type == token.SpaceType {
 		p.next()
 	}
 	return ast.NewBasicNode(start, p.tok.End, ast.IndentType)
@@ -469,14 +640,22 @@ func (p *parser) parseIndent(indentation int) ast.Node {
 }
 
 func (p *parser) parseIndentLessThan(indentation int) ast.Node {
+	return p.parseIndentWithLowerBound(indentation, 1)
+}
+
+func (p *parser) parseIndentLessThanOrEqual(indentation int) ast.Node {
+	return p.parseIndentWithLowerBound(indentation, 0)
+}
+
+func (p *parser) parseIndentWithLowerBound(indentation int, lowerBound int) ast.Node {
 	start := p.tok.Start
 	switch {
-	case indentation == 1:
+	case indentation == lowerBound:
 		return ast.NewBasicNode(token.Position{}, token.Position{}, ast.IndentType)
-	case indentation > 1:
+	case indentation > lowerBound:
 		if p.tok.Type == token.SpaceType {
 			p.next()
-			return p.parseIndentLessThan(indentation - 1)
+			return p.parseIndentWithLowerBound(indentation-1, lowerBound)
 		}
 		return ast.NewBasicNode(token.Position{}, token.Position{}, ast.IndentType)
 	default:
@@ -496,6 +675,7 @@ func (p *parser) parseDirective() ast.Node {
 		p.next()
 		directiveNode = p.parseYAMLDirective()
 	case token.TagDirective:
+		p.next()
 		directiveNode = p.parseTagDirective()
 	default:
 		directiveNode = p.parseReservedDirective()
@@ -503,7 +683,9 @@ func (p *parser) parseDirective() ast.Node {
 	if !ast.ValidNode(directiveNode) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	for ast.ValidNode(p.parseComment()) {
+
+	if !ast.ValidNode(p.parseComments()) {
+		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	return ast.NewBasicNode(start, p.tok.End, ast.DirectiveType)
 }
@@ -515,14 +697,19 @@ func (p *parser) parseReservedDirective() ast.Node {
 	}
 	p.next()
 	for {
-		for token.IsWhiteSpace(p.tok) {
-			p.next()
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseSeparateInLine()) {
+			p.rollback()
+			break
 		}
 		if p.tok.Type != token.StringType {
+			p.rollback()
 			break
 		}
 		p.next()
+		p.commit()
 	}
+
 	return ast.NewBasicNode(start, p.tok.Start, ast.DirectiveType)
 }
 
@@ -531,12 +718,14 @@ func (p *parser) parseTagDirective() ast.Node {
 	for token.IsWhiteSpace(p.tok) {
 		p.next()
 	}
+	if !ast.ValidNode(p.parseSeparateInLine()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
 	if !ast.ValidNode(p.parseTagHandle()) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	p.next()
-	for token.IsWhiteSpace(p.tok) {
-		p.next()
+	if !ast.ValidNode(p.parseSeparateInLine()) {
+		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	if !ast.ValidNode(p.parseTagPrefix()) {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -549,17 +738,56 @@ func (p *parser) parseTagHandle() ast.Node {
 	if p.tok.Type != token.TagType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	p.next()
+	if p.tok.Type == token.StringType {
+		// either named or secondary tag handle
+		p.setCheckpoint()
+		// trying named handle
+		cutToken := token.Token{
+			Type:   token.StringType,
+			Start:  p.tok.Start,
+			End:    p.tok.End,
+			Origin: p.tok.Origin[:len(p.tok.Origin)-1],
+		}
+		if cutToken.ConformsCharSet(token.WordCharSetType) || p.tok.Origin == "!" {
+			p.commit()
+			p.next()
+		}
+		// else - primary
+	}
 	return ast.NewBasicNode(start, p.tok.End, ast.TagType)
 }
 
 func (p *parser) parseTagPrefix() ast.Node {
-	switch p.tok.Type {
-	case token.TagType:
-		return ast.NewBasicNode(p.tok.Start, p.tok.End, ast.TagType)
-	// TODO: global tags support (maybe)
-	default:
+	start := p.tok.Start
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseLocalTagPrefix()) {
+		p.commit()
+	} else {
+		p.rollback()
+		// trying global tag
+		if !(p.tok.Type == token.StringType && len(p.tok.Origin) == 1 && p.tok.ConformsCharSet(token.TagCharSetType)) {
+			return ast.NewInvalidNode(start, p.tok.End)
+		}
+		p.next()
+		if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.URICharSetType) {
+			p.next()
+		}
+	}
+
+	return ast.NewBasicNode(start, p.tok.End, ast.TagType)
+}
+
+func (p *parser) parseLocalTagPrefix() ast.Node {
+	if p.tok.Type != token.TagType {
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
+	start := p.tok.Start
+	p.next()
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.URICharSetType) {
+		p.next()
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.TagType)
 }
 
 func (p *parser) parseYAMLDirective() ast.Node {
@@ -594,7 +822,13 @@ func (p *parser) parseDocumentPrefix() ast.Node {
 	if p.tok.Type == token.BOMType {
 		p.next()
 	}
-	for ast.ValidNode(p.parseComment()) {
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseCommentLine()) {
+			p.rollback()
+			break
+		}
+		p.commit()
 	}
 	return ast.NewBasicNode(start, p.tok.Start, ast.DocumentPrefixType)
 }
@@ -605,31 +839,83 @@ func (p *parser) parseDocumentSuffix() ast.Node {
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 	p.next()
-	if !ast.ValidNode(p.parseComment()) {
-		return ast.NewInvalidNode(start, p.tok.Start)
-	}
-	for ast.ValidNode(p.parseComment()) {
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseComments()) {
+		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	return ast.NewBasicNode(start, p.tok.Start, ast.DocumentSuffixType)
 }
 
-func (p *parser) parseComment() ast.Node {
+func (p *parser) parseComments() ast.Node {
+	start := p.tok.Start
+	if !ast.ValidNode(p.parseSeparatedComment()) {
+		p.rollback()
+		if !p.startOfLine {
+			return ast.NewInvalidNode(start, p.tok.End)
+		}
+	} else {
+		p.commit()
+	}
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseCommentLine()) {
+			p.rollback()
+			break
+		}
+		p.commit()
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.CommentType)
+}
+
+func (p *parser) parseSeparatedComment() ast.Node {
 	start := p.tok.Start
 
-	for token.IsWhiteSpace(p.tok) {
-		p.next()
-	}
+	p.setCheckpoint()
 
-	if p.tok.Type == token.CommentType {
-		p.next()
-	}
-
-	if p.tok.Type == token.LineBreakType {
-		p.startOfLine = true
-		p.next()
+	if !ast.ValidNode(p.parseSeparateInLine()) {
+		p.rollback()
 	} else {
-		return ast.NewInvalidNode(start, p.tok.Start)
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseCommentText()) {
+			p.rollback()
+		} else {
+			p.commit()
+		}
+		p.commit()
 	}
 
+	if p.tok.Type != token.LineBreakType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.CommentType)
+}
+
+func (p *parser) parseCommentLine() ast.Node {
+	start := p.tok.Start
+	if !ast.ValidNode(p.parseSeparateInLine()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseCommentText()) {
+		p.rollback()
+	} else {
+		p.commit()
+	}
+	if p.tok.Type != token.LineBreakType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.CommentType)
+}
+
+func (p *parser) parseCommentText() ast.Node {
+	if p.tok.Type != token.CommentType {
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+	start := p.tok.Start
+	p.next()
+
+	for p.tok.Type == token.StringType || p.tok.Type == token.SpaceType {
+		p.next()
+	}
 	return ast.NewBasicNode(start, p.tok.Start, ast.CommentType)
 }

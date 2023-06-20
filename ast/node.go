@@ -147,46 +147,52 @@ func NewPropertiesNode(start, end token.Position, tag, anchor Node) Node {
 }
 
 type TagNode struct {
-	tk token.Token
+	start, end token.Position
+	text       string
 }
 
 func (t TagNode) Start() token.Position {
-	return t.tk.Start
+	return t.start
 }
 
 func (t TagNode) End() token.Position {
-	return t.tk.End
+	return t.end
 }
 
 func (TagNode) Type() NodeType {
 	return TagType
 }
 
-func NewTagNode(tagToken token.Token) Node {
+func NewTagNode(start, end token.Position, text string) Node {
 	return TagNode{
-		tk: tagToken,
+		start: start,
+		end:   end,
+		text:  text,
 	}
 }
 
 type AnchorNode struct {
-	tk token.Token
+	start, end token.Position
+	text       string
 }
 
 func (a AnchorNode) Start() token.Position {
-	return a.tk.Start
+	return a.start
 }
 
 func (a AnchorNode) End() token.Position {
-	return a.tk.End
+	return a.end
 }
 
 func (AnchorNode) Type() NodeType {
 	return AnchorType
 }
 
-func NewAnchorNode(anchorToken token.Token) Node {
+func NewAnchorNode(start, end token.Position, text string) Node {
 	return AnchorNode{
-		tk: anchorToken,
+		start: start,
+		end:   end,
+		text:  text,
 	}
 }
 
@@ -240,6 +246,10 @@ func (t TextNode) End() token.Position {
 
 func (TextNode) Type() NodeType {
 	return TextType
+}
+
+func (t TextNode) Text() []byte {
+	return t.text
 }
 
 func NewTextNode(start, end token.Position, text []byte) Node {
