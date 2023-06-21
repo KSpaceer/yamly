@@ -1,6 +1,8 @@
 package ast
 
-import "github.com/KSpaceer/fastyaml/token"
+import (
+	"github.com/KSpaceer/fastyaml/token"
+)
 
 type NodeType int8
 
@@ -257,5 +259,32 @@ func NewTextNode(start, end token.Position, text []byte) Node {
 		start: start,
 		end:   end,
 		text:  text,
+	}
+}
+
+type ScalarNode struct {
+	start, end token.Position
+	properties Node
+	content    Node
+}
+
+func (s ScalarNode) Start() token.Position {
+	return s.start
+}
+
+func (s ScalarNode) End() token.Position {
+	return s.end
+}
+
+func (ScalarNode) Type() NodeType {
+	return ScalarType
+}
+
+func NewScalarNode(start, end token.Position, properties, content Node) Node {
+	return ScalarNode{
+		start:      start,
+		end:        end,
+		properties: properties,
+		content:    content,
 	}
 }
