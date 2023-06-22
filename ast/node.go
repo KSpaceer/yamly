@@ -9,7 +9,9 @@ type NodeType int8
 const (
 	InvalidType NodeType = iota
 	DocumentType
+	BlockType
 	ScalarType
+	CollectionType
 	MappingType
 	SequenceType
 	CommentType
@@ -24,6 +26,7 @@ const (
 	PropertiesType
 	BlockHeaderType
 	TextType
+	NullType
 )
 
 type ChompingType int8
@@ -287,4 +290,134 @@ func NewScalarNode(start, end token.Position, properties, content Node) Node {
 		properties: properties,
 		content:    content,
 	}
+}
+
+type CollectionNode struct {
+	start, end token.Position
+	properties Node
+	collection Node
+}
+
+func (c CollectionNode) Start() token.Position {
+	return c.start
+}
+
+func (c CollectionNode) End() token.Position {
+	return c.end
+}
+
+func (CollectionNode) Type() NodeType {
+	return CollectionType
+}
+
+func NewCollectionNode(start, end token.Position, properties, collection Node) Node {
+	return CollectionNode{
+		start:      start,
+		end:        end,
+		properties: properties,
+		collection: collection,
+	}
+}
+
+type IndentNode struct {
+	start, end token.Position
+	indent     int
+}
+
+func (i IndentNode) Start() token.Position {
+	return i.start
+}
+
+func (i IndentNode) End() token.Position {
+	return i.end
+}
+
+func (IndentNode) Type() NodeType {
+	return IndentType
+}
+
+func (i IndentNode) Indent() int {
+	return i.indent
+}
+
+func NewIndentNode(start, end token.Position, indent int) Node {
+	return IndentNode{
+		start:  start,
+		end:    end,
+		indent: indent,
+	}
+}
+
+type SequenceNode struct {
+	start, end token.Position
+	entries    []Node
+}
+
+func (s SequenceNode) Start() token.Position {
+	return s.start
+}
+
+func (s SequenceNode) End() token.Position {
+	return s.end
+}
+
+func (SequenceNode) Type() NodeType {
+	return SequenceType
+}
+
+func (s SequenceNode) Entries() []Node {
+	return s.entries
+}
+
+func NewSequenceNode(start token.Position, end token.Position, entries []Node) Node {
+	return SequenceNode{start: start, end: end, entries: entries}
+}
+
+type BlockNode struct {
+	start, end token.Position
+	content    Node
+}
+
+func (b BlockNode) Start() token.Position {
+	return b.start
+}
+
+func (b BlockNode) End() token.Position {
+	return b.end
+}
+
+func (BlockNode) Type() NodeType {
+	return BlockType
+}
+
+func (b BlockNode) Content() Node {
+	return b.content
+}
+
+func NewBlockNode(start, end token.Position, content Node) Node {
+	return BlockNode{
+		start:   start,
+		end:     end,
+		content: content,
+	}
+}
+
+type NullNode struct {
+	start, end token.Position
+}
+
+func (n NullNode) Start() token.Position {
+	return n.start
+}
+
+func (n NullNode) End() token.Position {
+	return n.end
+}
+
+func (NullNode) Type() NodeType {
+	return NullType
+}
+
+func NewNullNode(start token.Position, end token.Position) Node {
+	return NullNode{start: start, end: end}
 }

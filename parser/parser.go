@@ -22,6 +22,19 @@ const (
 	FlowKeyContext
 )
 
+type IndentationMode int8
+
+const (
+	Unknown IndentationMode = iota
+	StrictEquality
+	WithLowerBound
+)
+
+type indentation struct {
+	value int
+	mode  IndentationMode
+}
+
 type parser struct {
 	ta          TokenAccessor
 	tok         token.Token
@@ -176,17 +189,20 @@ func (p *parser) parseExplicitDocument() ast.Node {
 
 // YAML specification: [207] l-bare-document
 func (p *parser) parseBareDocument() ast.Node {
-	return p.parseBlockNode(-1, BlockInContext)
+	return p.parseBlockNode(&indentation{value: -1, mode: StrictEquality}, BlockInContext)
 }
 
 // YAML specification: [196] s-l+block-node
-func (p *parser) parseBlockNode(indentation int, ctx Context) ast.Node {
+func (p *parser) parseBlockNode(ind *indentation, ctx Context) ast.Node {
 	start := p.tok.Start
-	blockInBlock := p.parseBlockInBlock(indentation, ctx)
+	p.setCheckpoint()
+	blockInBlock := p.parseBlockInBlock(ind, ctx)
 	if ast.ValidNode(blockInBlock) {
+		p.commit()
 		return blockInBlock
 	}
-	flowInBlock := p.parseFlowInBlock(indentation)
+	p.rollback()
+	flowInBlock := p.parseFlowInBlock(ind)
 	var flowInBlock ast.Node
 	if ast.ValidNode(flowInBlock) {
 		return flowInBlock
@@ -195,18 +211,18 @@ func (p *parser) parseBlockNode(indentation int, ctx Context) ast.Node {
 }
 
 // YAML specification: [198] s-l+block-in-block
-func (p *parser) parseBlockInBlock(indentation int, ctx Context) ast.Node {
+func (p *parser) parseBlockInBlock(ind *indentation, ctx Context) ast.Node {
 	start := p.tok.Start
 
 	p.setCheckpoint()
-	scalar := p.parseBlockScalar(indentation, ctx)
+	scalar := p.parseBlockScalar(ind, ctx)
 	if ast.ValidNode(scalar) {
 		p.commit()
 		return scalar
 	}
 	p.rollback()
 
-	collection := p.parseBlockCollection(indentation, ctx)
+	collection := p.parseBlockCollection(ind, ctx)
 	if ast.ValidNode(collection) {
 		return collection
 	}
@@ -214,25 +230,170 @@ func (p *parser) parseBlockInBlock(indentation int, ctx Context) ast.Node {
 }
 
 // YAML specification: [200] s-l+block-collection
-func (p *parser) parseBlockCollection(indentation int, ctx Context) ast.Node {
+func (p *parser) parseBlockCollection(ind *indentation, ctx Context) ast.Node {
 	start := p.tok.Start
 	p.setCheckpoint()
 
-	if ast.ValidNode(p.parseSeparate(indentation+1, ctx)) {
+	var properties ast.Node
 
+	ind.value++
+	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		properties = p.parseProperties(ind, ctx)
+		if !ast.ValidNode(properties) {
+			p.rollback()
+			properties = nil
+		}
+	} else {
+		p.rollback()
+	}
+	p.commit()
+	ind.value--
+
+	if !ast.ValidNode(p.parseComments()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	p.setCheckpoint()
+	collection := p.parseSeqSpace(ind, ctx)
+	if ast.ValidNode(collection) {
+		p.commit()
+		return ast.NewCollectionNode(start, p.tok.End, properties, collection)
+	}
+	p.rollback()
+	collection = p.parseBlockMapping(ind)
+	if !ast.ValidNode(collection) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewCollectionNode(start, p.tok.End, properties, collection)
+}
+
+// YAML specification: [201] seq-space
+func (p *parser) parseSeqSpace(ind *indentation, ctx Context) ast.Node {
+	switch ctx {
+	case BlockInContext:
+		return p.parseBlockSequence(ind)
+	case BlockOutContext:
+		ind.value--
+		node := p.parseBlockSequence(ind)
+		ind.value++
+		return node
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 }
 
-// YAML specification: [199] s-l+block-scalar
-func (p *parser) parseBlockScalar(indentation int, ctx Context) ast.Node {
+// YAML specification: [183] l+block-sequence
+func (p *parser) parseBlockSequence(ind *indentation) ast.Node {
+	var entries []ast.Node
+
 	start := p.tok.Start
-	if !ast.ValidNode(p.parseSeparate(indentation+1, ctx)) {
+	localInd := indentation{
+		value: ind.value + 1,
+		mode:  WithLowerBound,
+	}
+	if !ast.ValidNode(p.parseIndent(&localInd)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entry := p.parseBlockSequenceEntry(&localInd)
+	if !ast.ValidNode(entry) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entries = append(entries, entry)
+
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseIndent(&localInd)) {
+			p.rollback()
+			break
+		}
+		entry = p.parseBlockSequenceEntry(&localInd)
+		if !ast.ValidNode(entry) {
+			p.rollback()
+			break
+		}
+		entries = append(entries, entry)
+		p.commit()
+	}
+
+	return ast.NewSequenceNode(start, p.tok.End, entries)
+}
+
+// YAML specification: [184] c-l-block-seq-entry
+func (p *parser) parseBlockSequenceEntry(ind *indentation) ast.Node {
+	start := p.tok.Start
+	if p.tok.Type != token.SequenceEntryType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	switch p.tok.Type {
+	case token.SpaceType, token.TabType, token.LineBreakType:
+		return p.parseBlockIndented(ind, BlockInContext)
+	default:
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+}
+
+// YAML specification: [185] s-l+block-indented
+func (p *parser) parseBlockIndented(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	localInd := indentation{
+		value: 0,
+		mode:  WithLowerBound,
+	}
+	// because we have "opportunistic" indentation starting with 0,
+	// parseIndent will never return invalid node
+	p.parseIndent(&localInd)
+	p.setCheckpoint()
+	mergedInd := indentation{
+		value: ind.value + 1 + localInd.value,
+		mode:  StrictEquality,
+	}
+	content := p.parseCompactSequence(&mergedInd)
+	if ast.ValidNode(content) {
+		p.commit()
+		p.commit()
+		return ast.NewBlockNode(start, p.tok.End, content)
+	}
+	p.rollback()
+
+	content = p.parseCompactMapping(&mergedInd)
+	if ast.ValidNode(content) {
+		p.commit()
+		return ast.NewBlockNode(start, p.tok.End, content)
+	}
+	p.rollback()
+
+	p.setCheckpoint()
+	content = p.parseBlockNode(ind, ctx)
+	if ast.ValidNode(content) {
+		p.commit()
+		return content
+	}
+	p.rollback()
+
+	nullStart := p.tok.Start
+
+	if ast.ValidNode(p.parseComments()) {
+		return ast.NewNullNode(nullStart, nullStart)
+	}
+	return ast.NewInvalidNode(start, p.tok.End)
+}
+
+// YAML specification: [199] s-l+block-scalar
+func (p *parser) parseBlockScalar(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+	ind.value++
+	if !ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		ind.value--
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	p.setCheckpoint()
-	properties := p.parseProperties(indentation+1, ctx)
+
+	properties := p.parseProperties(ind, ctx)
 	if ast.ValidNode(properties) {
-		if !ast.ValidNode(p.parseSeparate(indentation+1, ctx)) {
+		if !ast.ValidNode(p.parseSeparate(ind, ctx)) {
 			properties = nil
 			p.rollback()
 		} else {
@@ -244,11 +405,13 @@ func (p *parser) parseBlockScalar(indentation int, ctx Context) ast.Node {
 	}
 
 	var content ast.Node
+
+	ind.value--
 	switch p.tok.Type {
 	case token.LiteralType:
-		content = p.parseLiteral(indentation)
+		content = p.parseLiteral(ind)
 	case token.FoldedType:
-		content = p.parseFolded(indentation)
+		content = p.parseFolded(ind)
 	default:
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -260,7 +423,7 @@ func (p *parser) parseBlockScalar(indentation int, ctx Context) ast.Node {
 }
 
 // YAML specification: [182] c-l+folded
-func (p *parser) parseFolded(indentation int) ast.Node {
+func (p *parser) parseFolded(ind *indentation) ast.Node {
 	start := p.tok.Start
 	if p.tok.Type != token.FoldedType {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -274,7 +437,13 @@ func (p *parser) parseFolded(indentation int) ast.Node {
 	if !ok {
 		ast.NewInvalidNode(start, p.tok.End)
 	}
-	content := p.parseFoldedContent(indentation+castedHeader.IndentationIndicator(), castedHeader.ChompingIndicator())
+	content := p.parseFoldedContent(
+		&indentation{
+			value: ind.value + castedHeader.IndentationIndicator(),
+			mode:  WithLowerBound,
+		},
+		castedHeader.ChompingIndicator(),
+	)
 	castedContent, ok := content.(ast.TextNode)
 	if !ok {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -283,13 +452,13 @@ func (p *parser) parseFolded(indentation int) ast.Node {
 }
 
 // YAML specification: [182] l-folded-content
-func (p *parser) parseFoldedContent(indentation int, chomping ast.ChompingType) ast.Node {
+func (p *parser) parseFoldedContent(ind *indentation, chomping ast.ChompingType) ast.Node {
 	start := p.tok.Start
 	var foldedBuf bytes.Buffer
 
 	p.setCheckpoint()
 	var conditionalBuf bytes.Buffer
-	if ast.ValidNode(p.parseDiffLines(indentation, &conditionalBuf)) {
+	if ast.ValidNode(p.parseDiffLines(ind, &conditionalBuf)) {
 		if !ast.ValidNode(p.parseChompedLast(chomping, &conditionalBuf)) {
 			p.rollback()
 		} else {
@@ -299,16 +468,16 @@ func (p *parser) parseFoldedContent(indentation int, chomping ast.ChompingType) 
 	} else {
 		p.rollback()
 	}
-	if !ast.ValidNode(p.parseChompedEmpty(indentation, chomping, &foldedBuf)) {
+	if !ast.ValidNode(p.parseChompedEmpty(ind, chomping, &foldedBuf)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	return ast.NewTextNode(start, p.tok.End, foldedBuf.Bytes())
 }
 
 // YAML specification: [181] l-nb-diff-lines
-func (p *parser) parseDiffLines(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseDiffLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
-	if !ast.ValidNode(p.parseSameLines(indentation, buf)) {
+	if !ast.ValidNode(p.parseSameLines(ind, buf)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	savedLen := buf.Len()
@@ -320,7 +489,7 @@ func (p *parser) parseDiffLines(indentation int, buf *bytes.Buffer) ast.Node {
 			break
 		}
 		buf.WriteByte(byte(token.LineFeedCharacter))
-		if !ast.ValidNode(p.parseSameLines(indentation, buf)) {
+		if !ast.ValidNode(p.parseSameLines(ind, buf)) {
 			buf.Truncate(savedLen)
 			p.rollback()
 			break
@@ -332,14 +501,14 @@ func (p *parser) parseDiffLines(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [180] l-nb-same-lines
-func (p *parser) parseSameLines(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseSameLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
 
 	savedLen := buf.Len()
 	localLen := savedLen
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseEmpty(indentation, BlockInContext, buf)) {
+		if !ast.ValidNode(p.parseEmpty(ind, BlockInContext, buf)) {
 			p.rollback()
 			buf.Truncate(localLen)
 			break
@@ -349,7 +518,7 @@ func (p *parser) parseSameLines(indentation int, buf *bytes.Buffer) ast.Node {
 	}
 	p.setCheckpoint()
 
-	if !ast.ValidNode(p.parseFoldedLines(indentation, buf)) {
+	if !ast.ValidNode(p.parseFoldedLines(ind, buf)) {
 		buf.Truncate(localLen)
 		p.rollback()
 	} else {
@@ -357,7 +526,7 @@ func (p *parser) parseSameLines(indentation int, buf *bytes.Buffer) ast.Node {
 		return ast.NewTextNode(start, p.tok.End, nil)
 	}
 
-	if !ast.ValidNode(p.parseSpacedLines(indentation, buf)) {
+	if !ast.ValidNode(p.parseSpacedLines(ind, buf)) {
 		buf.Truncate(savedLen)
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -366,21 +535,21 @@ func (p *parser) parseSameLines(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [179] l-nb-spaced-lines
-func (p *parser) parseSpacedLines(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseSpacedLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
-	if !ast.ValidNode(p.parseSpacedText(indentation, buf)) {
+	if !ast.ValidNode(p.parseSpacedText(ind, buf)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 
 	savedLen := buf.Len()
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseSpacedLineBreak(indentation, buf)) {
+		if !ast.ValidNode(p.parseSpacedLineBreak(ind, buf)) {
 			p.rollback()
 			buf.Truncate(savedLen)
 			break
 		}
-		if !ast.ValidNode(p.parseSpacedText(indentation, buf)) {
+		if !ast.ValidNode(p.parseSpacedText(ind, buf)) {
 			p.rollback()
 			buf.Truncate(savedLen)
 			break
@@ -392,9 +561,9 @@ func (p *parser) parseSpacedLines(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [177] s-nb-spaced-text
-func (p *parser) parseSpacedText(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseSpacedText(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
-	if !ast.ValidNode(p.parseIndent(indentation)) {
+	if !ast.ValidNode(p.parseIndent(ind)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	if !token.IsWhiteSpace(p.tok) {
@@ -410,7 +579,7 @@ func (p *parser) parseSpacedText(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [178] b-l-spaced
-func (p *parser) parseSpacedLineBreak(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseSpacedLineBreak(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
 	if p.tok.Type != token.LineBreakType {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -421,7 +590,7 @@ func (p *parser) parseSpacedLineBreak(indentation int, buf *bytes.Buffer) ast.No
 
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseEmpty(indentation, BlockInContext, buf)) {
+		if !ast.ValidNode(p.parseEmpty(ind, BlockInContext, buf)) {
 			p.rollback()
 			buf.Truncate(savedLen)
 			break
@@ -434,21 +603,21 @@ func (p *parser) parseSpacedLineBreak(indentation int, buf *bytes.Buffer) ast.No
 }
 
 // YAML specification: [176] l-nb-folded-lines
-func (p *parser) parseFoldedLines(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseFoldedLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
-	if !ast.ValidNode(p.parseFoldedText(indentation, buf)) {
+	if !ast.ValidNode(p.parseFoldedText(ind, buf)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 
 	savedLen := buf.Len()
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseFoldedLineBreak(indentation, BlockInContext, buf)) {
+		if !ast.ValidNode(p.parseFoldedLineBreak(ind, BlockInContext, buf)) {
 			p.rollback()
 			buf.Truncate(savedLen)
 			break
 		}
-		if !ast.ValidNode(p.parseFoldedText(indentation, buf)) {
+		if !ast.ValidNode(p.parseFoldedText(ind, buf)) {
 			p.rollback()
 			buf.Truncate(savedLen)
 			break
@@ -460,9 +629,9 @@ func (p *parser) parseFoldedLines(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [175] s-nb-folded-text
-func (p *parser) parseFoldedText(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseFoldedText(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
-	if !ast.ValidNode(p.parseIndent(indentation)) {
+	if !ast.ValidNode(p.parseIndent(ind)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	if p.tok.Type != token.StringType {
@@ -478,13 +647,13 @@ func (p *parser) parseFoldedText(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [73] b-l-folded
-func (p *parser) parseFoldedLineBreak(indentation int, ctx Context, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseFoldedLineBreak(ind *indentation, ctx Context, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
 
 	savedLen := buf.Len()
 	p.setCheckpoint()
 
-	if ast.ValidNode(p.parseTrimmed(indentation, ctx, buf)) {
+	if ast.ValidNode(p.parseTrimmed(ind, ctx, buf)) {
 		p.commit()
 		return ast.NewTextNode(start, p.tok.End, nil)
 	}
@@ -503,7 +672,7 @@ func (p *parser) parseFoldedLineBreak(indentation int, ctx Context, buf *bytes.B
 }
 
 // YAML specification: [71] b-l-trimmed
-func (p *parser) parseTrimmed(indentation int, ctx Context, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseTrimmed(ind *indentation, ctx Context, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
 	if p.tok.Type != token.LineBreakType {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -512,7 +681,7 @@ func (p *parser) parseTrimmed(indentation int, ctx Context, buf *bytes.Buffer) a
 
 	savedLen := buf.Len()
 
-	if !ast.ValidNode(p.parseEmpty(indentation, ctx, buf)) {
+	if !ast.ValidNode(p.parseEmpty(ind, ctx, buf)) {
 		buf.Truncate(savedLen)
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -521,7 +690,7 @@ func (p *parser) parseTrimmed(indentation int, ctx Context, buf *bytes.Buffer) a
 
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseEmpty(indentation, ctx, buf)) {
+		if !ast.ValidNode(p.parseEmpty(ind, ctx, buf)) {
 			buf.Truncate(savedLen)
 			p.rollback()
 			break
@@ -533,7 +702,7 @@ func (p *parser) parseTrimmed(indentation int, ctx Context, buf *bytes.Buffer) a
 }
 
 // YAML specification: [170] c-l+literal
-func (p *parser) parseLiteral(indentation int) ast.Node {
+func (p *parser) parseLiteral(ind *indentation) ast.Node {
 	start := p.tok.Start
 	if p.tok.Type != token.LiteralType {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -547,7 +716,13 @@ func (p *parser) parseLiteral(indentation int) ast.Node {
 	if !ok {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	content := p.parseLiteralContent(indentation+castedHeader.IndentationIndicator(), castedHeader.ChompingIndicator())
+	content := p.parseLiteralContent(
+		&indentation{
+			value: ind.value + castedHeader.IndentationIndicator(),
+			mode:  WithLowerBound,
+		},
+		castedHeader.ChompingIndicator(),
+	)
 	castedContent, ok := content.(ast.TextNode)
 	if !ok {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -556,16 +731,16 @@ func (p *parser) parseLiteral(indentation int) ast.Node {
 }
 
 // YAML specification: [173] l-literal-content
-func (p *parser) parseLiteralContent(indentation int, chomping ast.ChompingType) ast.Node {
+func (p *parser) parseLiteralContent(ind *indentation, chomping ast.ChompingType) ast.Node {
 	start := p.tok.Start
 	var literalBuf bytes.Buffer
 
 	p.setCheckpoint()
 	var conditionalBuf bytes.Buffer
-	if ast.ValidNode(p.parseLiteralText(indentation, &conditionalBuf)) {
+	if ast.ValidNode(p.parseLiteralText(ind, &conditionalBuf)) {
 		for {
 			p.setCheckpoint()
-			if !ast.ValidNode(p.parseLiteralNext(indentation, &conditionalBuf)) {
+			if !ast.ValidNode(p.parseLiteralNext(ind, &conditionalBuf)) {
 				p.rollback()
 				break
 			}
@@ -580,7 +755,7 @@ func (p *parser) parseLiteralContent(indentation int, chomping ast.ChompingType)
 	} else {
 		p.rollback()
 	}
-	if !ast.ValidNode(p.parseChompedEmpty(indentation, chomping, &literalBuf)) {
+	if !ast.ValidNode(p.parseChompedEmpty(ind, chomping, &literalBuf)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	return ast.NewTextNode(start, p.tok.End, literalBuf.Bytes())
@@ -610,26 +785,26 @@ func (p *parser) parseChompedLast(chomping ast.ChompingType, buf *bytes.Buffer) 
 }
 
 // YAML specification: [166] l-chomped-empty
-func (p *parser) parseChompedEmpty(indentation int, chomping ast.ChompingType, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseChompedEmpty(ind *indentation, chomping ast.ChompingType, buf *bytes.Buffer) ast.Node {
 	switch chomping {
 	case ast.ClipChompingType, ast.StripChompingType:
-		return p.parseStripEmpty(indentation)
+		return p.parseStripEmpty(ind)
 	case ast.KeepChompingType:
-		return p.parseKeepEmpty(indentation, buf)
+		return p.parseKeepEmpty(ind, buf)
 	default:
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 }
 
 // YAML specification: [168] l-keep-empty
-func (p *parser) parseKeepEmpty(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseKeepEmpty(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
 
 	savedLen := buf.Len()
 	localLen := savedLen
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseEmpty(indentation, BlockInContext, buf)) {
+		if !ast.ValidNode(p.parseEmpty(ind, BlockInContext, buf)) {
 			p.rollback()
 			buf.Truncate(localLen)
 			break
@@ -638,7 +813,7 @@ func (p *parser) parseKeepEmpty(indentation int, buf *bytes.Buffer) ast.Node {
 		localLen = buf.Len()
 	}
 	p.setCheckpoint()
-	if !ast.ValidNode(p.parseTrailComments(indentation)) {
+	if !ast.ValidNode(p.parseTrailComments(ind)) {
 		buf.Truncate(savedLen)
 		p.rollback()
 	} else {
@@ -648,11 +823,11 @@ func (p *parser) parseKeepEmpty(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [167] l-strip-empty
-func (p *parser) parseStripEmpty(indentation int) ast.Node {
+func (p *parser) parseStripEmpty(ind *indentation) ast.Node {
 	start := p.tok.Start
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseIndentLessThanOrEqual(indentation)) {
+		if !ast.ValidNode(p.parseIndentLessThanOrEqual(ind.value)) {
 			p.rollback()
 			break
 		}
@@ -664,7 +839,7 @@ func (p *parser) parseStripEmpty(indentation int) ast.Node {
 	}
 
 	p.setCheckpoint()
-	if !ast.ValidNode(p.parseTrailComments(indentation)) {
+	if !ast.ValidNode(p.parseTrailComments(ind)) {
 		p.rollback()
 	} else {
 		p.commit()
@@ -673,9 +848,9 @@ func (p *parser) parseStripEmpty(indentation int) ast.Node {
 }
 
 // YAML specification: [169] l-trail-comments
-func (p *parser) parseTrailComments(indentation int) ast.Node {
+func (p *parser) parseTrailComments(ind *indentation) ast.Node {
 	start := p.tok.Start
-	if !ast.ValidNode(p.parseIndentLessThan(indentation)) {
+	if !ast.ValidNode(p.parseIndentLessThan(ind.value)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	if !ast.ValidNode(p.parseCommentText()) {
@@ -697,7 +872,7 @@ func (p *parser) parseTrailComments(indentation int) ast.Node {
 }
 
 // YAML specification: [172] l-nb-literal-next
-func (p *parser) parseLiteralNext(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseLiteralNext(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
 	if p.tok.Type != token.LineBreakType {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -705,7 +880,7 @@ func (p *parser) parseLiteralNext(indentation int, buf *bytes.Buffer) ast.Node {
 	savedLen := buf.Len()
 	buf.WriteByte(byte(token.LineFeedCharacter))
 	p.next()
-	if !ast.ValidNode(p.parseLiteralText(indentation, buf)) {
+	if !ast.ValidNode(p.parseLiteralText(ind, buf)) {
 		buf.Truncate(savedLen)
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -713,17 +888,17 @@ func (p *parser) parseLiteralNext(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [171] l-nb-literal-text
-func (p *parser) parseLiteralText(indentation int, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseLiteralText(ind *indentation, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseEmpty(indentation, BlockInContext, buf)) {
+		if !ast.ValidNode(p.parseEmpty(ind, BlockInContext, buf)) {
 			p.rollback()
 			break
 		}
 		p.commit()
 	}
-	if !ast.ValidNode(p.parseIndent(indentation)) {
+	if !ast.ValidNode(p.parseIndent(ind)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	if p.tok.Type != token.StringType && p.tok.Type != token.IsWhiteSpace(p.tok) {
@@ -737,13 +912,13 @@ func (p *parser) parseLiteralText(indentation int, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [70] l-empty
-func (p *parser) parseEmpty(indentation int, ctx Context, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseEmpty(ind *indentation, ctx Context, buf *bytes.Buffer) ast.Node {
 	start := p.tok.Start
 	p.setCheckpoint()
-	lp := p.parseLinePrefix(indentation, ctx)
+	lp := p.parseLinePrefix(ind, ctx)
 	if !ast.ValidNode(lp) {
 		p.rollback()
-		lp = p.parseIndentLessThan(indentation)
+		lp = p.parseIndentLessThan(ind.value)
 		if !ast.ValidNode(lp) {
 			return ast.NewInvalidNode(start, p.tok.End)
 		}
@@ -759,26 +934,26 @@ func (p *parser) parseEmpty(indentation int, ctx Context, buf *bytes.Buffer) ast
 }
 
 // YAML specification: [67] s-line-prefix
-func (p *parser) parseLinePrefix(indentation int, ctx Context) ast.Node {
+func (p *parser) parseLinePrefix(ind *indentation, ctx Context) ast.Node {
 	switch ctx {
 	case BlockOutContext, BlockInContext:
-		return p.parseBlockLinePrefix(indentation)
+		return p.parseBlockLinePrefix(ind)
 	case FlowOutContext, FlowInContext:
-		return p.parseFlowLinePrefix(indentation)
+		return p.parseFlowLinePrefix(ind)
 	default:
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 }
 
 // YAML specification: [68] s-block-line-prefix
-func (p *parser) parseBlockLinePrefix(indentation int) ast.Node {
-	return p.parseIndent(indentation)
+func (p *parser) parseBlockLinePrefix(ind *indentation) ast.Node {
+	return p.parseIndent(ind)
 }
 
 // YAML specification: [69] s-flow-line-prefix
-func (p *parser) parseFlowLinePrefix(indentation int) ast.Node {
+func (p *parser) parseFlowLinePrefix(ind *indentation) ast.Node {
 	start := p.tok.Start
-	indent := p.parseIndent(indentation)
+	indent := p.parseIndent(ind)
 	if !ast.ValidNode(indent) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -829,21 +1004,21 @@ func (p *parser) parseIndentationIndicator() (int, error) {
 		return 0, nil
 	}
 
-	indentation, err := strconv.Atoi(p.tok.Origin)
+	ind, err := strconv.Atoi(p.tok.Origin)
 	switch {
 	case err != nil:
 		return 0, fmt.Errorf("failed to parse indentation indicator node: %w", err)
-	case indentation <= 0:
+	case ind <= 0:
 		return 0, fmt.Errorf("failed to parse indentation indicator node: " +
 			"indentation must be omitted or greater than 0")
 	default:
 		p.next()
-		return indentation, nil
+		return ind, nil
 	}
 }
 
 // YAML specification: [96] c-ns-properties
-func (p *parser) parseProperties(indentation int, ctx Context) ast.Node {
+func (p *parser) parseProperties(ind *indentation, ctx Context) ast.Node {
 	var (
 		tag, anchor ast.Node
 		start       = p.tok.Start
@@ -862,7 +1037,7 @@ func (p *parser) parseProperties(indentation int, ctx Context) ast.Node {
 	}
 
 	p.setCheckpoint()
-	if ast.ValidNode(p.parseSeparate(indentation, ctx)) {
+	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
 		switch {
 		case tag != nil:
 			anchor = p.parseAnchorProperty()
@@ -940,10 +1115,10 @@ func (p *parser) parseTagProperty() ast.Node {
 }
 
 // YAML specification: [80] s-separate
-func (p *parser) parseSeparate(indentation int, ctx Context) ast.Node {
+func (p *parser) parseSeparate(ind *indentation, ctx Context) ast.Node {
 	switch ctx {
 	case BlockInContext, BlockOutContext, FlowInContext, FlowOutContext:
-		return p.parseSeparateLines(indentation)
+		return p.parseSeparateLines(ind)
 	case BlockKeyContext, FlowKeyContext:
 		return p.parseSeparateInLine()
 	}
@@ -951,10 +1126,10 @@ func (p *parser) parseSeparate(indentation int, ctx Context) ast.Node {
 }
 
 // YAML specification: [81] s-separate-lines
-func (p *parser) parseSeparateLines(indentation int) ast.Node {
+func (p *parser) parseSeparateLines(ind *indentation) ast.Node {
 	start := p.tok.Start
 	p.setCheckpoint()
-	if ast.ValidNode(p.parseComments()) && ast.ValidNode(p.parseFlowLinePrefix(indentation)) {
+	if ast.ValidNode(p.parseComments()) && ast.ValidNode(p.parseFlowLinePrefix(ind)) {
 		p.commit()
 		return ast.NewBasicNode(start, p.tok.End, ast.IndentType)
 	}
@@ -978,46 +1153,82 @@ func (p *parser) parseSeparateInLine() ast.Node {
 }
 
 // YAML specification: [63] s-indent
-func (p *parser) parseIndent(indentation int) ast.Node {
+func (p *parser) parseIndent(ind *indentation) ast.Node {
+	switch ind.mode {
+	case StrictEquality:
+		return p.parseIndentWithStrictEquality(ind.value)
+	case WithLowerBound:
+		node, ok := p.parseIndentWithLowerBound(ind.value).(ast.IndentNode)
+		if !ok || !ast.ValidNode(node) {
+			return ast.NewInvalidNode(node.Start(), node.End())
+		}
+		ind.mode = StrictEquality
+		ind.value = node.Indent()
+		return node
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+}
+
+func (p *parser) parseIndentWithStrictEquality(indentation int) ast.Node {
 	start := p.tok.Start
-	switch {
-	case indentation == 0:
-		return ast.NewBasicNode(token.Position{}, token.Position{}, ast.IndentType)
-	case indentation > 0:
+	if indentation < 0 {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	for i := indentation; i > 0; i-- {
 		if p.tok.Type != token.SpaceType {
 			return ast.NewInvalidNode(start, p.tok.End)
 		}
 		p.next()
-		return p.parseIndent(indentation - 1)
-	default:
-		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	return ast.NewIndentNode(start, p.tok.End, indentation)
+}
+
+func (p *parser) parseIndentWithLowerBound(lowerBound int) ast.Node {
+	start := p.tok.Start
+	var indent int
+	for ; indent < lowerBound; indent++ {
+		if p.tok.Type != token.SpaceType {
+			return ast.NewInvalidNode(start, p.tok.End)
+		}
+		p.next()
+	}
+
+	for p.tok.Type == token.SpaceType {
+		indent++
+		p.next()
+	}
+
+	return ast.NewIndentNode(start, p.tok.End, indent)
 }
 
 // YAML specification: [64] s-indent-less-than
 func (p *parser) parseIndentLessThan(indentation int) ast.Node {
-	return p.parseIndentWithLowerBound(indentation, 1)
+	return p.parseBorderedIndent(indentation, 1)
 }
 
 // YAML specification: [65] s-indent-less-or-equal
 func (p *parser) parseIndentLessThanOrEqual(indentation int) ast.Node {
-	return p.parseIndentWithLowerBound(indentation, 0)
+	return p.parseBorderedIndent(indentation, 0)
 }
 
-func (p *parser) parseIndentWithLowerBound(indentation int, lowerBound int) ast.Node {
+func (p *parser) parseBorderedIndent(indentation int, lowBorder int) ast.Node {
 	start := p.tok.Start
-	switch {
-	case indentation == lowerBound:
-		return ast.NewBasicNode(token.Position{}, token.Position{}, ast.IndentType)
-	case indentation > lowerBound:
-		if p.tok.Type == token.SpaceType {
-			p.next()
-			return p.parseIndentWithLowerBound(indentation-1, lowerBound)
-		}
-		return ast.NewBasicNode(token.Position{}, token.Position{}, ast.IndentType)
-	default:
+	if indentation < lowBorder {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	var currentIndent int
+
+	for indentation > lowBorder {
+		if p.tok.Type != token.SpaceType {
+			return ast.NewIndentNode(start, p.tok.End, currentIndent)
+		}
+		p.next()
+		currentIndent++
+		indentation--
+	}
+
+	return ast.NewIndentNode(start, p.tok.End, currentIndent)
 }
 
 // YAML specification: [82] l-directive
