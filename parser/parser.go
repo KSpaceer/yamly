@@ -210,6 +210,70 @@ func (p *parser) parseBlockNode(ind *indentation, ctx Context) ast.Node {
 	return ast.NewInvalidNode(start, p.tok.End)
 }
 
+// YAML specification: [197] s-l+flow-in-block
+func (p *parser) parseFlowInBlock(ind *indentation) ast.Node {
+	start := p.tok.Start
+
+	localInd := indentation{
+		value: ind.value + 1,
+		mode:  StrictEquality,
+	}
+	if !ast.ValidNode(p.parseSeparate(&localInd, FlowOutContext)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	node := p.parseFlowNode(&localInd, FlowOutContext)
+	if !ast.ValidNode(node) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	if !ast.ValidNode(p.parseComments()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return node
+}
+
+// YAML specification: [161] ns-flow-node
+func (p *parser) parseFlowNode(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	node := p.parseAliasNode()
+	if ast.ValidNode(node) {
+		p.commit()
+		return node
+	}
+
+	p.rollback()
+	p.setCheckpoint()
+
+	node = p.parseFlowContent(ind, ctx)
+	if ast.ValidNode(node) {
+		p.commit()
+		return node
+	}
+
+	p.rollback()
+
+	properties := p.parseProperties(ind, ctx)
+	if !ast.ValidNode(properties) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	contentPos := p.tok.Start
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		node = p.parseFlowContent(ind, ctx)
+	}
+
+	if ast.ValidNode(node) {
+		p.commit()
+		return ast.NewScalarNode(start, p.tok.End, properties, node)
+	}
+
+	p.rollback()
+	return ast.NewScalarNode(start, p.tok.End, properties, ast.NewNullNode(contentPos))
+}
+
 // YAML specification: [198] s-l+block-in-block
 func (p *parser) parseBlockInBlock(ind *indentation, ctx Context) ast.Node {
 	start := p.tok.Start
@@ -372,6 +436,7 @@ func (p *parser) parseBlockMappingImplicitKey() ast.Node {
 	return p.parseImplicitYAMLKey(BlockKeyContext)
 }
 
+// YAML specification: [194] c-l-block-map-implicit-value
 func (p *parser) parseBlockMappingImplicitValue(ind *indentation) ast.Node {
 	if p.tok.Type != token.MappingValueType {
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
