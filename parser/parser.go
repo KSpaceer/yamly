@@ -267,6 +267,176 @@ func (p *parser) parseBlockCollection(ind *indentation, ctx Context) ast.Node {
 	return ast.NewCollectionNode(start, p.tok.End, properties, collection)
 }
 
+// YAML specification: [187] l+block-mapping
+func (p *parser) parseBlockMapping(ind *indentation) ast.Node {
+	start := p.tok.Start
+	localInd := indentation{
+		value: ind.value + 1,
+		mode:  WithLowerBound,
+	}
+	if !ast.ValidNode(p.parseIndent(&localInd)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entry := p.parseBlockMappingEntry(&localInd)
+	if !ast.ValidNode(entry) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entries := []ast.Node{entry}
+
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseIndent(&localInd)) {
+			p.rollback()
+			break
+		}
+		entry = p.parseBlockMappingEntry(&localInd)
+		if !ast.ValidNode(entry) {
+			p.rollback()
+			break
+		}
+		p.commit()
+		entries = append(entries, entry)
+	}
+
+	return ast.NewMappingNode(start, p.tok.End, entries)
+}
+
+func (p *parser) parseCompactMapping(ind *indentation) ast.Node {
+	start := p.tok.Start
+
+	entry := p.parseBlockMappingEntry(ind)
+	if !ast.ValidNode(entry) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entries := []ast.Node{entry}
+
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseIndent(ind)) {
+			p.rollback()
+			break
+		}
+		entry = p.parseBlockMappingEntry(ind)
+		if !ast.ValidNode(entry) {
+			p.rollback()
+			break
+		}
+		p.commit()
+		entries = append(entries, entry)
+	}
+
+	return ast.NewMappingNode(start, p.tok.End, entries)
+}
+
+// YAML specification: [188] ns-l-block-map-entry
+func (p *parser) parseBlockMappingEntry(ind *indentation) ast.Node {
+
+	switch p.tok.Type {
+	case token.MappingKeyType:
+		return p.parseBlockMappingExplicitEntry(ind)
+	default:
+		return p.parseBlockMappingImplicitEntry(ind)
+	}
+}
+
+// YAML specification: [192] ns-l-block-map-implicit-entry
+func (p *parser) parseBlockMappingImplicitEntry(ind *indentation) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	key := p.parseBlockMappingImplicitKey()
+	if !ast.ValidNode(key) {
+		p.rollback()
+		key = ast.NewNullNode(start)
+	} else {
+		p.commit()
+	}
+	value := p.parseBlockMappingImplicitValue(ind)
+	if !ast.ValidNode(value) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewMappingEntryNode(start, p.tok.End, key, value)
+}
+
+// YAML specification: [193] ns-s-block-map-implicit-key
+func (p *parser) parseBlockMappingImplicitKey() ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	key := p.parseImplicitJSONKey(BlockKeyContext)
+	if ast.ValidNode(key) {
+		p.commit()
+		return key
+	}
+	p.rollback()
+	return p.parseImplicitYAMLKey(BlockKeyContext)
+}
+
+func (p *parser) parseBlockMappingImplicitValue(ind *indentation) ast.Node {
+	if p.tok.Type != token.MappingValueType {
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+	start := p.tok.Start
+	p.next()
+
+	p.setCheckpoint()
+	value := p.parseBlockNode(ind, BlockOutContext)
+	if ast.ValidNode(value) {
+		p.commit()
+		return value
+	}
+	p.rollback()
+	value = ast.NewNullNode(p.tok.Start)
+	if !ast.ValidNode(p.parseComments()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return value
+}
+
+// YAML specification: [189] c-l-block-map-explicit-entry
+func (p *parser) parseBlockMappingExplicitEntry(ind *indentation) ast.Node {
+	start := p.tok.Start
+
+	key := p.parseBlockMappingExplicitKey(ind)
+	if !ast.ValidNode(key) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	valueStart := p.tok.Start
+	p.setCheckpoint()
+	value := p.parseBlockMappingExplicitValue(ind)
+	if !ast.ValidNode(value) {
+		p.rollback()
+		value = ast.NewNullNode(valueStart)
+	} else {
+		p.commit()
+	}
+
+	return ast.NewMappingEntryNode(start, p.tok.End, key, value)
+}
+
+// YAML specification: [189] c-l-block-map-explicit-key
+func (p *parser) parseBlockMappingExplicitKey(ind *indentation) ast.Node {
+	if p.tok.Type != token.MappingKeyType {
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+	p.next()
+
+	return p.parseBlockIndented(ind, BlockOutContext)
+}
+
+// YAML specification: [189] l-block-map-explicit-value
+func (p *parser) parseBlockMappingExplicitValue(ind *indentation) ast.Node {
+	start := p.tok.Start
+	if !ast.ValidNode(p.parseIndent(ind)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	if p.tok.Type != token.MappingValueType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	return p.parseBlockIndented(ind, BlockOutContext)
+}
+
 // YAML specification: [201] seq-space
 func (p *parser) parseSeqSpace(ind *indentation, ctx Context) ast.Node {
 	switch ctx {
@@ -376,9 +546,36 @@ func (p *parser) parseBlockIndented(ind *indentation, ctx Context) ast.Node {
 	nullStart := p.tok.Start
 
 	if ast.ValidNode(p.parseComments()) {
-		return ast.NewNullNode(nullStart, nullStart)
+		return ast.NewNullNode(nullStart)
 	}
 	return ast.NewInvalidNode(start, p.tok.End)
+}
+
+// YAML specification: [186] ns-l-compact-sequence
+func (p *parser) parseCompactSequence(ind *indentation) ast.Node {
+	start := p.tok.Start
+	entry := p.parseBlockSequenceEntry(ind)
+	if !ast.ValidNode(entry) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entries := []ast.Node{entry}
+
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseIndent(ind)) {
+			p.rollback()
+			break
+		}
+		entry = p.parseBlockSequenceEntry(ind)
+		if !ast.ValidNode(entry) {
+			p.rollback()
+			break
+		}
+		p.commit()
+		entries = append(entries, entry)
+	}
+
+	return ast.NewSequenceNode(start, p.tok.End, entries)
 }
 
 // YAML specification: [199] s-l+block-scalar

@@ -13,6 +13,7 @@ const (
 	ScalarType
 	CollectionType
 	MappingType
+	MappingEntryType
 	SequenceType
 	CommentType
 	DirectiveType
@@ -373,6 +374,52 @@ func NewSequenceNode(start token.Position, end token.Position, entries []Node) N
 	return SequenceNode{start: start, end: end, entries: entries}
 }
 
+type MappingNode struct {
+	start, end token.Position
+	entries    []Node
+}
+
+func (m MappingNode) Start() token.Position {
+	return m.start
+}
+
+func (m MappingNode) End() token.Position {
+	return m.end
+}
+
+func (MappingNode) Type() NodeType {
+	return MappingType
+}
+
+func (m MappingNode) Entries() []Node {
+	return m.entries
+}
+
+func NewMappingNode(start token.Position, end token.Position, entries []Node) Node {
+	return MappingNode{start: start, end: end, entries: entries}
+}
+
+type MappingEntryNode struct {
+	start, end token.Position
+	key, value Node
+}
+
+func (m MappingEntryNode) Start() token.Position {
+	return m.start
+}
+
+func (m MappingEntryNode) End() token.Position {
+	return m.end
+}
+
+func (MappingEntryNode) Type() NodeType {
+	return MappingEntryType
+}
+
+func NewMappingEntryNode(start, end token.Position, key, value Node) Node {
+	return MappingEntryNode{start: start, end: end, key: key, value: value}
+}
+
 type BlockNode struct {
 	start, end token.Position
 	content    Node
@@ -403,21 +450,21 @@ func NewBlockNode(start, end token.Position, content Node) Node {
 }
 
 type NullNode struct {
-	start, end token.Position
+	pos token.Position
 }
 
 func (n NullNode) Start() token.Position {
-	return n.start
+	return n.pos
 }
 
 func (n NullNode) End() token.Position {
-	return n.end
+	return n.pos
 }
 
 func (NullNode) Type() NodeType {
 	return NullType
 }
 
-func NewNullNode(start token.Position, end token.Position) Node {
-	return NullNode{start: start, end: end}
+func NewNullNode(pos token.Position) Node {
+	return NullNode{pos: pos}
 }
