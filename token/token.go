@@ -5,7 +5,7 @@ const (
 	TagDirective  = "TAG"
 )
 
-type Character byte
+type Character = byte
 
 const (
 	SequenceEntryCharacter     Character = '-'
@@ -76,7 +76,7 @@ const (
 	KeepChompingType  = PlusType
 )
 
-type CharSetType byte
+type CharSetType int16
 
 const (
 	UnknownCharSetType CharSetType = 0
@@ -86,6 +86,7 @@ const (
 	URICharSetType
 	TagCharSetType
 	AnchorCharSetType
+	PlainSafeCharSetType
 )
 
 func IsWhiteSpace(tok Token) bool {

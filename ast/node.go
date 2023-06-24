@@ -19,6 +19,7 @@ const (
 	DirectiveType
 	TagType
 	AnchorType
+	AliasType
 	StreamType
 	DocumentPrefixType
 	DocumentSuffixType
@@ -202,6 +203,31 @@ func NewAnchorNode(start, end token.Position, text string) Node {
 	}
 }
 
+type AliasNode struct {
+	start, end token.Position
+	text       string
+}
+
+func (a AliasNode) Start() token.Position {
+	return a.start
+}
+
+func (a AliasNode) End() token.Position {
+	return a.end
+}
+
+func (AliasNode) Type() NodeType {
+	return AliasType
+}
+
+func NewAliasNode(start, end token.Position, text string) Node {
+	return AliasNode{
+		start: start,
+		end:   end,
+		text:  text,
+	}
+}
+
 type BlockHeaderNode struct {
 	start, end   token.Position
 	indentation  int
@@ -239,7 +265,7 @@ func NewBlockHeaderNode(start, end token.Position, chomping ChompingType, indent
 
 type TextNode struct {
 	start, end token.Position
-	text       []byte
+	text       string
 }
 
 func (t TextNode) Start() token.Position {
@@ -254,11 +280,11 @@ func (TextNode) Type() NodeType {
 	return TextType
 }
 
-func (t TextNode) Text() []byte {
+func (t TextNode) Text() string {
 	return t.text
 }
 
-func NewTextNode(start, end token.Position, text []byte) Node {
+func NewTextNode(start, end token.Position, text string) Node {
 	return TextNode{
 		start: start,
 		end:   end,

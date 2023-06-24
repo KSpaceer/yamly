@@ -8,6 +8,7 @@ import (
 	"github.com/KSpaceer/fastyaml/token"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type Context int8
@@ -21,6 +22,10 @@ const (
 	FlowOutContext
 	FlowKeyContext
 )
+
+var bufsPool = sync.Pool{
+	New: func() any { return bytes.NewBuffer(nil) },
+}
 
 type IndentationMode int8
 
@@ -274,6 +279,634 @@ func (p *parser) parseFlowNode(ind *indentation, ctx Context) ast.Node {
 	return ast.NewScalarNode(start, p.tok.End, properties, ast.NewNullNode(contentPos))
 }
 
+// YAML specification: [159] ns-flow-yaml-node
+func (p *parser) parseFlowYAMLNode(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	node := p.parseAliasNode()
+	if ast.ValidNode(node) {
+		p.commit()
+		return node
+	}
+
+	p.rollback()
+	p.setCheckpoint()
+
+	node = p.parsePlain(ind, ctx)
+	if ast.ValidNode(node) {
+		p.commit()
+		return node
+	}
+
+	p.rollback()
+
+	properties := p.parseProperties(ind, ctx)
+	if !ast.ValidNode(properties) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	contentPos := p.tok.Start
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		node = p.parsePlain(ind, ctx)
+	}
+
+	if ast.ValidNode(node) {
+		p.commit()
+		return ast.NewScalarNode(start, p.tok.End, properties, node)
+	}
+
+	p.rollback()
+	return ast.NewScalarNode(start, p.tok.End, properties, ast.NewNullNode(contentPos))
+}
+
+// YAML specification: [160] c-flow-json-node
+func (p *parser) parseFlowJSONNode(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	properties := p.parseProperties(ind, ctx)
+	if ast.ValidNode(properties) && ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		p.commit()
+	} else {
+		p.rollback()
+	}
+	content := p.parseFlowJSONContent(ind, ctx)
+	if !ast.ValidNode(content) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewScalarNode(start, p.tok.End, properties, content)
+}
+
+// YAML specification: [158] ns-flow-content
+func (p *parser) parseFlowContent(ind *indentation, ctx Context) ast.Node {
+	p.setCheckpoint()
+	// YAML specification: [156] ns-flow-yaml-content
+	content := p.parsePlain(ind, ctx)
+	if ast.ValidNode(content) {
+		p.commit()
+		return content
+	}
+	p.rollback()
+	return p.parseFlowJSONContent(ind, ctx)
+}
+
+// YAML specification: [157] c-flow-json-content
+func (p *parser) parseFlowJSONContent(ind *indentation, ctx Context) ast.Node {
+	switch p.tok.Type {
+	case token.SequenceStartType:
+		return p.parseFlowSequence(ind, ctx)
+	case token.MappingStartType:
+		return p.parseFlowMapping(ind, ctx)
+	case token.SingleQuoteType:
+		return p.parseSingleQuoted(ind, ctx)
+	case token.DoubleQuoteType:
+		return p.parseDoubleQuoted(ind, ctx)
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+}
+
+// YAML specification: [137] c-flow-sequence
+func (p *parser) parseFlowSequence(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	if p.tok.Type != token.SequenceStartType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		p.commit()
+	} else {
+		p.rollback()
+	}
+
+	p.setCheckpoint()
+	content := p.parseInFlow(ind, ctx)
+	if ast.ValidNode(content) {
+		p.commit()
+	} else {
+		p.rollback()
+		content = ast.NewNullNode(p.tok.Start)
+	}
+
+	if p.tok.Type != token.SequenceEndType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return content
+}
+
+// YAML specification: [136] in-flow
+func (p *parser) parseInFlow(ind *indentation, ctx Context) ast.Node {
+	switch ctx {
+	case FlowInContext, FlowOutContext:
+		ctx = FlowInContext
+	case BlockKeyContext, FlowKeyContext:
+		ctx = FlowKeyContext
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+	return p.parseFlowSequenceEntries(ind, ctx)
+}
+
+// YAML specification: [138] ns-s-flow-seq-entries
+func (p *parser) parseFlowSequenceEntries(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	entry := p.parseFlowSequenceEntry(ind, ctx)
+	if !ast.ValidNode(entry) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entries := []ast.Node{entry}
+
+	for {
+		p.setCheckpoint()
+		if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+			p.commit()
+		} else {
+			p.rollback()
+		}
+
+		if p.tok.Type != token.CollectEntryType {
+			break
+		}
+		p.next()
+
+		p.setCheckpoint()
+		if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+			p.commit()
+		} else {
+			p.rollback()
+		}
+
+		p.setCheckpoint()
+		entry = p.parseFlowSequenceEntry(ind, ctx)
+		if !ast.ValidNode(entry) {
+			p.rollback()
+			break
+		}
+		p.commit()
+		entries = append(entries, entry)
+	}
+
+	return ast.NewSequenceNode(start, p.tok.End, entries)
+}
+
+// YAML specification: [139] ns-flow-seq-entry
+func (p *parser) parseFlowSequenceEntry(ind *indentation, ctx Context) ast.Node {
+	p.setCheckpoint()
+	entry := p.parseFlowPair(ind, ctx)
+	if ast.ValidNode(entry) {
+		p.commit()
+		return entry
+	}
+	p.rollback()
+	return p.parseFlowNode(ind, ctx)
+}
+
+// YAML specification: [150] ns-flow-pair
+func (p *parser) parseFlowPair(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	pair := p.parseFlowPairEntry(ind, ctx)
+	if ast.ValidNode(pair) {
+		p.commit()
+		return pair
+	}
+	p.rollback()
+
+	if p.tok.Type != token.MappingKeyType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	p.next()
+	if !ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	pair = p.parseFlowMappingExplicitEntry(ind, ctx)
+	if !ast.ValidNode(pair) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return pair
+}
+
+// YAML specification: [151] ns-flow-pair-entry
+func (p *parser) parseFlowPairEntry(ind *indentation, ctx Context) ast.Node {
+	p.setCheckpoint()
+	pair := p.parseFlowPairYAMLKeyEntry(ind, ctx)
+	if ast.ValidNode(pair) {
+		p.commit()
+		return pair
+	}
+
+	p.rollback()
+	p.setCheckpoint()
+
+	pair = p.parseFlowMappingEmptyKeyEntry(ind, ctx)
+	if ast.ValidNode(pair) {
+		p.commit()
+		return pair
+	}
+
+	p.rollback()
+	return p.parseFlowPairJSONKeyEntry(ind, ctx)
+}
+
+// YAML specification: [153] c-ns-flow-pair-json-key-entry
+func (p *parser) parseFlowPairJSONKeyEntry(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+	key := p.parseImplicitJSONKey(FlowKeyContext)
+	if !ast.ValidNode(key) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	value := p.parseFlowMappingAdjacentValue(ind, ctx)
+	if !ast.ValidNode(value) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewMappingEntryNode(start, p.tok.End, key, value)
+}
+
+// YAML specification: [155] c-s-implicit-json-key
+func (p *parser) parseImplicitJSONKey(ctx Context) ast.Node {
+	start := p.tok.Start
+
+	localInd := indentation{
+		value: 0,
+		mode:  StrictEquality,
+	}
+	node := p.parseFlowJSONNode(&localInd, ctx)
+	if !ast.ValidNode(node) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparateInLine()) {
+		p.commit()
+	} else {
+		p.rollback()
+	}
+	return node
+}
+
+// YAML specification: [152] ns-flow-pair-yaml-key-entry
+func (p *parser) parseFlowPairYAMLKeyEntry(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+	key := p.parseImplicitYAMLKey(FlowKeyContext)
+	if !ast.ValidNode(key) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	value := p.parseFlowMappingSeparateValue(ind, ctx)
+	if !ast.ValidNode(value) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewMappingEntryNode(start, p.tok.End, key, value)
+}
+
+// YAML specification: [154] ns-s-implicit-yaml-key
+func (p *parser) parseImplicitYAMLKey(ctx Context) ast.Node {
+	start := p.tok.Start
+
+	localInd := indentation{
+		value: 0,
+		mode:  StrictEquality,
+	}
+	node := p.parseFlowYAMLNode(&localInd, ctx)
+	if !ast.ValidNode(node) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparateInLine()) {
+		p.commit()
+	} else {
+		p.rollback()
+	}
+	return node
+}
+
+// YAML specification: [143] ns-flow-map-explicit-entry
+func (p *parser) parseFlowMappingExplicitEntry(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	entry := p.parseFlowMappingImplicitEntry(ind, ctx)
+	if ast.ValidNode(entry) {
+		p.commit()
+		return entry
+	}
+	p.rollback()
+	return ast.NewMappingEntryNode(
+		start,
+		start,
+		ast.NewNullNode(start),
+		ast.NewNullNode(start),
+	)
+}
+
+// YAML specification: [144] ns-flow-map-implicit-entry
+func (p *parser) parseFlowMappingImplicitEntry(ind *indentation, ctx Context) ast.Node {
+	p.setCheckpoint()
+	entry := p.parseFlowMappingYAMLKeyEntry(ind, ctx)
+	if ast.ValidNode(entry) {
+		p.commit()
+		return entry
+	}
+	p.rollback()
+
+	p.setCheckpoint()
+	entry = p.parseFlowMappingJSONKeyEntry(ind, ctx)
+	if ast.ValidNode(entry) {
+		p.commit()
+		return entry
+	}
+	p.rollback()
+
+	return p.parseFlowMappingEmptyKeyEntry(ind, ctx)
+}
+
+// YAML specification: [146] c-ns-flow-map-empty-key-entry
+func (p *parser) parseFlowMappingEmptyKeyEntry(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	value := p.parseFlowMappingSeparateValue(ind, ctx)
+	if !ast.ValidNode(value) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewMappingEntryNode(start, p.tok.End, ast.NewNullNode(start), value)
+}
+
+// YAML specification: [148] c-ns-flow-map-json-key-entry
+func (p *parser) parseFlowMappingJSONKeyEntry(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	key := p.parseFlowJSONNode(ind, ctx)
+	if !ast.ValidNode(key) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	p.setCheckpoint()
+
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		p.rollback()
+	} else {
+		p.commit()
+	}
+
+	value := p.parseFlowMappingAdjacentValue(ind, ctx)
+	if !ast.ValidNode(value) {
+		p.rollback()
+		value = ast.NewNullNode(p.tok.Start)
+	} else {
+		p.commit()
+	}
+
+	return ast.NewMappingEntryNode(start, p.tok.End, key, value)
+}
+
+// YAML specification: [149] c-ns-flow-map-adjacent-value
+func (p *parser) parseFlowMappingAdjacentValue(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	if p.tok.Type != token.MappingValueType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+
+	p.setCheckpoint()
+
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		p.rollback()
+	} else {
+		p.commit()
+	}
+	value := p.parseFlowNode(ind, ctx)
+	if ast.ValidNode(value) {
+		p.commit()
+	} else {
+		p.rollback()
+		value = ast.NewNullNode(p.tok.Start)
+	}
+	return value
+}
+
+// YAML specification: [145] ns-flow-map-yaml-key-entry
+func (p *parser) parseFlowMappingYAMLKeyEntry(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	key := p.parseFlowYAMLNode(ind, ctx)
+	if !ast.ValidNode(key) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	p.setCheckpoint()
+
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		p.rollback()
+	} else {
+		p.commit()
+	}
+
+	value := p.parseFlowMappingSeparateValue(ind, ctx)
+	if !ast.ValidNode(value) {
+		p.rollback()
+		value = ast.NewNullNode(p.tok.Start)
+	} else {
+		p.commit()
+	}
+	return ast.NewMappingEntryNode(start, p.tok.End, key, value)
+}
+
+// YAML specification: [147] c-ns-flow-map-separate-value
+func (p *parser) parseFlowMappingSeparateValue(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+	if p.tok.Type != token.MappingValueType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	// lookahead
+	if isPlainSafeToken(p.tok, ctx) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	valueStart := p.tok.Start
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		value := p.parseFlowNode(ind, ctx)
+		if ast.ValidNode(value) {
+			p.commit()
+			return value
+		}
+	}
+	p.rollback()
+
+	return ast.NewNullNode(valueStart)
+}
+
+// YAML specification: [131] ns-plain
+func (p *parser) parsePlain(ind *indentation, ctx Context) ast.Node {
+	switch ctx {
+	case FlowInContext, FlowOutContext:
+		return p.parsePlainMultiLine(ind, ctx)
+	case BlockKeyContext, FlowKeyContext:
+		return p.parsePlainOneLine(ctx)
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+}
+
+// YAML specification: [135] ns-plain-multi-line
+func (p *parser) parsePlainMultiLine(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	firstLine, ok := p.parsePlainOneLine(ctx).(ast.TextNode)
+	if !ok || !ast.ValidNode(firstLine) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	buf := bufsPool.Get().(*bytes.Buffer)
+	buf.WriteString(firstLine.Text())
+	for {
+		savedLen := buf.Len()
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parsePlainNextLine(ind, ctx, buf)) {
+			buf.Truncate(savedLen)
+			p.rollback()
+			break
+		}
+		p.commit()
+	}
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
+}
+
+// YAML specification: [134] s-ns-plain-next-line
+func (p *parser) parsePlainNextLine(ind *indentation, ctx Context, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	savedLen := buf.Len()
+	if !ast.ValidNode(p.parseFlowFolded(ind, buf)) {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	// checking that line has at least one plain safe string
+	if !isPlainSafeToken(p.tok, ctx) {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	if !ast.ValidNode(p.parsePlainInLine(ctx, buf)) {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
+}
+
+// YAML specification: [74] s-flow-folded
+func (p *parser) parseFlowFolded(ind *indentation, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparateInLine()) {
+		p.commit()
+	} else {
+		p.rollback()
+	}
+
+	savedLen := buf.Len()
+	if !ast.ValidNode(p.parseFoldedLineBreak(ind, FlowInContext, buf)) ||
+		!ast.ValidNode(p.parseFlowLinePrefix(ind)) {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
+}
+
+// YAML specification: [133] ns-plain-one-line
+func (p *parser) parsePlainOneLine(ctx Context) ast.Node {
+	start := p.tok.Start
+	buf := bufsPool.Get().(*bytes.Buffer)
+	if !ast.ValidNode(p.parsePlainFirst(ctx, buf)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	if !ast.ValidNode(p.parsePlainInLine(ctx, buf)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
+}
+
+// YAML specification: [132] nb-ns-plain-in-line
+func (p *parser) parsePlainInLine(ctx Context, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	for {
+		p.setCheckpoint()
+
+		savedLen := buf.Len()
+
+		for token.IsWhiteSpace(p.tok) {
+			buf.WriteString(p.tok.Origin)
+			p.next()
+		}
+		// YAML specification: [130] ns-plain-char
+		// Only checking for plain safety conformity, because
+		// violating cases for the plain char string are handled by scanner:
+		// e.g.:
+		// "#foo" transforms to tokens "#" (comment) and "foo"
+		// "bar:" transforms to tokens "bar" and ":" (mapping value)
+		if !isPlainSafeToken(p.tok, ctx) {
+			buf.Truncate(savedLen)
+			p.rollback()
+			break
+		}
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
+}
+
+// YAML specification: [126] ns-plain-first
+func (p *parser) parsePlainFirst(ctx Context, buf *bytes.Buffer) ast.Node {
+	if p.tok.Type == token.StringType {
+		// will be parsed as part of "plain in line"
+		return ast.NewBasicNode(p.tok.Start, p.tok.End, ast.TextType)
+	}
+	switch p.tok.Type {
+	case token.MappingKeyType, token.MappingValueType, token.SequenceEntryType:
+		savedLen := buf.Len()
+		buf.WriteString(p.tok.Origin)
+		result := ast.NewBasicNode(p.tok.Start, p.tok.End, ast.TextType)
+		p.next()
+		// lookahead
+		if isPlainSafeToken(p.tok, ctx) {
+			buf.Truncate(savedLen)
+			return ast.NewInvalidNode(result.Start(), result.End())
+		}
+		return result
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+}
+
+func isPlainSafeToken(tok token.Token, ctx Context) bool {
+	switch ctx {
+	case FlowInContext, FlowOutContext:
+		return tok.Type == token.StringType
+	case BlockKeyContext, FlowKeyContext:
+		return tok.Type == token.StringType && tok.ConformsCharSet(token.PlainSafeCharSetType)
+	default:
+		return false
+	}
+}
+
 // YAML specification: [198] s-l+block-in-block
 func (p *parser) parseBlockInBlock(ind *indentation, ctx Context) ast.Node {
 	start := p.tok.Start
@@ -424,8 +1057,6 @@ func (p *parser) parseBlockMappingImplicitEntry(ind *indentation) ast.Node {
 
 // YAML specification: [193] ns-s-block-map-implicit-key
 func (p *parser) parseBlockMappingImplicitKey() ast.Node {
-	start := p.tok.Start
-
 	p.setCheckpoint()
 	key := p.parseImplicitJSONKey(BlockKeyContext)
 	if ast.ValidNode(key) {
@@ -716,24 +1347,21 @@ func (p *parser) parseFolded(ind *indentation) ast.Node {
 // YAML specification: [182] l-folded-content
 func (p *parser) parseFoldedContent(ind *indentation, chomping ast.ChompingType) ast.Node {
 	start := p.tok.Start
-	var foldedBuf bytes.Buffer
+	buf := bufsPool.Get().(*bytes.Buffer)
 
 	p.setCheckpoint()
-	var conditionalBuf bytes.Buffer
-	if ast.ValidNode(p.parseDiffLines(ind, &conditionalBuf)) {
-		if !ast.ValidNode(p.parseChompedLast(chomping, &conditionalBuf)) {
-			p.rollback()
-		} else {
-			foldedBuf = conditionalBuf
-			p.commit()
-		}
+	if ast.ValidNode(p.parseDiffLines(ind, buf)) && ast.ValidNode(p.parseChompedLast(chomping, buf)) {
+		p.commit()
 	} else {
+		buf.Reset()
 		p.rollback()
 	}
-	if !ast.ValidNode(p.parseChompedEmpty(ind, chomping, &foldedBuf)) {
+	if !ast.ValidNode(p.parseChompedEmpty(ind, chomping, buf)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	return ast.NewTextNode(start, p.tok.End, foldedBuf.Bytes())
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
 }
 
 // YAML specification: [181] l-nb-diff-lines
@@ -759,7 +1387,7 @@ func (p *parser) parseDiffLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 		p.commit()
 		savedLen = buf.Len()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [180] l-nb-same-lines
@@ -785,7 +1413,7 @@ func (p *parser) parseSameLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 		p.rollback()
 	} else {
 		p.commit()
-		return ast.NewTextNode(start, p.tok.End, nil)
+		return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 	}
 
 	if !ast.ValidNode(p.parseSpacedLines(ind, buf)) {
@@ -793,7 +1421,7 @@ func (p *parser) parseSameLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [179] l-nb-spaced-lines
@@ -819,7 +1447,7 @@ func (p *parser) parseSpacedLines(ind *indentation, buf *bytes.Buffer) ast.Node 
 		p.commit()
 		savedLen = buf.Len()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [177] s-nb-spaced-text
@@ -837,7 +1465,7 @@ func (p *parser) parseSpacedText(ind *indentation, buf *bytes.Buffer) ast.Node {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [178] b-l-spaced
@@ -861,7 +1489,7 @@ func (p *parser) parseSpacedLineBreak(ind *indentation, buf *bytes.Buffer) ast.N
 		savedLen = buf.Len()
 	}
 
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [176] l-nb-folded-lines
@@ -887,7 +1515,7 @@ func (p *parser) parseFoldedLines(ind *indentation, buf *bytes.Buffer) ast.Node 
 		p.commit()
 		savedLen = buf.Len()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [175] s-nb-folded-text
@@ -905,7 +1533,7 @@ func (p *parser) parseFoldedText(ind *indentation, buf *bytes.Buffer) ast.Node {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [73] b-l-folded
@@ -917,7 +1545,7 @@ func (p *parser) parseFoldedLineBreak(ind *indentation, ctx Context, buf *bytes.
 
 	if ast.ValidNode(p.parseTrimmed(ind, ctx, buf)) {
 		p.commit()
-		return ast.NewTextNode(start, p.tok.End, nil)
+		return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 	}
 
 	p.rollback()
@@ -930,7 +1558,7 @@ func (p *parser) parseFoldedLineBreak(ind *indentation, ctx Context, buf *bytes.
 	buf.WriteByte(byte(token.SpaceCharacter))
 	p.next()
 
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [71] b-l-trimmed
@@ -960,7 +1588,7 @@ func (p *parser) parseTrimmed(ind *indentation, ctx Context, buf *bytes.Buffer) 
 		p.commit()
 		savedLen = buf.Len()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [170] c-l+literal
@@ -995,32 +1623,36 @@ func (p *parser) parseLiteral(ind *indentation) ast.Node {
 // YAML specification: [173] l-literal-content
 func (p *parser) parseLiteralContent(ind *indentation, chomping ast.ChompingType) ast.Node {
 	start := p.tok.Start
-	var literalBuf bytes.Buffer
+	buf := bufsPool.Get().(*bytes.Buffer)
 
 	p.setCheckpoint()
-	var conditionalBuf bytes.Buffer
-	if ast.ValidNode(p.parseLiteralText(ind, &conditionalBuf)) {
+	if ast.ValidNode(p.parseLiteralText(ind, buf)) {
 		for {
 			p.setCheckpoint()
-			if !ast.ValidNode(p.parseLiteralNext(ind, &conditionalBuf)) {
+			savedLen := buf.Len()
+			if !ast.ValidNode(p.parseLiteralNext(ind, buf)) {
+				buf.Truncate(savedLen)
 				p.rollback()
 				break
 			}
 			p.commit()
 		}
-		if !ast.ValidNode(p.parseChompedLast(chomping, &conditionalBuf)) {
+		if !ast.ValidNode(p.parseChompedLast(chomping, buf)) {
+			buf.Reset()
 			p.rollback()
 		} else {
-			literalBuf = conditionalBuf
 			p.commit()
 		}
 	} else {
+		buf.Reset()
 		p.rollback()
 	}
-	if !ast.ValidNode(p.parseChompedEmpty(ind, chomping, &literalBuf)) {
+	if !ast.ValidNode(p.parseChompedEmpty(ind, chomping, buf)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	return ast.NewTextNode(start, p.tok.End, literalBuf.Bytes())
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
 }
 
 // YAML specification: [165] b-chomped-last
@@ -1081,7 +1713,7 @@ func (p *parser) parseKeepEmpty(ind *indentation, buf *bytes.Buffer) ast.Node {
 	} else {
 		p.commit()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [167] l-strip-empty
@@ -1106,7 +1738,7 @@ func (p *parser) parseStripEmpty(ind *indentation) ast.Node {
 	} else {
 		p.commit()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [169] l-trail-comments
@@ -1146,7 +1778,7 @@ func (p *parser) parseLiteralNext(ind *indentation, buf *bytes.Buffer) ast.Node 
 		buf.Truncate(savedLen)
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [171] l-nb-literal-text
@@ -1170,7 +1802,7 @@ func (p *parser) parseLiteralText(ind *indentation, buf *bytes.Buffer) ast.Node 
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
-	return ast.NewTextNode(start, p.tok.End, nil)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [70] l-empty
@@ -1314,6 +1946,21 @@ func (p *parser) parseProperties(ind *indentation, ctx Context) ast.Node {
 	}
 
 	return ast.NewPropertiesNode(start, p.tok.Start, tag, anchor)
+}
+
+// YAML specification: [104] c-ns-alias-node
+func (p *parser) parseAliasNode() ast.Node {
+	start := p.tok.Start
+	if p.tok.Type != token.AliasType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.AnchorCharSetType) {
+		text := p.tok.Origin
+		p.next()
+		return ast.NewAliasNode(start, p.tok.End, text)
+	}
+	return ast.NewInvalidNode(start, p.tok.End)
 }
 
 // YAML specification: [101] c-ns-anchor-property
