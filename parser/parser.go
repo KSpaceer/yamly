@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 type Context int8
@@ -51,6 +52,11 @@ type state struct {
 	startOfLine bool
 }
 
+func Parse(ts lexer.TokenStream) ast.Node {
+	p := NewParser(ts)
+	return p.Parse()
+}
+
 func NewParser(ts lexer.TokenStream) *parser {
 	return &parser{
 		ta: NewTokenAccessor(ts),
@@ -61,8 +67,7 @@ func NewParser(ts lexer.TokenStream) *parser {
 }
 
 func (p *parser) Parse() ast.Node {
-	p.next()
-	return ast.NewInvalidNode(token.Position{}, token.Position{})
+	return p.parseStream()
 }
 
 func (p *parser) next() {
@@ -1220,7 +1225,7 @@ func (p *parser) parsePlain(ind *indentation, ctx Context) ast.Node {
 func (p *parser) parsePlainMultiLine(ind *indentation, ctx Context) ast.Node {
 	start := p.tok.Start
 
-	firstLine, ok := p.parsePlainOneLine(ctx).(ast.TextNode)
+	firstLine, ok := p.parsePlainOneLine(ctx).(*ast.TextNode)
 	if !ok || !ast.ValidNode(firstLine) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -1778,7 +1783,7 @@ func (p *parser) parseFolded(ind *indentation) ast.Node {
 	if !ast.ValidNode(header) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	castedHeader, ok := header.(ast.BlockHeaderNode)
+	castedHeader, ok := header.(*ast.BlockHeaderNode)
 	if !ok {
 		ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -1789,7 +1794,7 @@ func (p *parser) parseFolded(ind *indentation) ast.Node {
 		},
 		castedHeader.ChompingIndicator(),
 	)
-	castedContent, ok := content.(ast.TextNode)
+	castedContent, ok := content.(*ast.TextNode)
 	if !ok {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -1830,7 +1835,7 @@ func (p *parser) parseDiffLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 			p.rollback()
 			break
 		}
-		buf.WriteByte(byte(token.LineFeedCharacter))
+		buf.WriteByte(token.LineFeedCharacter)
 		if !ast.ValidNode(p.parseSameLines(ind, buf)) {
 			buf.Truncate(savedLen)
 			p.rollback()
@@ -2054,7 +2059,7 @@ func (p *parser) parseLiteral(ind *indentation) ast.Node {
 	if !ast.ValidNode(header) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	castedHeader, ok := header.(ast.BlockHeaderNode)
+	castedHeader, ok := header.(*ast.BlockHeaderNode)
 	if !ok {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -2065,7 +2070,7 @@ func (p *parser) parseLiteral(ind *indentation) ast.Node {
 		},
 		castedHeader.ChompingIndicator(),
 	)
-	castedContent, ok := content.(ast.TextNode)
+	castedContent, ok := content.(*ast.TextNode)
 	if !ok {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -2519,7 +2524,7 @@ func (p *parser) parseIndent(ind *indentation) ast.Node {
 	case StrictEquality:
 		return p.parseIndentWithStrictEquality(ind.value)
 	case WithLowerBound:
-		node, ok := p.parseIndentWithLowerBound(ind.value).(ast.IndentNode)
+		node, ok := p.parseIndentWithLowerBound(ind.value).(*ast.IndentNode)
 		if !ok || !ast.ValidNode(node) {
 			return ast.NewInvalidNode(node.Start(), node.End())
 		}
@@ -2743,18 +2748,42 @@ func (p *parser) parseYAMLDirective() ast.Node {
 // YAML specification: [87] ns-yaml-version
 func (p *parser) parseYAMLVersion() ast.Node {
 	start := p.tok.Start
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.DecimalCharSetType) {
+	if p.tok.Type != token.StringType || !isCorrectYAMLVersion(p.tok.Origin) {
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 	p.next()
-	if p.tok.Type != token.DotType {
-		return ast.NewInvalidNode(start, p.tok.End)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
+}
+
+func isCorrectYAMLVersion(s string) bool {
+	const (
+		start = iota
+		metFirstPart
+		metDot
+		metSecondPart
+	)
+	currentState := start
+	for _, c := range s {
+		switch currentState {
+		case start:
+			if unicode.IsDigit(c) {
+				currentState = metFirstPart
+			} else {
+				return false
+			}
+		case metFirstPart:
+			if c == rune(token.DotCharacter) {
+				currentState = metDot
+			} else if !unicode.IsDigit(c) {
+				return false
+			}
+		case metSecondPart:
+			if !unicode.IsDigit(c) {
+				return false
+			}
+		}
 	}
-	p.next()
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.DecimalCharSetType) {
-		return ast.NewInvalidNode(start, p.tok.End)
-	}
-	return ast.NewBasicNode(start, p.tok.End, ast.FloatNumberType)
+	return currentState == metSecondPart
 }
 
 // YAML specification: [202] l-document-prefix

@@ -23,7 +23,6 @@ const (
 	StreamType
 	DocumentPrefixType
 	DocumentSuffixType
-	FloatNumberType
 	IndentType
 	PropertiesType
 	BlockHeaderType
@@ -54,6 +53,7 @@ type Node interface {
 	Start() token.Position
 	End() token.Position
 	Type() NodeType
+	Accept(v Visitor)
 }
 
 func ValidNode(n Node) bool {
@@ -77,6 +77,8 @@ func (b *BasicNode) Type() NodeType {
 	return b.NodeType
 }
 
+func (*BasicNode) Accept(Visitor) {}
+
 func NewInvalidNode(start, end token.Position) Node {
 	return &BasicNode{
 		start:    start,
@@ -98,24 +100,28 @@ type StreamNode struct {
 	documents  []Node
 }
 
-func (s StreamNode) Start() token.Position {
+func (s *StreamNode) Start() token.Position {
 	return s.start
 }
 
-func (s StreamNode) End() token.Position {
+func (s *StreamNode) End() token.Position {
 	return s.end
 }
 
-func (StreamNode) Type() NodeType {
+func (*StreamNode) Type() NodeType {
 	return StreamType
 }
 
-func (s StreamNode) Documents() []Node {
+func (s *StreamNode) Accept(v Visitor) {
+	v.VisitStreamNode(s)
+}
+
+func (s *StreamNode) Documents() []Node {
 	return s.documents
 }
 
 func NewStreamNode(start, end token.Position, documents []Node) Node {
-	return StreamNode{
+	return &StreamNode{
 		start:     start,
 		end:       end,
 		documents: documents,
@@ -128,28 +134,32 @@ type PropertiesNode struct {
 	anchor     Node
 }
 
-func (p PropertiesNode) Start() token.Position {
+func (p *PropertiesNode) Start() token.Position {
 	return p.start
 }
 
-func (p PropertiesNode) End() token.Position {
+func (p *PropertiesNode) End() token.Position {
 	return p.end
 }
 
-func (PropertiesNode) Type() NodeType {
+func (*PropertiesNode) Type() NodeType {
 	return PropertiesType
 }
 
-func (p PropertiesNode) Tag() Node {
+func (p *PropertiesNode) Accept(v Visitor) {
+	v.VisitPropertiesNode(p)
+}
+
+func (p *PropertiesNode) Tag() Node {
 	return p.tag
 }
 
-func (p PropertiesNode) Anchor() Node {
+func (p *PropertiesNode) Anchor() Node {
 	return p.anchor
 }
 
 func NewPropertiesNode(start, end token.Position, tag, anchor Node) Node {
-	return PropertiesNode{
+	return &PropertiesNode{
 		start:  start,
 		end:    end,
 		tag:    tag,
@@ -162,20 +172,24 @@ type TagNode struct {
 	text       string
 }
 
-func (t TagNode) Start() token.Position {
+func (t *TagNode) Start() token.Position {
 	return t.start
 }
 
-func (t TagNode) End() token.Position {
+func (t *TagNode) End() token.Position {
 	return t.end
 }
 
-func (TagNode) Type() NodeType {
+func (*TagNode) Type() NodeType {
 	return TagType
 }
 
+func (t *TagNode) Accept(v Visitor) {
+	v.VisitTagNode(t)
+}
+
 func NewTagNode(start, end token.Position, text string) Node {
-	return TagNode{
+	return &TagNode{
 		start: start,
 		end:   end,
 		text:  text,
@@ -187,20 +201,24 @@ type AnchorNode struct {
 	text       string
 }
 
-func (a AnchorNode) Start() token.Position {
+func (a *AnchorNode) Start() token.Position {
 	return a.start
 }
 
-func (a AnchorNode) End() token.Position {
+func (a *AnchorNode) End() token.Position {
 	return a.end
 }
 
-func (AnchorNode) Type() NodeType {
+func (*AnchorNode) Type() NodeType {
 	return AnchorType
 }
 
+func (a *AnchorNode) Accept(v Visitor) {
+	v.VisitAnchorNode(a)
+}
+
 func NewAnchorNode(start, end token.Position, text string) Node {
-	return AnchorNode{
+	return &AnchorNode{
 		start: start,
 		end:   end,
 		text:  text,
@@ -212,20 +230,24 @@ type AliasNode struct {
 	text       string
 }
 
-func (a AliasNode) Start() token.Position {
+func (a *AliasNode) Start() token.Position {
 	return a.start
 }
 
-func (a AliasNode) End() token.Position {
+func (a *AliasNode) End() token.Position {
 	return a.end
 }
 
-func (AliasNode) Type() NodeType {
+func (*AliasNode) Type() NodeType {
 	return AliasType
 }
 
+func (a *AliasNode) Accept(v Visitor) {
+	v.VisitAliasNode(a)
+}
+
 func NewAliasNode(start, end token.Position, text string) Node {
-	return AliasNode{
+	return &AliasNode{
 		start: start,
 		end:   end,
 		text:  text,
@@ -238,28 +260,30 @@ type BlockHeaderNode struct {
 	chompingType ChompingType
 }
 
-func (b BlockHeaderNode) Start() token.Position {
+func (b *BlockHeaderNode) Start() token.Position {
 	return b.start
 }
 
-func (b BlockHeaderNode) End() token.Position {
+func (b *BlockHeaderNode) End() token.Position {
 	return b.end
 }
 
-func (BlockHeaderNode) Type() NodeType {
+func (*BlockHeaderNode) Type() NodeType {
 	return BlockHeaderType
 }
 
-func (b BlockHeaderNode) IndentationIndicator() int {
+func (*BlockHeaderNode) Accept(Visitor) {}
+
+func (b *BlockHeaderNode) IndentationIndicator() int {
 	return b.indentation
 }
 
-func (b BlockHeaderNode) ChompingIndicator() ChompingType {
+func (b *BlockHeaderNode) ChompingIndicator() ChompingType {
 	return b.chompingType
 }
 
-func NewBlockHeaderNode(start, end token.Position, chomping ChompingType, indentation int) BlockHeaderNode {
-	return BlockHeaderNode{
+func NewBlockHeaderNode(start, end token.Position, chomping ChompingType, indentation int) Node {
+	return &BlockHeaderNode{
 		start:        start,
 		end:          end,
 		indentation:  indentation,
@@ -272,24 +296,28 @@ type TextNode struct {
 	text       string
 }
 
-func (t TextNode) Start() token.Position {
+func (t *TextNode) Start() token.Position {
 	return t.start
 }
 
-func (t TextNode) End() token.Position {
+func (t *TextNode) End() token.Position {
 	return t.end
 }
 
-func (TextNode) Type() NodeType {
+func (*TextNode) Type() NodeType {
 	return TextType
 }
 
-func (t TextNode) Text() string {
+func (t *TextNode) Accept(v Visitor) {
+	v.VisitTextNode(t)
+}
+
+func (t *TextNode) Text() string {
 	return t.text
 }
 
 func NewTextNode(start, end token.Position, text string) Node {
-	return TextNode{
+	return &TextNode{
 		start: start,
 		end:   end,
 		text:  text,
@@ -302,20 +330,24 @@ type ScalarNode struct {
 	content    Node
 }
 
-func (s ScalarNode) Start() token.Position {
+func (s *ScalarNode) Start() token.Position {
 	return s.start
 }
 
-func (s ScalarNode) End() token.Position {
+func (s *ScalarNode) End() token.Position {
 	return s.end
 }
 
-func (ScalarNode) Type() NodeType {
+func (*ScalarNode) Type() NodeType {
 	return ScalarType
 }
 
+func (s *ScalarNode) Accept(v Visitor) {
+	v.VisitScalarNode(s)
+}
+
 func NewScalarNode(start, end token.Position, properties, content Node) Node {
-	return ScalarNode{
+	return &ScalarNode{
 		start:      start,
 		end:        end,
 		properties: properties,
@@ -329,20 +361,24 @@ type CollectionNode struct {
 	collection Node
 }
 
-func (c CollectionNode) Start() token.Position {
+func (c *CollectionNode) Start() token.Position {
 	return c.start
 }
 
-func (c CollectionNode) End() token.Position {
+func (c *CollectionNode) End() token.Position {
 	return c.end
 }
 
-func (CollectionNode) Type() NodeType {
+func (*CollectionNode) Type() NodeType {
 	return CollectionType
 }
 
+func (c *CollectionNode) Accept(v Visitor) {
+	v.VisitCollectionNode(c)
+}
+
 func NewCollectionNode(start, end token.Position, properties, collection Node) Node {
-	return CollectionNode{
+	return &CollectionNode{
 		start:      start,
 		end:        end,
 		properties: properties,
@@ -355,24 +391,26 @@ type IndentNode struct {
 	indent     int
 }
 
-func (i IndentNode) Start() token.Position {
+func (i *IndentNode) Start() token.Position {
 	return i.start
 }
 
-func (i IndentNode) End() token.Position {
+func (i *IndentNode) End() token.Position {
 	return i.end
 }
 
-func (IndentNode) Type() NodeType {
+func (*IndentNode) Type() NodeType {
 	return IndentType
 }
 
-func (i IndentNode) Indent() int {
+func (i *IndentNode) Indent() int {
 	return i.indent
 }
 
+func (*IndentNode) Accept(v Visitor) {}
+
 func NewIndentNode(start, end token.Position, indent int) Node {
-	return IndentNode{
+	return &IndentNode{
 		start:  start,
 		end:    end,
 		indent: indent,
@@ -384,24 +422,28 @@ type SequenceNode struct {
 	entries    []Node
 }
 
-func (s SequenceNode) Start() token.Position {
+func (s *SequenceNode) Start() token.Position {
 	return s.start
 }
 
-func (s SequenceNode) End() token.Position {
+func (s *SequenceNode) End() token.Position {
 	return s.end
 }
 
-func (SequenceNode) Type() NodeType {
+func (*SequenceNode) Type() NodeType {
 	return SequenceType
 }
 
-func (s SequenceNode) Entries() []Node {
+func (s *SequenceNode) Accept(v Visitor) {
+	v.VisitSequenceNode(s)
+}
+
+func (s *SequenceNode) Entries() []Node {
 	return s.entries
 }
 
 func NewSequenceNode(start token.Position, end token.Position, entries []Node) Node {
-	return SequenceNode{start: start, end: end, entries: entries}
+	return &SequenceNode{start: start, end: end, entries: entries}
 }
 
 type MappingNode struct {
@@ -409,24 +451,28 @@ type MappingNode struct {
 	entries    []Node
 }
 
-func (m MappingNode) Start() token.Position {
+func (m *MappingNode) Start() token.Position {
 	return m.start
 }
 
-func (m MappingNode) End() token.Position {
+func (m *MappingNode) End() token.Position {
 	return m.end
 }
 
-func (MappingNode) Type() NodeType {
+func (*MappingNode) Type() NodeType {
 	return MappingType
 }
 
-func (m MappingNode) Entries() []Node {
+func (m *MappingNode) Accept(v Visitor) {
+	v.VisitMappingNode(m)
+}
+
+func (m *MappingNode) Entries() []Node {
 	return m.entries
 }
 
 func NewMappingNode(start token.Position, end token.Position, entries []Node) Node {
-	return MappingNode{start: start, end: end, entries: entries}
+	return &MappingNode{start: start, end: end, entries: entries}
 }
 
 type MappingEntryNode struct {
@@ -434,20 +480,24 @@ type MappingEntryNode struct {
 	key, value Node
 }
 
-func (m MappingEntryNode) Start() token.Position {
+func (m *MappingEntryNode) Start() token.Position {
 	return m.start
 }
 
-func (m MappingEntryNode) End() token.Position {
+func (m *MappingEntryNode) End() token.Position {
 	return m.end
 }
 
-func (MappingEntryNode) Type() NodeType {
+func (*MappingEntryNode) Type() NodeType {
 	return MappingEntryType
 }
 
+func (m *MappingEntryNode) Accept(v Visitor) {
+	v.VisitMappingEntryNode(m)
+}
+
 func NewMappingEntryNode(start, end token.Position, key, value Node) Node {
-	return MappingEntryNode{start: start, end: end, key: key, value: value}
+	return &MappingEntryNode{start: start, end: end, key: key, value: value}
 }
 
 type BlockNode struct {
@@ -455,24 +505,28 @@ type BlockNode struct {
 	content    Node
 }
 
-func (b BlockNode) Start() token.Position {
+func (b *BlockNode) Start() token.Position {
 	return b.start
 }
 
-func (b BlockNode) End() token.Position {
+func (b *BlockNode) End() token.Position {
 	return b.end
 }
 
-func (BlockNode) Type() NodeType {
+func (*BlockNode) Type() NodeType {
 	return BlockType
 }
 
-func (b BlockNode) Content() Node {
+func (b *BlockNode) Accept(v Visitor) {
+	v.VisitBlockNode(b)
+}
+
+func (b *BlockNode) Content() Node {
 	return b.content
 }
 
 func NewBlockNode(start, end token.Position, content Node) Node {
-	return BlockNode{
+	return &BlockNode{
 		start:   start,
 		end:     end,
 		content: content,
@@ -483,18 +537,22 @@ type NullNode struct {
 	pos token.Position
 }
 
-func (n NullNode) Start() token.Position {
+func (n *NullNode) Start() token.Position {
 	return n.pos
 }
 
-func (n NullNode) End() token.Position {
+func (n *NullNode) End() token.Position {
 	return n.pos
 }
 
-func (NullNode) Type() NodeType {
+func (*NullNode) Type() NodeType {
 	return NullType
 }
 
+func (n *NullNode) Accept(v Visitor) {
+	v.VisitNullNode(n)
+}
+
 func NewNullNode(pos token.Position) Node {
-	return NullNode{pos: pos}
+	return &NullNode{pos: pos}
 }

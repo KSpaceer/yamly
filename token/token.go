@@ -32,6 +32,7 @@ const (
 	SpaceCharacter             Character = ' '
 	TabCharacter               Character = '\t'
 	EscapeCharacter            Character = '\\'
+	DotCharacter               Character = '.'
 )
 
 const byteOrderMark = 0xFEFF
@@ -57,7 +58,6 @@ const (
 	SingleQuoteType
 	DoubleQuoteType
 	DirectiveType
-	ReservedType
 	LineBreakType
 	SpaceType
 	TabType
@@ -65,7 +65,6 @@ const (
 	EOFType
 	DocumentEndType
 	DirectiveEndType
-	DotType
 	StringType
 	MinusType
 	PlusType
