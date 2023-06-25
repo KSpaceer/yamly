@@ -96,40 +96,83 @@ func (p *parser) rollback() {
 func (p *parser) parseStream() ast.Node {
 	start := p.tok.Start
 
-	for ast.ValidNode(p.parseDocumentPrefix()) {
-	}
-
-	documents := make([]ast.Node, 0)
-	if doc := p.parseAnyDocument(); ast.ValidNode(doc) {
-		documents = append(documents, doc)
-	}
-
-docs:
 	for {
-		switch {
-		case ast.ValidNode(p.parseDocumentSuffix()):
-			for ast.ValidNode(p.parseDocumentSuffix()) {
-			}
-			for ast.ValidNode(p.parseDocumentPrefix()) {
-			}
-			doc := p.parseAnyDocument()
-			if ast.ValidNode(doc) {
-				documents = append(documents, doc)
-			}
-		case ast.ValidNode(p.parseComment()):
-		default:
-			doc := p.parseExplicitDoc()
-			if ast.ValidNode(doc) {
-				documents = append(documents, doc)
-			} else if p.tok.Type != token.EOFType {
-				return ast.NewInvalidNode(start, p.tok.Start)
-			} else {
-				break docs
-			}
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseDocumentPrefix()) {
+			p.rollback()
+			break
 		}
+		p.commit()
 	}
 
-	return &ast.StreamNode{}
+	var docs []ast.Node
+
+	p.setCheckpoint()
+	doc := p.parseAnyDocument()
+	if !ast.ValidNode(doc) {
+		p.rollback()
+	} else {
+		p.commit()
+		docs = append(docs, doc)
+	}
+
+	for {
+		p.setCheckpoint()
+		doc = p.parseDocumentWithSuffixesAndPrefixes()
+		if ast.ValidNode(doc) {
+			p.commit()
+			docs = append(docs, doc)
+			continue
+		}
+		p.rollback()
+
+		if p.tok.Type == token.BOMType {
+			continue
+		}
+
+		p.setCheckpoint()
+		if ast.ValidNode(p.parseCommentLine()) {
+			p.commit()
+			continue
+		}
+		p.rollback()
+
+		p.setCheckpoint()
+		doc = p.parseExplicitDocument()
+		if !ast.ValidNode(doc) {
+			p.rollback()
+			break
+		}
+		p.commit()
+		docs = append(docs, doc)
+	}
+
+	return ast.NewStreamNode(start, p.tok.End, docs)
+}
+
+func (p *parser) parseDocumentWithSuffixesAndPrefixes() ast.Node {
+	start := p.tok.Start
+	if !ast.ValidNode(p.parseDocumentSuffix()) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseDocumentSuffix()) {
+			p.rollback()
+			break
+		}
+		p.commit()
+	}
+
+	p.setCheckpoint()
+	doc := p.parseAnyDocument()
+	if !ast.ValidNode(doc) {
+		p.rollback()
+		doc = ast.NewNullNode(p.tok.Start)
+	} else {
+		p.commit()
+	}
+	return doc
 }
 
 // YAML specification: [210] l-any-document
@@ -169,7 +212,13 @@ func (p *parser) parseDirectiveDocument() ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 
-	for ast.ValidNode(p.parseDirective()) {
+	for {
+		p.setCheckpoint()
+		if !ast.ValidNode(p.parseDirective()) {
+			p.rollback()
+			break
+		}
+		p.commit()
 	}
 
 	return p.parseExplicitDocument()
@@ -183,12 +232,20 @@ func (p *parser) parseExplicitDocument() ast.Node {
 	}
 	p.next()
 
+	p.setCheckpoint()
 	doc := p.parseBareDocument()
 	if ast.ValidNode(doc) {
+		p.commit()
 		return doc
 	}
-	for ast.ValidNode(p.parseComment()) {
+	p.rollback()
+
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseComments()) {
+		p.rollback()
+		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	p.commit()
 	return ast.NewBasicNode(start, p.tok.End, ast.DocumentType)
 }
 
@@ -201,16 +258,15 @@ func (p *parser) parseBareDocument() ast.Node {
 func (p *parser) parseBlockNode(ind *indentation, ctx Context) ast.Node {
 	start := p.tok.Start
 	p.setCheckpoint()
-	blockInBlock := p.parseBlockInBlock(ind, ctx)
-	if ast.ValidNode(blockInBlock) {
+	node := p.parseBlockInBlock(ind, ctx)
+	if ast.ValidNode(node) {
 		p.commit()
-		return blockInBlock
+		return node
 	}
 	p.rollback()
-	flowInBlock := p.parseFlowInBlock(ind)
-	var flowInBlock ast.Node
-	if ast.ValidNode(flowInBlock) {
-		return flowInBlock
+	node = p.parseFlowInBlock(ind)
+	if ast.ValidNode(node) {
+		return node
 	}
 	return ast.NewInvalidNode(start, p.tok.End)
 }
@@ -367,6 +423,402 @@ func (p *parser) parseFlowJSONContent(ind *indentation, ctx Context) ast.Node {
 	default:
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
+}
+
+// YAML specification: [109] c-double-quoted
+func (p *parser) parseDoubleQuoted(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+	if p.tok.Type != token.DoubleQuoteType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	text := p.parseDoubleText(ind, ctx)
+	if !ast.ValidNode(text) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	if p.tok.Type != token.SingleQuoteType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	return text
+}
+
+// YAML specification: [121] nb-single-text
+func (p *parser) parseDoubleText(ind *indentation, ctx Context) ast.Node {
+	switch ctx {
+	case FlowInContext, FlowOutContext:
+		return p.parseDoubleMultiLine(ind)
+	case BlockKeyContext, FlowKeyContext:
+		return p.parseDoubleOneLine()
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+}
+
+// YAML specification: [111] nb-double-one-line
+func (p *parser) parseDoubleOneLine() ast.Node {
+	start := p.tok.Start
+
+	buf := bufsPool.Get().(*bytes.Buffer)
+	// escape sequences are handled by scanner
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+		token.IsWhiteSpace(p.tok) {
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
+}
+
+// YAML specification: [116] nb-double-multi-line
+func (p *parser) parseDoubleMultiLine(ind *indentation) ast.Node {
+	start := p.tok.Start
+
+	buf := bufsPool.Get().(*bytes.Buffer)
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+		token.IsWhiteSpace(p.tok) {
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+
+	savedLen := buf.Len()
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseDoubleNextLine(ind, buf)) {
+		p.rollback()
+		buf.Truncate(savedLen)
+
+		p.next()
+		for token.IsWhiteSpace(p.tok) {
+			buf.WriteString(p.tok.Origin)
+			p.next()
+		}
+	} else {
+		p.commit()
+	}
+
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
+}
+
+// YAML specification: [115] s-double-next-line
+func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	savedLen := buf.Len()
+
+	if !ast.ValidNode(p.parseDoubleBreak(ind, buf)) {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	p.setCheckpoint()
+
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.JSONCharSetType) {
+		p.rollback()
+		return ast.NewBasicNode(start, p.tok.End, ast.TextType)
+	}
+	p.commit()
+	buf.WriteString(p.tok.Origin)
+	p.next()
+
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+		token.IsWhiteSpace(p.tok) {
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+
+	p.setCheckpoint()
+	savedLen = buf.Len()
+
+	if !ast.ValidNode(p.parseDoubleNextLine(ind, buf)) {
+		p.rollback()
+		buf.Truncate(savedLen)
+		p.next()
+		for token.IsWhiteSpace(p.tok) {
+			buf.WriteString(p.tok.Origin)
+			p.next()
+		}
+	} else {
+		p.commit()
+	}
+
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
+}
+
+// YAML specification: [113] s-double-break
+func (p *parser) parseDoubleBreak(ind *indentation, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	p.setCheckpoint()
+	savedLen := buf.Len()
+	if ast.ValidNode(p.parseDoubleEscaped(ind, buf)) {
+		p.commit()
+		return ast.NewBasicNode(start, p.tok.End, ast.TextType)
+	}
+	p.rollback()
+	buf.Truncate(savedLen)
+	return p.parseFlowFolded(ind, buf)
+}
+
+// YAML specification: [112] s-double-escaped
+func (p *parser) parseDoubleEscaped(ind *indentation, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	savedLen := buf.Len()
+
+	for token.IsWhiteSpace(p.tok) {
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+
+	if p.tok.Type != token.StringType || p.tok.Origin != "\\" {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	if p.tok.Type != token.LineBreakType {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	for {
+		p.setCheckpoint()
+		savedLen := buf.Len()
+		if !ast.ValidNode(p.parseEmpty(ind, FlowInContext, buf)) {
+			buf.Truncate(savedLen)
+			break
+		}
+		p.commit()
+	}
+	if !ast.ValidNode(p.parseFlowLinePrefix(ind)) {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
+}
+
+// YAML specification: [140] c-single-quoted
+func (p *parser) parseSingleQuoted(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+	if p.tok.Type != token.SingleQuoteType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	text := p.parseSingleText(ind, ctx)
+	if !ast.ValidNode(text) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+
+	if p.tok.Type != token.SingleQuoteType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+	return text
+}
+
+// YAML specification: [121] nb-single-text
+func (p *parser) parseSingleText(ind *indentation, ctx Context) ast.Node {
+	switch ctx {
+	case FlowInContext, FlowOutContext:
+		return p.parseSingleMultiLine(ind)
+	case BlockKeyContext, FlowKeyContext:
+		return p.parseSingleOneLine()
+	default:
+		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
+	}
+}
+
+// YAML specification: [122] nb-single-one-line
+func (p *parser) parseSingleOneLine() ast.Node {
+	start := p.tok.Start
+
+	buf := bufsPool.Get().(*bytes.Buffer)
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+		token.IsWhiteSpace(p.tok) {
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
+}
+
+// YAML specification: [125] nb-single-multi-line
+func (p *parser) parseSingleMultiLine(ind *indentation) ast.Node {
+	start := p.tok.Start
+
+	buf := bufsPool.Get().(*bytes.Buffer)
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+		token.IsWhiteSpace(p.tok) {
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+
+	savedLen := buf.Len()
+	p.setCheckpoint()
+	if !ast.ValidNode(p.parseSingleNextLine(ind, buf)) {
+		p.rollback()
+		buf.Truncate(savedLen)
+
+		p.next()
+		for token.IsWhiteSpace(p.tok) {
+			buf.WriteString(p.tok.Origin)
+			p.next()
+		}
+	} else {
+		p.commit()
+	}
+
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
+}
+
+// YAML specification: [124] s-single-next-line
+func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.Node {
+	start := p.tok.Start
+	savedLen := buf.Len()
+	if !ast.ValidNode(p.parseFlowFolded(ind, buf)) {
+		buf.Truncate(savedLen)
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.setCheckpoint()
+
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.JSONCharSetType) {
+		p.rollback()
+		return ast.NewBasicNode(start, p.tok.End, ast.TextType)
+	}
+	p.commit()
+	buf.WriteString(p.tok.Origin)
+	p.next()
+
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+		token.IsWhiteSpace(p.tok) {
+		buf.WriteString(p.tok.Origin)
+		p.next()
+	}
+
+	p.setCheckpoint()
+	savedLen = buf.Len()
+
+	if !ast.ValidNode(p.parseSingleNextLine(ind, buf)) {
+		p.rollback()
+		buf.Truncate(savedLen)
+		p.next()
+		for token.IsWhiteSpace(p.tok) {
+			buf.WriteString(p.tok.Origin)
+			p.next()
+		}
+	} else {
+		p.commit()
+	}
+
+	text := buf.String()
+	bufsPool.Put(buf)
+	return ast.NewTextNode(start, p.tok.End, text)
+}
+
+// YAML specification: [140] c-flow-mapping
+func (p *parser) parseFlowMapping(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	if p.tok.Type != token.MappingStartType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+
+	p.setCheckpoint()
+	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		p.commit()
+	} else {
+		p.rollback()
+	}
+
+	p.setCheckpoint()
+	content := p.parseFlowMappingEntries(ind, ctx)
+	if ast.ValidNode(content) {
+		p.commit()
+	} else {
+		p.rollback()
+		content = ast.NewNullNode(p.tok.Start)
+	}
+
+	if p.tok.Type != token.MappingEndType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return content
+}
+
+// YAML specification: [141] ns-s-flow-map-entries
+func (p *parser) parseFlowMappingEntries(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	entry := p.parseFlowMappingEntry(ind, ctx)
+	if !ast.ValidNode(entry) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entries := []ast.Node{entry}
+
+	for {
+		p.setCheckpoint()
+		if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+			p.commit()
+		} else {
+			p.rollback()
+		}
+
+		if p.tok.Type != token.CollectEntryType {
+			break
+		}
+		p.next()
+
+		p.setCheckpoint()
+		if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+			p.commit()
+		} else {
+			p.rollback()
+		}
+
+		p.setCheckpoint()
+		entry = p.parseFlowMappingEntry(ind, ctx)
+		if !ast.ValidNode(entry) {
+			p.rollback()
+			break
+		}
+		p.commit()
+		entries = append(entries, entry)
+	}
+
+	return ast.NewMappingNode(start, p.tok.End, entries)
+}
+
+// YAML specification: [142] ns-flow-map-entry
+func (p *parser) parseFlowMappingEntry(ind *indentation, ctx Context) ast.Node {
+	start := p.tok.Start
+
+	p.setCheckpoint()
+	entry := p.parseFlowMappingImplicitEntry(ind, ctx)
+	if ast.ValidNode(entry) {
+		p.commit()
+		return entry
+	}
+	p.rollback()
+
+	if p.tok.Start != token.MappingKeyType {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	p.next()
+
+	if !ast.ValidNode(p.parseSeparate(ind, ctx)) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	entry = p.parseFlowMappingExplicitEntry(ind, ctx)
+	if !ast.ValidNode(entry) {
+		return ast.NewInvalidNode(start, p.tok.End)
+	}
+	return entry
 }
 
 // YAML specification: [137] c-flow-sequence

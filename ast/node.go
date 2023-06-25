@@ -60,22 +60,17 @@ func ValidNode(n Node) bool {
 	return n != nil && n.Type() != InvalidType
 }
 
-type NodePosition struct {
-	StartPos token.Position
-	EndPos   token.Position
-}
-
 type BasicNode struct {
-	NodePosition
-	NodeType NodeType
+	start, end token.Position
+	NodeType   NodeType
 }
 
 func (b *BasicNode) Start() token.Position {
-	return b.StartPos
+	return b.start
 }
 
 func (b *BasicNode) End() token.Position {
-	return b.EndPos
+	return b.end
 }
 
 func (b *BasicNode) Type() NodeType {
@@ -84,72 +79,81 @@ func (b *BasicNode) Type() NodeType {
 
 func NewInvalidNode(start, end token.Position) Node {
 	return &BasicNode{
-		NodePosition: NodePosition{
-			StartPos: start,
-			EndPos:   end,
-		},
+		start:    start,
+		end:      end,
 		NodeType: InvalidType,
 	}
 }
 
 func NewBasicNode(start, end token.Position, tp NodeType) Node {
 	return &BasicNode{
-		NodePosition: NodePosition{
-			StartPos: start,
-			EndPos:   end,
-		},
+		start:    start,
+		end:      end,
 		NodeType: tp,
 	}
 }
 
 type StreamNode struct {
-	NodePosition
-	Documents []Node
+	start, end token.Position
+	documents  []Node
 }
 
 func (s StreamNode) Start() token.Position {
-	return s.StartPos
+	return s.start
 }
 
 func (s StreamNode) End() token.Position {
-	return s.EndPos
+	return s.end
 }
 
 func (StreamNode) Type() NodeType {
 	return StreamType
 }
 
-type CommentNode struct {
-	StartPos token.Position
-	EndPos   token.Position
+func (s StreamNode) Documents() []Node {
+	return s.documents
+}
+
+func NewStreamNode(start, end token.Position, documents []Node) Node {
+	return StreamNode{
+		start:     start,
+		end:       end,
+		documents: documents,
+	}
 }
 
 type PropertiesNode struct {
-	NodePosition
-	Tag    Node
-	Anchor Node
+	start, end token.Position
+	tag        Node
+	anchor     Node
 }
 
 func (p PropertiesNode) Start() token.Position {
-	return p.StartPos
+	return p.start
 }
 
 func (p PropertiesNode) End() token.Position {
-	return p.EndPos
+	return p.end
 }
 
 func (PropertiesNode) Type() NodeType {
 	return PropertiesType
 }
 
+func (p PropertiesNode) Tag() Node {
+	return p.tag
+}
+
+func (p PropertiesNode) Anchor() Node {
+	return p.anchor
+}
+
 func NewPropertiesNode(start, end token.Position, tag, anchor Node) Node {
 	return PropertiesNode{
-		NodePosition: NodePosition{
-			StartPos: start,
-			EndPos:   end,
-		},
-		Tag:    tag,
-		Anchor: anchor,
+		start:  start,
+		end:    end,
+		tag:    tag,
+		anchor: anchor,
 	}
 }
 
