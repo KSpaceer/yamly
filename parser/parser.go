@@ -811,7 +811,7 @@ func (p *parser) parseFlowMappingEntry(ind *indentation, ctx Context) ast.Node {
 	}
 	p.rollback()
 
-	if p.tok.Start != token.MappingKeyType {
+	if p.tok.Type != token.MappingKeyType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	p.next()
@@ -2252,10 +2252,10 @@ func (p *parser) parseLiteralText(ind *indentation, buf *bytes.Buffer) ast.Node 
 	if !ast.ValidNode(p.parseIndent(ind)) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	if p.tok.Type != token.StringType && p.tok.Type != token.IsWhiteSpace(p.tok) {
+	if p.tok.Type != token.StringType && !token.IsWhiteSpace(p.tok) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
-	for p.tok.Type == token.StringType || p.tok.Type == token.IsWhiteSpace(p.tok) {
+	for p.tok.Type == token.StringType || token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}

@@ -259,7 +259,7 @@ func TestTokenAccessor(t *testing.T) {
 					Type: token.DirectiveType,
 				},
 				{
-					Type: token.DotType,
+					Type: token.LineBreakType,
 				},
 				{
 					Type: token.AliasType,
@@ -288,7 +288,7 @@ func TestTokenAccessor(t *testing.T) {
 					Type: token.DirectiveType,
 				},
 				{
-					Type: token.DotType,
+					Type: token.LineBreakType,
 				},
 				{
 					Type: token.AliasType,
@@ -297,7 +297,7 @@ func TestTokenAccessor(t *testing.T) {
 					Type: token.DirectiveType,
 				},
 				{
-					Type: token.DotType,
+					Type: token.LineBreakType,
 				},
 				{
 					Type: token.AliasType,

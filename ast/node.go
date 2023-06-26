@@ -56,6 +56,10 @@ type Node interface {
 	Accept(v Visitor)
 }
 
+type Texter interface {
+	Text() string
+}
+
 func ValidNode(n Node) bool {
 	return n != nil && n.Type() != InvalidType
 }
@@ -188,6 +192,10 @@ func (t *TagNode) Accept(v Visitor) {
 	v.VisitTagNode(t)
 }
 
+func (t *TagNode) Text() string {
+	return t.text
+}
+
 func NewTagNode(start, end token.Position, text string) Node {
 	return &TagNode{
 		start: start,
@@ -217,6 +225,10 @@ func (a *AnchorNode) Accept(v Visitor) {
 	v.VisitAnchorNode(a)
 }
 
+func (a *AnchorNode) Text() string {
+	return a.text
+}
+
 func NewAnchorNode(start, end token.Position, text string) Node {
 	return &AnchorNode{
 		start: start,
@@ -244,6 +256,10 @@ func (*AliasNode) Type() NodeType {
 
 func (a *AliasNode) Accept(v Visitor) {
 	v.VisitAliasNode(a)
+}
+
+func (a *AliasNode) Text() string {
+	return a.text
 }
 
 func NewAliasNode(start, end token.Position, text string) Node {
@@ -377,6 +393,14 @@ func (c *CollectionNode) Accept(v Visitor) {
 	v.VisitCollectionNode(c)
 }
 
+func (c *CollectionNode) Properties() Node {
+	return c.properties
+}
+
+func (c *CollectionNode) Collection() Node {
+	return c.collection
+}
+
 func NewCollectionNode(start, end token.Position, properties, collection Node) Node {
 	return &CollectionNode{
 		start:      start,
@@ -494,6 +518,14 @@ func (*MappingEntryNode) Type() NodeType {
 
 func (m *MappingEntryNode) Accept(v Visitor) {
 	v.VisitMappingEntryNode(m)
+}
+
+func (m *MappingEntryNode) Key() Node {
+	return m.key
+}
+
+func (m *MappingEntryNode) Value() Node {
+	return m.value
 }
 
 func NewMappingEntryNode(start, end token.Position, key, value Node) Node {
