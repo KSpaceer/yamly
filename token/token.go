@@ -80,13 +80,13 @@ type CharSetType int16
 const (
 	UnknownCharSetType CharSetType = 0
 	DecimalCharSetType CharSetType = 1 << iota
-	HexadecimalCharSetTYpe
 	WordCharSetType
 	URICharSetType
 	TagCharSetType
 	AnchorCharSetType
 	PlainSafeCharSetType
-	JSONCharSetType
+	SingleQuotedCharSetType
+	DoubleQuotedCharSetType
 )
 
 func IsWhiteSpace(tok Token) bool {
@@ -99,19 +99,46 @@ func IsWhiteSpace(tok Token) bool {
 }
 
 type Token struct {
-	Type             Type
-	Start            Position
-	End              Position
-	Origin           string
-	conformationBits byte
+	Type            Type
+	Start           Position
+	End             Position
+	Origin          string
+	conformationMap conformationBitmap
 }
 
-func (t Token) ConformsCharSet(cst CharSetType) bool {
-	return t.conformationBits&byte(cst) == 1
+func (t *Token) ConformsCharSet(cst CharSetType) bool {
+	result, ok := t.conformationMap.Get(cst)
+	if ok {
+		return result
+	}
+	return t.slowConformation(cst)
+}
+
+func (t *Token) slowConformation(cst CharSetType) bool {
+	var result bool
+	switch cst {
+	case DecimalCharSetType:
+		result = isDecimal(t)
+	case WordCharSetType:
+		result = isWord(t)
+	case URICharSetType:
+		result = isURI(t)
+	case TagCharSetType:
+		result = isTagString(t)
+	case AnchorCharSetType:
+		result = isAnchorString(t)
+	case PlainSafeCharSetType:
+		result = isPlainSafeString(t)
+	case SingleQuotedCharSetType:
+		result = isSingleQuotedString(t)
+	case DoubleQuotedCharSetType:
+		result = isDoubleQuotedString(t)
+	}
+	t.conformationMap.Set(cst, result)
+	return false
 }
 
 type Position struct {
-	Offset int
 	Row    int
 	Column int
 }

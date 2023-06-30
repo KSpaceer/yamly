@@ -67,6 +67,8 @@ func NewParser(ts lexer.TokenStream) *parser {
 }
 
 func (p *parser) Parse() ast.Node {
+	p.next()
+	p.startOfLine = true
 	return p.parseStream()
 }
 
@@ -103,7 +105,7 @@ func (p *parser) parseStream() ast.Node {
 
 	for {
 		p.setCheckpoint()
-		if !ast.ValidNode(p.parseDocumentPrefix()) {
+		if prefix := p.parseDocumentPrefix(); !ast.ValidNode(prefix) || prefix.Type() == ast.NullType {
 			p.rollback()
 			break
 		}
@@ -467,12 +469,13 @@ func (p *parser) parseDoubleOneLine() ast.Node {
 
 	buf := bufsPool.Get().(*bytes.Buffer)
 	// escape sequences are handled by scanner
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -482,7 +485,7 @@ func (p *parser) parseDoubleMultiLine(ind *indentation) ast.Node {
 	start := p.tok.Start
 
 	buf := bufsPool.Get().(*bytes.Buffer)
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -504,6 +507,7 @@ func (p *parser) parseDoubleMultiLine(ind *indentation) ast.Node {
 	}
 
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -520,7 +524,7 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 
 	p.setCheckpoint()
 
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.JSONCharSetType) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.DoubleQuotedCharSetType) {
 		p.rollback()
 		return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 	}
@@ -528,7 +532,7 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	buf.WriteString(p.tok.Origin)
 	p.next()
 
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -550,6 +554,7 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	}
 
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -640,12 +645,13 @@ func (p *parser) parseSingleOneLine() ast.Node {
 	start := p.tok.Start
 
 	buf := bufsPool.Get().(*bytes.Buffer)
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -655,7 +661,7 @@ func (p *parser) parseSingleMultiLine(ind *indentation) ast.Node {
 	start := p.tok.Start
 
 	buf := bufsPool.Get().(*bytes.Buffer)
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -677,6 +683,7 @@ func (p *parser) parseSingleMultiLine(ind *indentation) ast.Node {
 	}
 
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -691,7 +698,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	}
 	p.setCheckpoint()
 
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.JSONCharSetType) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.SingleQuotedCharSetType) {
 		p.rollback()
 		return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 	}
@@ -699,7 +706,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	buf.WriteString(p.tok.Origin)
 	p.next()
 
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.JSONCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -721,6 +728,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	}
 
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -1242,6 +1250,7 @@ func (p *parser) parsePlainMultiLine(ind *indentation, ctx Context) ast.Node {
 		p.commit()
 	}
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -1297,6 +1306,7 @@ func (p *parser) parsePlainOneLine(ctx Context) ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -1332,7 +1342,7 @@ func (p *parser) parsePlainInLine(ctx Context, buf *bytes.Buffer) ast.Node {
 
 // YAML specification: [126] ns-plain-first
 func (p *parser) parsePlainFirst(ctx Context, buf *bytes.Buffer) ast.Node {
-	if p.tok.Type == token.StringType {
+	if p.tok.Type == token.StringType && isPlainSafeToken(p.tok, ctx) {
 		// will be parsed as part of "plain in line"
 		return ast.NewBasicNode(p.tok.Start, p.tok.End, ast.TextType)
 	}
@@ -1396,11 +1406,12 @@ func (p *parser) parseBlockCollection(ind *indentation, ctx Context) ast.Node {
 		if !ast.ValidNode(properties) {
 			p.rollback()
 			properties = nil
+		} else {
+			p.commit()
 		}
 	} else {
 		p.rollback()
 	}
-	p.commit()
 	ind.value--
 
 	if !ast.ValidNode(p.parseComments()) {
@@ -1817,6 +1828,7 @@ func (p *parser) parseFoldedContent(ind *indentation, chomping ast.ChompingType)
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -2108,6 +2120,7 @@ func (p *parser) parseLiteralContent(ind *indentation, chomping ast.ChompingType
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	text := buf.String()
+	buf.Reset()
 	bufsPool.Put(buf)
 	return ast.NewTextNode(start, p.tok.End, text)
 }
@@ -2789,7 +2802,12 @@ func isCorrectYAMLVersion(s string) bool {
 // YAML specification: [202] l-document-prefix
 func (p *parser) parseDocumentPrefix() ast.Node {
 	start := p.tok.Start
+	// document prefix without tokens (null prefix) is valid
+	// so we have to break the endless loop of null prefixes
+	var notNull bool
+
 	if p.tok.Type == token.BOMType {
+		notNull = true
 		p.next()
 	}
 	for {
@@ -2798,7 +2816,11 @@ func (p *parser) parseDocumentPrefix() ast.Node {
 			p.rollback()
 			break
 		}
+		notNull = true
 		p.commit()
+	}
+	if !notNull {
+		return ast.NewNullNode(start)
 	}
 	return ast.NewBasicNode(start, p.tok.Start, ast.DocumentPrefixType)
 }

@@ -30,6 +30,54 @@ const (
 	NullType
 )
 
+func (t NodeType) String() string {
+	switch t {
+	case InvalidType:
+		return "invalid"
+	case DocumentType:
+		return "document"
+	case BlockType:
+		return "block"
+	case ScalarType:
+		return "scalar"
+	case CollectionType:
+		return "collection"
+	case MappingType:
+		return "mapping"
+	case MappingEntryType:
+		return "mapping_entry"
+	case SequenceType:
+		return "sequence"
+	case CommentType:
+		return "comment"
+	case DirectiveType:
+		return "directive"
+	case TagType:
+		return "tag"
+	case AnchorType:
+		return "anchor"
+	case AliasType:
+		return "alias"
+	case StreamType:
+		return "stream"
+	case DocumentPrefixType:
+		return "document_prefix"
+	case DocumentSuffixType:
+		return "document_suffix"
+	case IndentType:
+		return "indent"
+	case PropertiesType:
+		return "properties"
+	case BlockHeaderType:
+		return "block_header"
+	case TextType:
+		return "text"
+	case NullType:
+		return "null"
+	}
+	return ""
+}
+
 type ChompingType int8
 
 const (

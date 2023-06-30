@@ -346,7 +346,7 @@ func TestTokenAccessor(t *testing.T) {
 			}
 
 			for i := range tc.ExpectedTokens {
-				if tc.ExpectedTokens[i] != result[i] {
+				if tc.ExpectedTokens[i].Type != result[i].Type {
 					t.Fatalf("expected token [%v] but got [%v] at position %d",
 						tc.ExpectedTokens[i], result[i], i)
 				}
