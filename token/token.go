@@ -134,8 +134,8 @@ func (t *Token) slowConformation(cst CharSetType) bool {
 	case DoubleQuotedCharSetType:
 		result = isDoubleQuotedString(t)
 	}
-	t.conformationMap.Set(cst, result)
-	return false
+	t.conformationMap = t.conformationMap.Set(cst, result)
+	return result
 }
 
 type Position struct {

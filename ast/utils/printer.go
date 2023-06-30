@@ -104,11 +104,17 @@ func (p *Printer) isLevelEnded(lvl int) bool {
 }
 
 func (p *Printer) VisitStreamNode(n *ast.StreamNode) {
+	levelsEnded := p.levelsEnded
+	defer func() {
+		p.levelsEnded = levelsEnded
+	}()
+
 	docs := n.Documents()
 
 	for i, doc := range docs {
 		p.edgeType = edgeMid
 		if i == len(docs)-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
 		p.printValue(doc)
@@ -129,6 +135,11 @@ func (p *Printer) VisitTextNode(n *ast.TextNode) {}
 func (p *Printer) VisitScalarNode(n *ast.ScalarNode) {}
 
 func (p *Printer) VisitCollectionNode(n *ast.CollectionNode) {
+	levelsEnded := p.levelsEnded
+	defer func() {
+		p.levelsEnded = levelsEnded
+	}()
+
 	properties, collection := n.Properties(), n.Collection()
 	var count, maxCount int
 	if properties != nil {
@@ -141,8 +152,10 @@ func (p *Printer) VisitCollectionNode(n *ast.CollectionNode) {
 	if properties != nil {
 		p.edgeType = edgeMid
 		if count == maxCount-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
+		count++
 		p.printValue(properties)
 		p.level++
 		properties.Accept(p)
@@ -152,8 +165,10 @@ func (p *Printer) VisitCollectionNode(n *ast.CollectionNode) {
 	if collection != nil {
 		p.edgeType = edgeMid
 		if count == maxCount-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
+		count++
 		p.printValue(collection)
 		p.level++
 		collection.Accept(p)
@@ -162,10 +177,16 @@ func (p *Printer) VisitCollectionNode(n *ast.CollectionNode) {
 }
 
 func (p *Printer) VisitSequenceNode(n *ast.SequenceNode) {
+	levelsEnded := p.levelsEnded
+	defer func() {
+		p.levelsEnded = levelsEnded
+	}()
+
 	entries := n.Entries()
 	for i, entry := range entries {
 		p.edgeType = edgeMid
 		if i == len(entries)-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
 		p.printValue(entry)
@@ -176,10 +197,16 @@ func (p *Printer) VisitSequenceNode(n *ast.SequenceNode) {
 }
 
 func (p *Printer) VisitMappingNode(n *ast.MappingNode) {
+	levelsEnded := p.levelsEnded
+	defer func() {
+		p.levelsEnded = levelsEnded
+	}()
+
 	entries := n.Entries()
 	for i, entry := range entries {
 		p.edgeType = edgeMid
 		if i == len(entries)-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
 		p.printValue(entry)
@@ -190,6 +217,11 @@ func (p *Printer) VisitMappingNode(n *ast.MappingNode) {
 }
 
 func (p *Printer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
+	levelsEnded := p.levelsEnded
+	defer func() {
+		p.levelsEnded = levelsEnded
+	}()
+
 	key, value := n.Key(), n.Value()
 	var count, maxCount int
 	if key != nil {
@@ -202,8 +234,10 @@ func (p *Printer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	if key != nil {
 		p.edgeType = edgeMid
 		if count == maxCount-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
+		count++
 		p.printValue(key)
 		p.level++
 		key.Accept(p)
@@ -213,8 +247,10 @@ func (p *Printer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	if value != nil {
 		p.edgeType = edgeMid
 		if count == maxCount-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
+		count++
 		p.printValue(value)
 		p.level++
 		value.Accept(p)
@@ -234,6 +270,11 @@ func (p *Printer) VisitBlockNode(n *ast.BlockNode) {
 func (p *Printer) VisitNullNode(n *ast.NullNode) {}
 
 func (p *Printer) VisitPropertiesNode(n *ast.PropertiesNode) {
+	levelsEnded := p.levelsEnded
+	defer func() {
+		p.levelsEnded = levelsEnded
+	}()
+
 	tag, anchor := n.Tag(), n.Anchor()
 	var count, maxCount int
 	if tag != nil {
@@ -246,8 +287,10 @@ func (p *Printer) VisitPropertiesNode(n *ast.PropertiesNode) {
 	if tag != nil {
 		p.edgeType = edgeMid
 		if count == maxCount-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
+		count++
 		p.printValue(tag)
 		p.level++
 		tag.Accept(p)
@@ -257,8 +300,10 @@ func (p *Printer) VisitPropertiesNode(n *ast.PropertiesNode) {
 	if anchor != nil {
 		p.edgeType = edgeMid
 		if count == maxCount-1 {
+			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
+		count++
 		p.printValue(anchor)
 		p.level++
 		anchor.Accept(p)

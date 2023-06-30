@@ -89,8 +89,13 @@ func (t *testComparingVisitor) VisitScalarNode(n *ast.ScalarNode) {
 
 func (t *testComparingVisitor) VisitCollectionNode(n *ast.CollectionNode) {
 	t.cmpChan <- n
-	n.Properties().Accept(t)
-	n.Collection().Accept(t)
+	properties, collection := n.Properties(), n.Collection()
+	if properties != nil {
+		properties.Accept(t)
+	}
+	if collection != nil {
+		collection.Accept(t)
+	}
 }
 
 func (t *testComparingVisitor) VisitSequenceNode(n *ast.SequenceNode) {

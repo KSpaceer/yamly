@@ -2537,9 +2537,10 @@ func (p *parser) parseIndent(ind *indentation) ast.Node {
 	case StrictEquality:
 		return p.parseIndentWithStrictEquality(ind.value)
 	case WithLowerBound:
+		start := p.tok.Start
 		node, ok := p.parseIndentWithLowerBound(ind.value).(*ast.IndentNode)
 		if !ok || !ast.ValidNode(node) {
-			return ast.NewInvalidNode(node.Start(), node.End())
+			return ast.NewInvalidNode(start, p.tok.End)
 		}
 		ind.mode = StrictEquality
 		ind.value = node.Indent()
