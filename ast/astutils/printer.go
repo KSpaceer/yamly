@@ -259,6 +259,12 @@ func (p *Printer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 }
 
 func (p *Printer) VisitBlockNode(n *ast.BlockNode) {
+	levelsEnded := p.levelsEnded
+	defer func() {
+		p.levelsEnded = levelsEnded
+	}()
+
+	p.levelsEnded = append(p.levelsEnded, p.level)
 	content := n.Content()
 	p.edgeType = edgeEnd
 	p.printValue(content)

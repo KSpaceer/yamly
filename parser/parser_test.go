@@ -292,6 +292,336 @@ func TestParser(t *testing.T) {
 				},
 			),
 		},
+		{
+			name: "simple sequence with mapping and simple single quoted value",
+			tokens: []token.Token{
+				{
+					Type:   token.SequenceEntryType,
+					Origin: "-",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "key1",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "value1",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "key2",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "value2",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SequenceEntryType,
+					Origin: "-",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SingleQuoteType,
+					Origin: "'",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "quotedvalue",
+				},
+				{
+					Type:   token.SingleQuoteType,
+					Origin: "'",
+				},
+				{
+					Type: token.EOFType,
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewCollectionNode(
+						token.Position{},
+						token.Position{},
+						nil,
+						ast.NewSequenceNode(
+							token.Position{},
+							token.Position{},
+							[]ast.Node{
+								ast.NewBlockNode(
+									token.Position{},
+									token.Position{},
+									ast.NewMappingNode(
+										token.Position{},
+										token.Position{},
+										[]ast.Node{
+											ast.NewMappingEntryNode(
+												token.Position{},
+												token.Position{},
+												ast.NewTextNode(
+													token.Position{},
+													token.Position{},
+													"key1",
+												),
+												ast.NewTextNode(
+													token.Position{},
+													token.Position{},
+													"value1",
+												),
+											),
+											ast.NewMappingEntryNode(
+												token.Position{},
+												token.Position{},
+												ast.NewTextNode(
+													token.Position{},
+													token.Position{},
+													"key2",
+												),
+												ast.NewTextNode(
+													token.Position{},
+													token.Position{},
+													"value2",
+												),
+											),
+										},
+									),
+								),
+								ast.NewTextNode(
+									token.Position{},
+									token.Position{},
+									"quotedvalue",
+								),
+							},
+						),
+					),
+				},
+			),
+		},
+		{
+			name: "nested mapping with properties",
+			tokens: []token.Token{
+				{
+					Type:   token.StringType,
+					Origin: "mapping",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.TagType,
+					Origin: "!",
+				},
+				{
+					Type:   token.TagType,
+					Origin: "!",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "map",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.AnchorType,
+					Origin: "&",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "ref",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.MappingKeyType,
+					Origin: "?",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "innerkey",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "innervalue",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "aliased",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.AliasType,
+					Origin: "*",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "ref",
+				},
+				{
+					Type: token.EOFType,
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewCollectionNode(
+						token.Position{},
+						token.Position{},
+						nil,
+						ast.NewMappingNode(
+							token.Position{},
+							token.Position{},
+							[]ast.Node{
+								ast.NewMappingEntryNode(
+									token.Position{},
+									token.Position{},
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"mapping",
+									),
+									ast.NewCollectionNode(
+										token.Position{},
+										token.Position{},
+										ast.NewPropertiesNode(
+											token.Position{},
+											token.Position{},
+											ast.NewTagNode(
+												token.Position{},
+												token.Position{},
+												"map",
+											),
+											ast.NewAnchorNode(
+												token.Position{},
+												token.Position{},
+												"ref",
+											),
+										),
+										ast.NewMappingNode(
+											token.Position{},
+											token.Position{},
+											[]ast.Node{
+												ast.NewMappingEntryNode(
+													token.Position{},
+													token.Position{},
+													ast.NewTextNode(
+														token.Position{},
+														token.Position{},
+														"innerkey",
+													),
+													ast.NewTextNode(
+														token.Position{},
+														token.Position{},
+														"innervalue",
+													),
+												),
+											},
+										),
+									),
+								),
+								ast.NewMappingEntryNode(
+									token.Position{},
+									token.Position{},
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"aliased",
+									),
+									ast.NewAliasNode(
+										token.Position{},
+										token.Position{},
+										"ref",
+									),
+								),
+							},
+						),
+					),
+				},
+			),
+		},
 	}
 	cmp := astutils.NewComparator()
 	for _, tc := range tcases {

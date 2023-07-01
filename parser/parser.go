@@ -673,7 +673,6 @@ func (p *parser) parseSingleMultiLine(ind *indentation) ast.Node {
 		p.rollback()
 		buf.Truncate(savedLen)
 
-		p.next()
 		for token.IsWhiteSpace(p.tok) {
 			buf.WriteString(p.tok.Origin)
 			p.next()
@@ -2692,24 +2691,29 @@ func (p *parser) parseTagHandle() ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	p.next()
-	if p.tok.Type == token.StringType {
-		// either named or secondary tag handle
-		// YAML specification: [91] c-secondary-tag-handle
-		// YAML specification: [92] c-named-tag-handle
-		cutToken := token.Token{
-			Type:   token.StringType,
-			Start:  p.tok.Start,
-			End:    p.tok.End,
-			Origin: p.tok.Origin[:len(p.tok.Origin)-1],
-		}
-		// \w*!
-		if p.tok.Origin[len(p.tok.Origin)-1] == byte(token.TagCharacter) &&
-			(cutToken.ConformsCharSet(token.WordCharSetType) || len(cutToken.Origin) == 0) {
-			p.next()
-		}
-		// else - primary
-		// YAML specification: [90] c-primary-tag-handle
+
+	// YAML specification: [91] c-secondary-tag-handle
+	if p.tok.Type == token.TagType {
+		p.next()
+		return ast.NewBasicNode(start, p.tok.End, ast.TagType)
 	}
+
+	if p.tok.Type == token.StringType {
+		// YAML specification: [92] c-named-tag-handle
+		p.setCheckpoint()
+		p.next()
+		if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.WordCharSetType) {
+			p.next()
+			if p.tok.Type == token.TagType {
+				p.next()
+				p.commit()
+				return ast.NewBasicNode(start, p.tok.End, ast.TagType)
+			}
+		}
+		p.rollback()
+	}
+	// else - primary
+	// YAML specification: [90] c-primary-tag-handle
 	return ast.NewBasicNode(start, p.tok.End, ast.TagType)
 }
 

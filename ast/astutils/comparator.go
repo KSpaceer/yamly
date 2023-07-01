@@ -9,6 +9,9 @@ func NewComparator() *Comparator {
 }
 
 func (c *Comparator) Equal(first, second ast.Node) bool {
+	if first == nil || second == nil {
+		return first == nil && second == nil
+	}
 	firstCh, secondCh := make(chan ast.Node), make(chan ast.Node)
 	firstVisitor := &testComparingVisitor{firstCh}
 	secondVisitor := &testComparingVisitor{secondCh}
