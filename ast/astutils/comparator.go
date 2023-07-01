@@ -1,4 +1,4 @@
-package utils
+package astutils
 
 import "github.com/KSpaceer/fastyaml/ast"
 
@@ -8,7 +8,7 @@ func NewComparator() *Comparator {
 	return &Comparator{}
 }
 
-func (c *Comparator) Compare(first, second ast.Node) bool {
+func (c *Comparator) Equal(first, second ast.Node) bool {
 	firstCh, secondCh := make(chan ast.Node), make(chan ast.Node)
 	firstVisitor := &testComparingVisitor{firstCh}
 	secondVisitor := &testComparingVisitor{secondCh}

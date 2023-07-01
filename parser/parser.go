@@ -92,7 +92,7 @@ func (p *parser) commit() {
 }
 
 func (p *parser) rollback() {
-	p.ta.Rollback()
+	p.tok = p.ta.Rollback()
 	if savedStatesLen := len(p.savedStates); savedStatesLen > 0 {
 		p.state = p.savedStates[savedStatesLen-1]
 		p.savedStates = p.savedStates[:savedStatesLen-1]
@@ -2843,6 +2843,7 @@ func (p *parser) parseDocumentSuffix() ast.Node {
 // YAML specification: [79] s-l-comments
 func (p *parser) parseComments() ast.Node {
 	start := p.tok.Start
+	p.setCheckpoint()
 	if !ast.ValidNode(p.parseSeparatedComment()) {
 		p.rollback()
 		if !p.startOfLine {
@@ -2898,9 +2899,10 @@ func (p *parser) parseCommentLine() ast.Node {
 	} else {
 		p.commit()
 	}
-	if p.tok.Type != token.LineBreakType {
+	if p.tok.Type != token.LineBreakType && p.tok.Type != token.EOFType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	p.next()
 	return ast.NewBasicNode(start, p.tok.End, ast.CommentType)
 }
 

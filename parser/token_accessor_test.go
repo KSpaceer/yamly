@@ -7,13 +7,17 @@ import (
 )
 
 func TestTokenAccessor(t *testing.T) {
+	type rollbackInfo struct {
+		idx int
+		tok token.Token
+	}
 	type tcase struct {
 		Name           string
 		LoadedTokens   []token.Token
 		ExpectedTokens []token.Token
 		Checkpoints    []int
 		Commits        []int
-		Rollbacks      []int
+		Rollbacks      []rollbackInfo
 	}
 
 	tcases := []tcase{
@@ -130,7 +134,12 @@ func TestTokenAccessor(t *testing.T) {
 			},
 			Checkpoints: []int{0},
 			Commits:     []int{2},
-			Rollbacks:   []int{1},
+			Rollbacks: []rollbackInfo{
+				{
+					idx: 1,
+					tok: token.Token{},
+				},
+			},
 		},
 		{
 			Name: "Two checkpoints, one rollback",
@@ -161,7 +170,12 @@ func TestTokenAccessor(t *testing.T) {
 			},
 			Checkpoints: []int{0, 1},
 			Commits:     []int{},
-			Rollbacks:   []int{2},
+			Rollbacks: []rollbackInfo{
+				{
+					idx: 2,
+					tok: token.Token{Type: token.StringType},
+				},
+			},
 		},
 		{
 			Name: "Nested commits",
@@ -238,7 +252,16 @@ func TestTokenAccessor(t *testing.T) {
 			},
 			Checkpoints: []int{0, 1},
 			Commits:     nil,
-			Rollbacks:   []int{2, 3},
+			Rollbacks: []rollbackInfo{
+				{
+					idx: 2,
+					tok: token.Token{Type: token.StringType},
+				},
+				{
+					idx: 3,
+					tok: token.Token{},
+				},
+			},
 		},
 		{
 			Name: "Checkpoint, rollback, checkpoint, commit, checkpoint, checkpoint, commit, rollback",
@@ -305,7 +328,16 @@ func TestTokenAccessor(t *testing.T) {
 			},
 			Checkpoints: []int{0, 3, 6, 7},
 			Commits:     []int{5, 8},
-			Rollbacks:   []int{2, 9},
+			Rollbacks: []rollbackInfo{
+				{
+					idx: 2,
+					tok: token.Token{},
+				},
+				{
+					idx: 9,
+					tok: token.Token{Type: token.TagType},
+				},
+			},
 		},
 	}
 
@@ -329,8 +361,12 @@ func TestTokenAccessor(t *testing.T) {
 					tokenAccessor.Commit()
 					commitIdx++
 				}
-				if rollbackIdx < len(tc.Rollbacks) && i == tc.Rollbacks[rollbackIdx] {
-					tokenAccessor.Rollback()
+				if rollbackIdx < len(tc.Rollbacks) && i == tc.Rollbacks[rollbackIdx].idx {
+					restored := tokenAccessor.Rollback()
+					if restored != tc.Rollbacks[rollbackIdx].tok {
+						t.Errorf("wrong restored token: expected %v but got %v",
+							tc.Rollbacks[rollbackIdx].tok.Type, restored.Type)
+					}
 					rollbackIdx++
 				}
 				if checkpointIdx < len(tc.Checkpoints) && i == tc.Checkpoints[checkpointIdx] {

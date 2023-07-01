@@ -8,6 +8,7 @@ import (
 type TokenAccessor struct {
 	ts               lexer.TokenStream
 	buf              []token.Token
+	saved            token.Token
 	bufIndex         int
 	checkpointsStack []int
 }
@@ -31,14 +32,18 @@ func (a *TokenAccessor) Next() token.Token {
 	if a.bufIndex != -1 && a.bufIndex != len(a.buf) {
 		tok = a.buf[a.bufIndex]
 		a.bufIndex++
-		if a.bufIndex == len(a.buf) && len(a.checkpointsStack) == 0 {
-			a.buf = a.buf[:0]
+		if a.bufIndex == len(a.buf) {
+			if len(a.checkpointsStack) == 0 {
+				a.buf = a.buf[:0]
+			}
 			a.bufIndex = -1
 		}
 	} else {
 		tok = a.ts.Next()
 		if len(a.checkpointsStack) > 0 {
 			a.buf = append(a.buf, tok)
+		} else {
+			a.saved = tok
 		}
 	}
 
@@ -46,18 +51,35 @@ func (a *TokenAccessor) Next() token.Token {
 }
 
 func (a *TokenAccessor) SetCheckpoint() {
-	a.checkpointsStack = append(a.checkpointsStack, len(a.buf))
+	if a.bufIndex != -1 {
+		a.checkpointsStack = append(a.checkpointsStack, a.bufIndex)
+	} else {
+		a.checkpointsStack = append(a.checkpointsStack, len(a.buf)-1)
+	}
 }
 
-func (a *TokenAccessor) Rollback() {
+func (a *TokenAccessor) Rollback() token.Token {
 	switch stackLen := len(a.checkpointsStack); stackLen {
 	case 0:
+		return a.saved
 	default:
 		a.bufIndex = a.checkpointsStack[stackLen-1]
-		if a.bufIndex >= len(a.buf) {
-			a.bufIndex = len(a.buf)
+		var restoredToken token.Token
+		if a.bufIndex == -1 {
+			restoredToken = a.saved
+			if len(a.buf) > 0 {
+				a.bufIndex = 0
+			}
+		} else {
+			restoredToken = a.buf[a.bufIndex]
+			a.bufIndex++
+			if a.bufIndex == len(a.buf) && len(a.checkpointsStack) == 0 {
+				a.buf = a.buf[:0]
+				a.bufIndex = -1
+			}
 		}
 		a.checkpointsStack = a.checkpointsStack[:stackLen-1]
+		return restoredToken
 	}
 }
 
