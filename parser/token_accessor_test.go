@@ -339,6 +339,61 @@ func TestTokenAccessor(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "double nested rollback",
+			LoadedTokens: []token.Token{
+				{
+					Type: token.SpaceType,
+				},
+				{
+					Type: token.StringType,
+				},
+				{
+					Type: token.SequenceEntryType,
+				},
+				{
+					Type: token.CommentType,
+				},
+			},
+			ExpectedTokens: []token.Token{
+				{
+					Type: token.SpaceType,
+				},
+				{
+					Type: token.StringType,
+				},
+				{
+					Type: token.SequenceEntryType,
+				},
+				{
+					Type: token.StringType,
+				},
+				{
+					Type: token.SequenceEntryType,
+				},
+				{
+					Type: token.StringType,
+				},
+				{
+					Type: token.SequenceEntryType,
+				},
+				{
+					Type: token.CommentType,
+				},
+			},
+			Checkpoints: []int{1, 3},
+			Commits:     nil,
+			Rollbacks: []rollbackInfo{
+				{
+					idx: 3,
+					tok: token.Token{Type: token.SpaceType},
+				},
+				{
+					idx: 5,
+					tok: token.Token{Type: token.SpaceType},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tcases {
@@ -364,8 +419,8 @@ func TestTokenAccessor(t *testing.T) {
 				if rollbackIdx < len(tc.Rollbacks) && i == tc.Rollbacks[rollbackIdx].idx {
 					restored := tokenAccessor.Rollback()
 					if restored != tc.Rollbacks[rollbackIdx].tok {
-						t.Errorf("wrong restored token: expected %v but got %v",
-							tc.Rollbacks[rollbackIdx].tok.Type, restored.Type)
+						t.Errorf("wrong restored token: expected %v but got %v at position %d",
+							tc.Rollbacks[rollbackIdx].tok.Type, restored.Type, i)
 					}
 					rollbackIdx++
 				}

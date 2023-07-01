@@ -1334,6 +1334,7 @@ func (p *parser) parsePlainInLine(ctx Context, buf *bytes.Buffer) ast.Node {
 			p.rollback()
 			break
 		}
+		p.commit()
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}

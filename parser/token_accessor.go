@@ -9,52 +9,53 @@ type TokenAccessor struct {
 	ts               lexer.TokenStream
 	buf              []token.Token
 	saved            token.Token
-	bufIndex         int
+	bufIndicator     int
 	checkpointsStack []int
 }
 
 const (
 	tokenBufferPreallocationSize      = 8
 	checkpointsStackPreallocationSize = 2
+
+	withoutBuffer = -1
 )
 
 func NewTokenAccessor(ts lexer.TokenStream) TokenAccessor {
 	return TokenAccessor{
 		ts:               ts,
 		buf:              make([]token.Token, 0, tokenBufferPreallocationSize),
-		bufIndex:         -1,
+		bufIndicator:     withoutBuffer,
 		checkpointsStack: make([]int, 0, checkpointsStackPreallocationSize),
 	}
 }
 
 func (a *TokenAccessor) Next() token.Token {
 	var tok token.Token
-	if a.bufIndex != -1 && a.bufIndex != len(a.buf) {
-		tok = a.buf[a.bufIndex]
-		a.bufIndex++
-		if a.bufIndex == len(a.buf) {
-			if len(a.checkpointsStack) == 0 {
-				a.buf = a.buf[:0]
-			}
-			a.bufIndex = -1
-		}
-	} else {
+	if a.bufIndicator == withoutBuffer {
 		tok = a.ts.Next()
 		if len(a.checkpointsStack) > 0 {
 			a.buf = append(a.buf, tok)
 		} else {
 			a.saved = tok
 		}
+	} else {
+		tok = a.buf[a.bufIndicator]
+		a.bufIndicator++
+		if a.bufIndicator == len(a.buf) {
+			if len(a.checkpointsStack) == 0 {
+				a.buf = a.buf[:0]
+			}
+			a.bufIndicator = withoutBuffer
+		}
 	}
-
 	return tok
 }
 
 func (a *TokenAccessor) SetCheckpoint() {
-	if a.bufIndex != -1 {
-		a.checkpointsStack = append(a.checkpointsStack, a.bufIndex)
-	} else {
+	if a.bufIndicator == withoutBuffer {
 		a.checkpointsStack = append(a.checkpointsStack, len(a.buf)-1)
+	} else {
+		a.checkpointsStack = append(a.checkpointsStack, a.bufIndicator-1)
 	}
 }
 
@@ -63,23 +64,25 @@ func (a *TokenAccessor) Rollback() token.Token {
 	case 0:
 		return a.saved
 	default:
-		a.bufIndex = a.checkpointsStack[stackLen-1]
-		var restoredToken token.Token
-		if a.bufIndex == -1 {
-			restoredToken = a.saved
+		a.bufIndicator = a.checkpointsStack[stackLen-1]
+		var restoredTok token.Token
+		if a.bufIndicator == withoutBuffer {
+			restoredTok = a.saved
 			if len(a.buf) > 0 {
-				a.bufIndex = 0
+				a.bufIndicator = 0
 			}
 		} else {
-			restoredToken = a.buf[a.bufIndex]
-			a.bufIndex++
-			if a.bufIndex == len(a.buf) && len(a.checkpointsStack) == 0 {
-				a.buf = a.buf[:0]
-				a.bufIndex = -1
+			restoredTok = a.buf[a.bufIndicator]
+			a.bufIndicator++
+			if a.bufIndicator == len(a.buf) {
+				if len(a.checkpointsStack) == 0 {
+					a.buf = a.buf[:0]
+				}
+				a.bufIndicator = withoutBuffer
 			}
 		}
 		a.checkpointsStack = a.checkpointsStack[:stackLen-1]
-		return restoredToken
+		return restoredTok
 	}
 }
 
@@ -87,8 +90,8 @@ func (a *TokenAccessor) Commit() {
 	switch stackLen := len(a.checkpointsStack); stackLen {
 	case 0:
 	case 1:
+		a.bufIndicator = -1
 		a.buf = a.buf[:0]
-		a.bufIndex = -1
 		fallthrough
 	default:
 		a.checkpointsStack = a.checkpointsStack[:stackLen-1]

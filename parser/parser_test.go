@@ -130,7 +130,166 @@ func TestParser(t *testing.T) {
 			expectedAST: ast.NewStreamNode(
 				token.Position{},
 				token.Position{},
-				nil,
+				[]ast.Node{
+					ast.NewCollectionNode(
+						token.Position{},
+						token.Position{},
+						nil,
+						ast.NewSequenceNode(
+							token.Position{},
+							token.Position{},
+							[]ast.Node{
+								ast.NewTextNode(token.Position{}, token.Position{}, "value1"),
+								ast.NewTextNode(token.Position{}, token.Position{}, "value2"),
+							},
+						),
+					),
+				},
+			),
+		},
+		{
+			name: "simple mapping with sequence and simple value",
+			tokens: []token.Token{
+				{
+					Type:   token.StringType,
+					Origin: "sequence",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SequenceEntryType,
+					Origin: "-",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "sequencevalue1",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SequenceEntryType,
+					Origin: "-",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "sequencevalue2",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "simple",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "value",
+				},
+				{
+					Type: token.EOFType,
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewCollectionNode(
+						token.Position{},
+						token.Position{},
+						nil,
+						ast.NewMappingNode(
+							token.Position{},
+							token.Position{},
+							[]ast.Node{
+								ast.NewMappingEntryNode(
+									token.Position{},
+									token.Position{},
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"sequence",
+									),
+									ast.NewCollectionNode(
+										token.Position{},
+										token.Position{},
+										nil,
+										ast.NewSequenceNode(
+											token.Position{},
+											token.Position{},
+											[]ast.Node{
+												ast.NewTextNode(
+													token.Position{},
+													token.Position{},
+													"sequencevalue1",
+												),
+												ast.NewTextNode(
+													token.Position{},
+													token.Position{},
+													"sequencevalue2",
+												),
+											},
+										),
+									),
+								),
+								ast.NewMappingEntryNode(
+									token.Position{},
+									token.Position{},
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"simple",
+									),
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"value",
+									),
+								),
+							},
+						),
+					),
+				},
 			),
 		},
 	}
