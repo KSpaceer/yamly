@@ -73,8 +73,8 @@ func (p *parser) Parse() ast.Node {
 }
 
 func (p *parser) next() {
-	p.tok = p.ta.Next()
 	p.startOfLine = p.tok.Type == token.LineBreakType
+	p.tok = p.ta.Next()
 }
 
 func (p *parser) setCheckpoint() {
@@ -253,7 +253,7 @@ func (p *parser) parseExplicitDocument() ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	p.commit()
-	return ast.NewBasicNode(start, p.tok.End, ast.DocumentType)
+	return ast.NewNullNode(p.tok.Start)
 }
 
 // YAML specification: [207] l-bare-document
@@ -444,7 +444,7 @@ func (p *parser) parseDoubleQuoted(ind *indentation, ctx Context) ast.Node {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 
-	if p.tok.Type != token.SingleQuoteType {
+	if p.tok.Type != token.DoubleQuoteType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
 	p.next()
@@ -497,7 +497,6 @@ func (p *parser) parseDoubleMultiLine(ind *indentation) ast.Node {
 		p.rollback()
 		buf.Truncate(savedLen)
 
-		p.next()
 		for token.IsWhiteSpace(p.tok) {
 			buf.WriteString(p.tok.Origin)
 			p.next()
@@ -2666,9 +2665,6 @@ func (p *parser) parseReservedDirective() ast.Node {
 // YAML specification: [88] ns-tag-directive
 func (p *parser) parseTagDirective() ast.Node {
 	start := p.tok.Start
-	for token.IsWhiteSpace(p.tok) {
-		p.next()
-	}
 	if !ast.ValidNode(p.parseSeparateInLine()) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -2698,20 +2694,18 @@ func (p *parser) parseTagHandle() ast.Node {
 		return ast.NewBasicNode(start, p.tok.End, ast.TagType)
 	}
 
-	if p.tok.Type == token.StringType {
-		// YAML specification: [92] c-named-tag-handle
-		p.setCheckpoint()
+	// YAML specification: [92] c-named-tag-handle
+	p.setCheckpoint()
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.WordCharSetType) {
 		p.next()
-		if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.WordCharSetType) {
+		if p.tok.Type == token.TagType {
 			p.next()
-			if p.tok.Type == token.TagType {
-				p.next()
-				p.commit()
-				return ast.NewBasicNode(start, p.tok.End, ast.TagType)
-			}
+			p.commit()
+			return ast.NewBasicNode(start, p.tok.End, ast.TagType)
 		}
-		p.rollback()
 	}
+	p.rollback()
+
 	// else - primary
 	// YAML specification: [90] c-primary-tag-handle
 	return ast.NewBasicNode(start, p.tok.End, ast.TagType)
@@ -2727,13 +2721,14 @@ func (p *parser) parseTagPrefix() ast.Node {
 		p.rollback()
 		// trying global tag
 		// YAML specification: [95] ns-global-tag-prefix
-		if !(p.tok.Type == token.StringType && len(p.tok.Origin) == 1 && p.tok.ConformsCharSet(token.TagCharSetType)) {
+		if p.tok.Type != token.StringType || len(p.tok.Origin) == 0 {
+			return ast.NewInvalidNode(start, p.tok.End)
+		}
+		if !token.ConformsCharSet(p.tok.Origin[:1], token.TagCharSetType) ||
+			!p.tok.ConformsCharSet(token.URICharSetType) {
 			return ast.NewInvalidNode(start, p.tok.End)
 		}
 		p.next()
-		if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.URICharSetType) {
-			p.next()
-		}
 	}
 
 	return ast.NewBasicNode(start, p.tok.End, ast.TagType)
@@ -2796,10 +2791,11 @@ func isCorrectYAMLVersion(s string) bool {
 			} else if !unicode.IsDigit(c) {
 				return false
 			}
-		case metSecondPart:
+		case metDot, metSecondPart:
 			if !unicode.IsDigit(c) {
 				return false
 			}
+			currentState = metSecondPart
 		}
 	}
 	return currentState == metSecondPart
@@ -2838,7 +2834,6 @@ func (p *parser) parseDocumentSuffix() ast.Node {
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 	p.next()
-	p.setCheckpoint()
 	if !ast.ValidNode(p.parseComments()) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}

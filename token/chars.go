@@ -2,8 +2,31 @@ package token
 
 import "strings"
 
-func isDecimal(t *Token) bool {
-	for _, c := range t.Origin {
+func ConformsCharSet(s string, cst CharSetType) bool {
+	var result bool
+	switch cst {
+	case DecimalCharSetType:
+		result = isDecimal(s)
+	case WordCharSetType:
+		result = isWord(s)
+	case URICharSetType:
+		result = isURI(s)
+	case TagCharSetType:
+		result = isTagString(s)
+	case AnchorCharSetType:
+		result = isAnchorString(s)
+	case PlainSafeCharSetType:
+		result = isPlainSafeString(s)
+	case SingleQuotedCharSetType:
+		result = isSingleQuotedString(s)
+	case DoubleQuotedCharSetType:
+		result = isDoubleQuotedString(s)
+	}
+	return result
+}
+
+func isDecimal(s string) bool {
+	for _, c := range s {
 		if !isDigit(c) {
 			return false
 		}
@@ -12,8 +35,8 @@ func isDecimal(t *Token) bool {
 }
 
 // YAML specification: [39] ns-word-char
-func isWord(t *Token) bool {
-	for _, c := range t.Origin {
+func isWord(s string) bool {
+	for _, c := range s {
 		if !(isDigit(c) || isASCIILetter(c) || c == '-') {
 			return false
 		}
@@ -22,10 +45,10 @@ func isWord(t *Token) bool {
 }
 
 // YAML specification: [39] ns-uri-char
-func isURI(t *Token) bool {
+func isURI(s string) bool {
 	const URIOnlyChars = "#;/?:@&=+$_.!~*'"
 
-	runes := []rune(t.Origin)
+	runes := []rune(s)
 	n := len(runes)
 	for i := 0; i < n; i++ {
 		switch runes[i] {
@@ -46,10 +69,10 @@ func isURI(t *Token) bool {
 }
 
 // YAML specification: [40] ns-tag-char
-func isTagString(t *Token) bool {
+func isTagString(s string) bool {
 	const TagOnlyChars = "#;/?:@&=+$_.~*'"
 
-	runes := []rune(t.Origin)
+	runes := []rune(s)
 	n := len(runes)
 	for i := 0; i < n; i++ {
 		switch runes[i] {
@@ -70,14 +93,14 @@ func isTagString(t *Token) bool {
 }
 
 // YAML specification: [102] ns-anchor-char
-func isAnchorString(t *Token) bool {
+func isAnchorString(s string) bool {
 	// has same definition with plain safe chars
-	return isPlainSafeString(t)
+	return isPlainSafeString(s)
 }
 
 // YAML specification: [129] ns-plain-safe-in
-func isPlainSafeString(t *Token) bool {
-	for _, c := range t.Origin {
+func isPlainSafeString(s string) bool {
+	for _, c := range s {
 		if isFlowIndicator(c) {
 			return false
 		}
@@ -86,8 +109,8 @@ func isPlainSafeString(t *Token) bool {
 }
 
 // YAML specification: [118] nb-single-char
-func isSingleQuotedString(t *Token) bool {
-	runes := []rune(t.Origin)
+func isSingleQuotedString(s string) bool {
+	runes := []rune(s)
 	n := len(runes)
 	for i := 0; i < n; i++ {
 		switch runes[i] {
@@ -106,8 +129,8 @@ func isSingleQuotedString(t *Token) bool {
 }
 
 // YAML specification: [107] nb-double-char
-func isDoubleQuotedString(t *Token) bool {
-	runes := []rune(t.Origin)
+func isDoubleQuotedString(s string) bool {
+	runes := []rune(s)
 	n := len(runes)
 	var (
 		i  int

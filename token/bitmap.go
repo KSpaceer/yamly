@@ -13,7 +13,7 @@ func (b conformationBitmap) Set(cst CharSetType, val bool) conformationBitmap {
 
 func (b conformationBitmap) Get(cst CharSetType) (bool, bool) {
 	shift := 2 * bits.TrailingZeros16(uint16(cst))
-	val := (b & 3 << shift) >> shift
+	val := (b & (3 << shift)) >> shift
 	switch val {
 	case 0, 3:
 		return false, false
@@ -26,9 +26,15 @@ func (b conformationBitmap) Get(cst CharSetType) (bool, bool) {
 }
 
 func (b conformationBitmap) setTrue(cst CharSetType) conformationBitmap {
-	return b | (1 << (2 * bits.TrailingZeros16(uint16(cst))))
+	shift := 2 * bits.TrailingZeros16(uint16(cst))
+	// remove false
+	b = b & ^(1 << (1 + shift))
+	return b | (1 << shift)
 }
 
 func (b conformationBitmap) setFalse(cst CharSetType) conformationBitmap {
-	return b | (1 << (1 + 2*bits.TrailingZeros16(uint16(cst))))
+	shift := 1 + 2*bits.TrailingZeros16(uint16(cst))
+	// remove true
+	b = b & ^(1 << (shift - 1))
+	return b | (1 << shift)
 }

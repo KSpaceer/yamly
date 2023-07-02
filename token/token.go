@@ -79,6 +79,9 @@ type CharSetType int16
 
 const (
 	UnknownCharSetType CharSetType = 0
+)
+
+const (
 	DecimalCharSetType CharSetType = 1 << iota
 	WordCharSetType
 	URICharSetType
@@ -115,25 +118,7 @@ func (t *Token) ConformsCharSet(cst CharSetType) bool {
 }
 
 func (t *Token) slowConformation(cst CharSetType) bool {
-	var result bool
-	switch cst {
-	case DecimalCharSetType:
-		result = isDecimal(t)
-	case WordCharSetType:
-		result = isWord(t)
-	case URICharSetType:
-		result = isURI(t)
-	case TagCharSetType:
-		result = isTagString(t)
-	case AnchorCharSetType:
-		result = isAnchorString(t)
-	case PlainSafeCharSetType:
-		result = isPlainSafeString(t)
-	case SingleQuotedCharSetType:
-		result = isSingleQuotedString(t)
-	case DoubleQuotedCharSetType:
-		result = isDoubleQuotedString(t)
-	}
+	result := ConformsCharSet(t.Origin, cst)
 	t.conformationMap = t.conformationMap.Set(cst, result)
 	return result
 }

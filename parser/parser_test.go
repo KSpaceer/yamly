@@ -932,12 +932,12 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			// TODO
 			expectedAST: ast.NewStreamNode(
 				token.Position{},
 				token.Position{},
 				[]ast.Node{
-					ast.NewTextNode(token.Position{}, token.Position{}, ""),
+					ast.NewNullNode(token.Position{}),
+					ast.NewTextNode(token.Position{}, token.Position{}, "aaaa"),
 				},
 			),
 		},
