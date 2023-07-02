@@ -11,7 +11,6 @@ type Visitor interface {
 	VisitSequenceNode(n *SequenceNode)
 	VisitMappingNode(n *MappingNode)
 	VisitMappingEntryNode(n *MappingEntryNode)
-	VisitBlockNode(n *BlockNode)
 	VisitNullNode(n *NullNode)
 	VisitPropertiesNode(n *PropertiesNode)
 }

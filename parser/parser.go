@@ -1688,14 +1688,14 @@ func (p *parser) parseBlockIndented(ind *indentation, ctx Context) ast.Node {
 	if ast.ValidNode(content) {
 		p.commit()
 		p.commit()
-		return ast.NewBlockNode(start, p.tok.End, content)
+		return content
 	}
 	p.rollback()
 
 	content = p.parseCompactMapping(&mergedInd)
 	if ast.ValidNode(content) {
 		p.commit()
-		return ast.NewBlockNode(start, p.tok.End, content)
+		return content
 	}
 	p.rollback()
 
@@ -2889,6 +2889,7 @@ func (p *parser) parseSeparatedComment() ast.Node {
 	if p.tok.Type != token.LineBreakType && p.tok.Type != token.EOFType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	p.next()
 	return ast.NewBasicNode(start, p.tok.End, ast.CommentType)
 }
 
@@ -2919,7 +2920,7 @@ func (p *parser) parseCommentText() ast.Node {
 	start := p.tok.Start
 	p.next()
 
-	for p.tok.Type == token.StringType || p.tok.Type == token.SpaceType {
+	for p.tok.Type == token.StringType || token.IsWhiteSpace(p.tok) {
 		p.next()
 	}
 	return ast.NewBasicNode(start, p.tok.Start, ast.CommentType)

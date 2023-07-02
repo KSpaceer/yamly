@@ -4,7 +4,7 @@ import "strings"
 
 func isDecimal(t *Token) bool {
 	for _, c := range t.Origin {
-		if isDigit(c) {
+		if !isDigit(c) {
 			return false
 		}
 	}

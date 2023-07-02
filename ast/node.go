@@ -9,7 +9,6 @@ type NodeType int8
 const (
 	InvalidType NodeType = iota
 	DocumentType
-	BlockType
 	ScalarType
 	CollectionType
 	MappingType
@@ -36,8 +35,6 @@ func (t NodeType) String() string {
 		return "invalid"
 	case DocumentType:
 		return "document"
-	case BlockType:
-		return "block"
 	case ScalarType:
 		return "scalar"
 	case CollectionType:
@@ -410,6 +407,14 @@ func (s *ScalarNode) Accept(v Visitor) {
 	v.VisitScalarNode(s)
 }
 
+func (s *ScalarNode) Properties() Node {
+	return s.properties
+}
+
+func (s *ScalarNode) Content() Node {
+	return s.content
+}
+
 func NewScalarNode(start, end token.Position, properties, content Node) Node {
 	return &ScalarNode{
 		start:      start,
@@ -578,39 +583,6 @@ func (m *MappingEntryNode) Value() Node {
 
 func NewMappingEntryNode(start, end token.Position, key, value Node) Node {
 	return &MappingEntryNode{start: start, end: end, key: key, value: value}
-}
-
-type BlockNode struct {
-	start, end token.Position
-	content    Node
-}
-
-func (b *BlockNode) Start() token.Position {
-	return b.start
-}
-
-func (b *BlockNode) End() token.Position {
-	return b.end
-}
-
-func (*BlockNode) Type() NodeType {
-	return BlockType
-}
-
-func (b *BlockNode) Accept(v Visitor) {
-	v.VisitBlockNode(b)
-}
-
-func (b *BlockNode) Content() Node {
-	return b.content
-}
-
-func NewBlockNode(start, end token.Position, content Node) Node {
-	return &BlockNode{
-		start:   start,
-		end:     end,
-		content: content,
-	}
 }
 
 type NullNode struct {

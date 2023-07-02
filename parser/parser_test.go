@@ -387,43 +387,39 @@ func TestParser(t *testing.T) {
 							token.Position{},
 							token.Position{},
 							[]ast.Node{
-								ast.NewBlockNode(
+								ast.NewMappingNode(
 									token.Position{},
 									token.Position{},
-									ast.NewMappingNode(
-										token.Position{},
-										token.Position{},
-										[]ast.Node{
-											ast.NewMappingEntryNode(
+									[]ast.Node{
+										ast.NewMappingEntryNode(
+											token.Position{},
+											token.Position{},
+											ast.NewTextNode(
 												token.Position{},
 												token.Position{},
-												ast.NewTextNode(
-													token.Position{},
-													token.Position{},
-													"key1",
-												),
-												ast.NewTextNode(
-													token.Position{},
-													token.Position{},
-													"value1",
-												),
+												"key1",
 											),
-											ast.NewMappingEntryNode(
+											ast.NewTextNode(
 												token.Position{},
 												token.Position{},
-												ast.NewTextNode(
-													token.Position{},
-													token.Position{},
-													"key2",
-												),
-												ast.NewTextNode(
-													token.Position{},
-													token.Position{},
-													"value2",
-												),
+												"value1",
 											),
-										},
-									),
+										),
+										ast.NewMappingEntryNode(
+											token.Position{},
+											token.Position{},
+											ast.NewTextNode(
+												token.Position{},
+												token.Position{},
+												"key2",
+											),
+											ast.NewTextNode(
+												token.Position{},
+												token.Position{},
+												"value2",
+											),
+										),
+									},
 								),
 								ast.NewTextNode(
 									token.Position{},
@@ -619,6 +615,329 @@ func TestParser(t *testing.T) {
 							},
 						),
 					),
+				},
+			),
+		},
+		{
+			name: "sequence with folded and literal",
+			tokens: []token.Token{
+				{
+					Type:   token.SequenceEntryType,
+					Origin: "-",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.AnchorType,
+					Origin: "&",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "lit",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.LiteralType,
+					Origin: "|",
+				},
+				{
+					Type:   token.PlusType,
+					Origin: "+",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "my_comment",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "firstrow",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "secondrow",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SequenceEntryType,
+					Origin: "-",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.TagType,
+					Origin: "!",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "primary",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.FoldedType,
+					Origin: ">",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "1",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "folded",
+				},
+				{
+					Type: token.EOFType,
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewCollectionNode(
+						token.Position{},
+						token.Position{},
+						nil,
+						ast.NewSequenceNode(
+							token.Position{},
+							token.Position{},
+							[]ast.Node{
+								ast.NewScalarNode(
+									token.Position{},
+									token.Position{},
+									ast.NewPropertiesNode(
+										token.Position{},
+										token.Position{},
+										nil,
+										ast.NewAnchorNode(
+											token.Position{},
+											token.Position{},
+											"lit",
+										),
+									),
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"firstrow\nsecondrow\n",
+									),
+								),
+								ast.NewScalarNode(
+									token.Position{},
+									token.Position{},
+									ast.NewPropertiesNode(
+										token.Position{},
+										token.Position{},
+										ast.NewTagNode(
+											token.Position{},
+											token.Position{},
+											"primary",
+										),
+										nil,
+									),
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"\nfolded",
+									),
+								),
+							},
+						),
+					),
+				},
+			),
+		},
+		{
+			name: "several documents with comments",
+			tokens: []token.Token{
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "directives",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "comment",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DirectiveType,
+					Origin: "%",
+				},
+				{
+					Type:   token.StringType,
+					Origin: token.YAMLDirective,
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "2.2",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DirectiveType,
+					Origin: "%",
+				},
+				{
+					Type:   token.StringType,
+					Origin: token.TagDirective,
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.TagType,
+					Origin: "!",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "yaml",
+				},
+				{
+					Type:   token.TagType,
+					Origin: "!",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "tag:yaml.org,2002:",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DirectiveEndType,
+					Origin: "---",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DocumentEndType,
+					Origin: "...",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "aaaa",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type: token.EOFType,
+				},
+			},
+			// TODO
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewTextNode(token.Position{}, token.Position{}, ""),
 				},
 			),
 		},

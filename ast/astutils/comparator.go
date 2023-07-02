@@ -117,13 +117,13 @@ func (t *testComparingVisitor) VisitMappingNode(n *ast.MappingNode) {
 
 func (t *testComparingVisitor) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	t.cmpChan <- n
-	n.Key().Accept(t)
-	n.Value().Accept(t)
-}
-
-func (t *testComparingVisitor) VisitBlockNode(n *ast.BlockNode) {
-	t.cmpChan <- n
-	n.Content().Accept(t)
+	key, value := n.Key(), n.Value()
+	if key != nil {
+		key.Accept(t)
+	}
+	if value != nil {
+		value.Accept(t)
+	}
 }
 
 func (t *testComparingVisitor) VisitNullNode(n *ast.NullNode) {
@@ -132,6 +132,11 @@ func (t *testComparingVisitor) VisitNullNode(n *ast.NullNode) {
 
 func (t *testComparingVisitor) VisitPropertiesNode(n *ast.PropertiesNode) {
 	t.cmpChan <- n
-	n.Anchor().Accept(t)
-	n.Tag().Accept(t)
+	anchor, tag := n.Anchor(), n.Tag()
+	if anchor != nil {
+		anchor.Accept(t)
+	}
+	if tag != nil {
+		tag.Accept(t)
+	}
 }
