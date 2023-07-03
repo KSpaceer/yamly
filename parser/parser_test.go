@@ -16,7 +16,7 @@ func TestParser(t *testing.T) {
 		expectedAST ast.Node
 	}
 
-	tcases := []tcase{
+	var tcases = []tcase{
 		{
 			name: "empty YAML",
 			tokens: []token.Token{
@@ -938,6 +938,372 @@ func TestParser(t *testing.T) {
 				[]ast.Node{
 					ast.NewNullNode(token.Position{}),
 					ast.NewTextNode(token.Position{}, token.Position{}, "aaaa"),
+				},
+			),
+		},
+		{
+			name: "null nodes",
+			tokens: []token.Token{
+				{
+					Type:   token.DirectiveEndType,
+					Origin: "---",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "mapping",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "quoted",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "key",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "empty",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "value",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "empty",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "key",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.MappingKeyType,
+					Origin: "?",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "value",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "empty",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "key",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "and",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "value",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.MappingKeyType,
+					Origin: "?",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "sequence",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SequenceEntryType,
+					Origin: "-",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SequenceEntryType,
+					Origin: "-",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "seqvalue",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DocumentEndType,
+					Origin: "...",
+				},
+				{
+					Type: token.EOFType,
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewCollectionNode(
+						token.Position{},
+						token.Position{},
+						nil,
+						ast.NewMappingNode(
+							token.Position{},
+							token.Position{},
+							[]ast.Node{
+								ast.NewMappingEntryNode(
+									token.Position{},
+									token.Position{},
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"mapping",
+									),
+									ast.NewCollectionNode(
+										token.Position{},
+										token.Position{},
+										nil,
+										ast.NewMappingNode(
+											token.Position{},
+											token.Position{},
+											[]ast.Node{
+												ast.NewMappingEntryNode(
+													token.Position{},
+													token.Position{},
+													ast.NewScalarNode(
+														token.Position{},
+														token.Position{},
+														ast.NewInvalidNode(
+															token.Position{},
+															token.Position{},
+														),
+														ast.NewTextNode(
+															token.Position{},
+															token.Position{},
+															"quoted key",
+														),
+													),
+													ast.NewNullNode(token.Position{}),
+												),
+												ast.NewMappingEntryNode(
+													token.Position{},
+													token.Position{},
+													ast.NewNullNode(token.Position{}),
+													ast.NewTextNode(
+														token.Position{},
+														token.Position{},
+														"value",
+													),
+												),
+												ast.NewMappingEntryNode(
+													token.Position{},
+													token.Position{},
+													ast.NewNullNode(token.Position{}),
+													ast.NewNullNode(token.Position{}),
+												),
+											},
+										),
+									),
+								),
+								ast.NewMappingEntryNode(
+									token.Position{},
+									token.Position{},
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"sequence",
+									),
+									ast.NewCollectionNode(
+										token.Position{},
+										token.Position{},
+										nil,
+										ast.NewSequenceNode(
+											token.Position{},
+											token.Position{},
+											[]ast.Node{
+												ast.NewNullNode(token.Position{}),
+												ast.NewTextNode(
+													token.Position{},
+													token.Position{},
+													"seqvalue",
+												),
+											},
+										),
+									),
+								),
+							},
+						),
+					),
+					ast.NewNullNode(token.Position{}),
 				},
 			),
 		},
