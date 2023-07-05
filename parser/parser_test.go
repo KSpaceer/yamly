@@ -626,8 +626,7 @@ func TestParser(t *testing.T) {
 					Origin: "-",
 				},
 				{
-					Type:   token.SpaceType,
-					Origin: " ",
+					Type: token.SpaceType, Origin: " ",
 				},
 				{
 					Type:   token.AnchorType,
@@ -1304,6 +1303,299 @@ func TestParser(t *testing.T) {
 						),
 					),
 					ast.NewNullNode(token.Position{}),
+				},
+			),
+		},
+		{
+			name: "flow syntax sequence",
+			tokens: []token.Token{
+				{
+					Type:   token.SequenceStartType,
+					Origin: "[",
+				},
+				{
+					Type:   token.TabType,
+					Origin: "\t",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "plain",
+				},
+				{
+					Type:   token.TabType,
+					Origin: "\t",
+				},
+				{
+					Type:   token.CollectEntryType,
+					Origin: ",",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "\\\"multi\\\"",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "line",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.SequenceEndType,
+					Origin: "]",
+				},
+				{
+					Type: token.EOFType,
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewSequenceNode(
+						token.Position{},
+						token.Position{},
+						[]ast.Node{
+							ast.NewTextNode(
+								token.Position{},
+								token.Position{},
+								"plain",
+							),
+							ast.NewTextNode(
+								token.Position{},
+								token.Position{},
+								"\\\"multi\\\"\n\nline",
+							),
+						},
+					),
+				},
+			),
+		},
+		{
+			name: "flow syntax mapping",
+			tokens: []token.Token{
+				{
+					Type:   token.MappingStartType,
+					Origin: "{",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "unquoted",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.TabType,
+					Origin: "\t",
+				},
+				{
+					Type:   token.SingleQuoteType,
+					Origin: "'",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "''single quoted''",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "multiline \"ათჯერ გაზომე და ერთხელ გაჭერი\"",
+				},
+				{
+					Type:   token.SingleQuoteType,
+					Origin: "'",
+				},
+				{
+					Type:   token.CollectEntryType,
+					Origin: ",",
+				},
+				{
+					Type:   token.MappingKeyType,
+					Origin: "?",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "explicit key",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "adjacent",
+				},
+				{
+					Type:   token.CollectEntryType,
+					Origin: ",",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "novalue",
+				},
+				{
+					Type:   token.CollectEntryType,
+					Origin: ",",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.CollectEntryType,
+					Origin: ",",
+				},
+				{
+					Type:   token.MappingKeyType,
+					Origin: "?",
+				},
+				{
+					Type:   token.TabType,
+					Origin: "\t",
+				},
+				{
+					Type:   token.MappingEndType,
+					Origin: "}",
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewMappingNode(
+						token.Position{},
+						token.Position{},
+						[]ast.Node{
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewTextNode(
+									token.Position{},
+									token.Position{},
+									"unquoted",
+								),
+								ast.NewTextNode(
+									token.Position{},
+									token.Position{},
+									"''single quoted''\n\nmultiline \"ათჯერ გაზომე და ერთხელ გაჭერი\"",
+								),
+							),
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewScalarNode(
+									token.Position{},
+									token.Position{},
+									ast.NewInvalidNode(
+										token.Position{},
+										token.Position{},
+									),
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"explicit key",
+									),
+								),
+								ast.NewTextNode(
+									token.Position{},
+									token.Position{},
+									"adjacent",
+								),
+							),
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewTextNode(
+									token.Position{},
+									token.Position{},
+									"novalue",
+								),
+								ast.NewNullNode(token.Position{}),
+							),
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewNullNode(token.Position{}),
+								ast.NewNullNode(token.Position{}),
+							),
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewNullNode(token.Position{}),
+								ast.NewNullNode(token.Position{}),
+							),
+						},
+					),
 				},
 			),
 		},

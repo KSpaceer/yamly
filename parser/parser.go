@@ -543,7 +543,6 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	if !ast.ValidNode(p.parseDoubleNextLine(ind, buf)) {
 		p.rollback()
 		buf.Truncate(savedLen)
-		p.next()
 		for token.IsWhiteSpace(p.tok) {
 			buf.WriteString(p.tok.Origin)
 			p.next()
@@ -552,10 +551,7 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 		p.commit()
 	}
 
-	text := buf.String()
-	buf.Reset()
-	bufsPool.Put(buf)
-	return ast.NewTextNode(start, p.tok.End, text)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [113] s-double-break
@@ -716,7 +712,6 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	if !ast.ValidNode(p.parseSingleNextLine(ind, buf)) {
 		p.rollback()
 		buf.Truncate(savedLen)
-		p.next()
 		for token.IsWhiteSpace(p.tok) {
 			buf.WriteString(p.tok.Origin)
 			p.next()
@@ -724,11 +719,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	} else {
 		p.commit()
 	}
-
-	text := buf.String()
-	buf.Reset()
-	bufsPool.Put(buf)
-	return ast.NewTextNode(start, p.tok.End, text)
+	return ast.NewBasicNode(start, p.tok.End, ast.TextType)
 }
 
 // YAML specification: [140] c-flow-mapping
@@ -759,6 +750,7 @@ func (p *parser) parseFlowMapping(ind *indentation, ctx Context) ast.Node {
 	if p.tok.Type != token.MappingEndType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	p.next()
 	return content
 }
 
@@ -796,10 +788,10 @@ func (p *parser) parseFlowMappingEntries(ind *indentation, ctx Context) ast.Node
 		entry = p.parseFlowMappingEntry(ind, ctx)
 		if !ast.ValidNode(entry) {
 			p.rollback()
-			break
+		} else {
+			entries = append(entries, entry)
+			p.commit()
 		}
-		p.commit()
-		entries = append(entries, entry)
 	}
 
 	return ast.NewMappingNode(start, p.tok.End, entries)
@@ -809,23 +801,19 @@ func (p *parser) parseFlowMappingEntries(ind *indentation, ctx Context) ast.Node
 func (p *parser) parseFlowMappingEntry(ind *indentation, ctx Context) ast.Node {
 	start := p.tok.Start
 
-	p.setCheckpoint()
+	if p.tok.Type == token.MappingKeyType {
+		p.setCheckpoint()
+		p.next()
+		if ast.ValidNode(p.parseSeparate(ind, ctx)) {
+			entry := p.parseFlowMappingExplicitEntry(ind, ctx)
+			if ast.ValidNode(entry) {
+				p.commit()
+				return entry
+			}
+		}
+		p.rollback()
+	}
 	entry := p.parseFlowMappingImplicitEntry(ind, ctx)
-	if ast.ValidNode(entry) {
-		p.commit()
-		return entry
-	}
-	p.rollback()
-
-	if p.tok.Type != token.MappingKeyType {
-		return ast.NewInvalidNode(start, p.tok.End)
-	}
-	p.next()
-
-	if !ast.ValidNode(p.parseSeparate(ind, ctx)) {
-		return ast.NewInvalidNode(start, p.tok.End)
-	}
-	entry = p.parseFlowMappingExplicitEntry(ind, ctx)
 	if !ast.ValidNode(entry) {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
@@ -860,6 +848,7 @@ func (p *parser) parseFlowSequence(ind *indentation, ctx Context) ast.Node {
 	if p.tok.Type != token.SequenceEndType {
 		return ast.NewInvalidNode(start, p.tok.End)
 	}
+	p.next()
 	return content
 }
 
@@ -1348,14 +1337,17 @@ func (p *parser) parsePlainFirst(ctx Context, buf *bytes.Buffer) ast.Node {
 	switch p.tok.Type {
 	case token.MappingKeyType, token.MappingValueType, token.SequenceEntryType:
 		savedLen := buf.Len()
+		p.setCheckpoint()
 		buf.WriteString(p.tok.Origin)
 		result := ast.NewBasicNode(p.tok.Start, p.tok.End, ast.TextType)
 		p.next()
 		// lookahead
-		if isPlainSafeToken(p.tok, ctx) {
+		if !isPlainSafeToken(p.tok, ctx) {
+			p.rollback()
 			buf.Truncate(savedLen)
 			return ast.NewInvalidNode(result.Start(), result.End())
 		}
+		p.commit()
 		return result
 	default:
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
@@ -2520,11 +2512,11 @@ func (p *parser) parseSeparateLines(ind *indentation) ast.Node {
 
 // YAML specification: [66] s-separate-in-line
 func (p *parser) parseSeparateInLine() ast.Node {
-	if p.tok.Type != token.SpaceType && !p.startOfLine {
+	if !token.IsWhiteSpace(p.tok) && !p.startOfLine {
 		return ast.NewInvalidNode(p.tok.Start, p.tok.End)
 	}
 	start := p.tok.Start
-	for p.tok.Type == token.SpaceType {
+	for token.IsWhiteSpace(p.tok) {
 		p.next()
 	}
 	return ast.NewBasicNode(start, p.tok.End, ast.IndentType)

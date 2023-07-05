@@ -225,6 +225,7 @@ func isEscapedCharacter(runes []rune, i int) (int, bool) {
 		if strings.IndexRune(singleEscapedCharacters, runes[i]) == -1 {
 			return 0, false
 		}
+		i++
 	}
 	return i, true
 }
