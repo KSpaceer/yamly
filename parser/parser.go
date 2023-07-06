@@ -2190,6 +2190,7 @@ func (p *parser) parseStripEmpty(ind *indentation) ast.Node {
 			p.rollback()
 			break
 		}
+		p.next()
 		p.commit()
 	}
 

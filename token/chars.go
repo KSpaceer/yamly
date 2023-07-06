@@ -46,7 +46,7 @@ func isWord(s string) bool {
 
 // YAML specification: [39] ns-uri-char
 func isURI(s string) bool {
-	const URIOnlyChars = "#;/?:@&=+$_.!~*'"
+	const URIOnlyChars = "-#;/?:@&=+$_.!~*'"
 
 	runes := []rune(s)
 	n := len(runes)

@@ -13,8 +13,8 @@ func (c *Comparator) Equal(first, second ast.Node) bool {
 		return first == nil && second == nil
 	}
 	firstCh, secondCh := make(chan ast.Node), make(chan ast.Node)
-	firstVisitor := &testComparingVisitor{firstCh}
-	secondVisitor := &testComparingVisitor{secondCh}
+	firstVisitor := &comparingVisitor{firstCh}
+	secondVisitor := &comparingVisitor{secondCh}
 	go func() {
 		first.Accept(firstVisitor)
 		close(firstCh)
@@ -59,38 +59,45 @@ func (c *Comparator) compareNodes(first, second ast.Node) bool {
 	}
 }
 
-type testComparingVisitor struct {
+type comparingVisitor struct {
 	cmpChan chan<- ast.Node
 }
 
-func (t *testComparingVisitor) VisitStreamNode(n *ast.StreamNode) {
+func (t *comparingVisitor) VisitStreamNode(n *ast.StreamNode) {
 	t.cmpChan <- n
 	for _, doc := range n.Documents() {
 		doc.Accept(t)
 	}
 }
 
-func (t *testComparingVisitor) VisitTagNode(n *ast.TagNode) {
+func (t *comparingVisitor) VisitTagNode(n *ast.TagNode) {
 	t.cmpChan <- n
 }
 
-func (t *testComparingVisitor) VisitAnchorNode(n *ast.AnchorNode) {
+func (t *comparingVisitor) VisitAnchorNode(n *ast.AnchorNode) {
 	t.cmpChan <- n
 }
 
-func (t *testComparingVisitor) VisitAliasNode(n *ast.AliasNode) {
+func (t *comparingVisitor) VisitAliasNode(n *ast.AliasNode) {
 	t.cmpChan <- n
 }
 
-func (t *testComparingVisitor) VisitTextNode(n *ast.TextNode) {
+func (t *comparingVisitor) VisitTextNode(n *ast.TextNode) {
 	t.cmpChan <- n
 }
 
-func (t *testComparingVisitor) VisitScalarNode(n *ast.ScalarNode) {
+func (t *comparingVisitor) VisitScalarNode(n *ast.ScalarNode) {
 	t.cmpChan <- n
+	properties, content := n.Properties(), n.Content()
+	if properties != nil {
+		properties.Accept(t)
+	}
+	if content != nil {
+		content.Accept(t)
+	}
 }
 
-func (t *testComparingVisitor) VisitCollectionNode(n *ast.CollectionNode) {
+func (t *comparingVisitor) VisitCollectionNode(n *ast.CollectionNode) {
 	t.cmpChan <- n
 	properties, collection := n.Properties(), n.Collection()
 	if properties != nil {
@@ -101,21 +108,21 @@ func (t *testComparingVisitor) VisitCollectionNode(n *ast.CollectionNode) {
 	}
 }
 
-func (t *testComparingVisitor) VisitSequenceNode(n *ast.SequenceNode) {
+func (t *comparingVisitor) VisitSequenceNode(n *ast.SequenceNode) {
 	t.cmpChan <- n
 	for _, entry := range n.Entries() {
 		entry.Accept(t)
 	}
 }
 
-func (t *testComparingVisitor) VisitMappingNode(n *ast.MappingNode) {
+func (t *comparingVisitor) VisitMappingNode(n *ast.MappingNode) {
 	t.cmpChan <- n
 	for _, entry := range n.Entries() {
 		entry.Accept(t)
 	}
 }
 
-func (t *testComparingVisitor) VisitMappingEntryNode(n *ast.MappingEntryNode) {
+func (t *comparingVisitor) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	t.cmpChan <- n
 	key, value := n.Key(), n.Value()
 	if key != nil {
@@ -126,11 +133,11 @@ func (t *testComparingVisitor) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	}
 }
 
-func (t *testComparingVisitor) VisitNullNode(n *ast.NullNode) {
+func (t *comparingVisitor) VisitNullNode(n *ast.NullNode) {
 	t.cmpChan <- n
 }
 
-func (t *testComparingVisitor) VisitPropertiesNode(n *ast.PropertiesNode) {
+func (t *comparingVisitor) VisitPropertiesNode(n *ast.PropertiesNode) {
 	t.cmpChan <- n
 	anchor, tag := n.Anchor(), n.Tag()
 	if anchor != nil {
