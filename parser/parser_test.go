@@ -31,6 +31,9 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "simple mapping entry",
+			/*
+				key: value
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.StringType,
@@ -94,6 +97,10 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "simple sequence",
+			/*
+				- value1
+				- value2
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.SequenceEntryType,
@@ -149,6 +156,12 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "simple mapping with sequence and simple value",
+			/*
+				sequence:
+				  - sequencevalue1
+				  - sequencevalue2
+				simple: value
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.StringType,
@@ -294,6 +307,11 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "simple sequence with mapping and simple single quoted value",
+			/*
+				- key1: value1
+				  key2: value2
+				- 'quotedvalue'
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.SequenceEntryType,
@@ -434,6 +452,12 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "nested mapping with properties",
+			/*
+				mapping: !!map &ref
+				 ? innerkey
+				 : innervalue
+				aliased: *ref
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.StringType,
@@ -620,6 +644,15 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "sequence with folded and literal",
+			/*
+				- &lit |+ # my_comment
+				  firstrow
+				  secondrow
+
+				- !primary >1
+
+				   folded
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.SequenceEntryType,
@@ -818,6 +851,16 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "several documents with comments",
+			/*
+				#directives comment
+				%YAML 2.2
+				%TAG !yaml! tag:yaml.org,2002:
+				---
+				...
+				"aaaa \
+				"
+
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.CommentType,
@@ -954,6 +997,21 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "null nodes",
+			/*
+				---
+				mapping:
+				  "quoted key": #empty value
+				#empty key
+				  ?
+				  : value
+				#empty key and value
+				  ?
+				  :
+				sequence:
+				  -
+				  - seqvalue
+				...
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.DirectiveEndType,
@@ -1314,12 +1372,17 @@ func TestParser(t *testing.T) {
 							},
 						),
 					),
-					ast.NewNullNode(token.Position{}),
 				},
 			),
 		},
 		{
 			name: "flow syntax sequence",
+			/*
+				[	plain	,"\"multi\"
+
+
+				  line",flow: pair,	? ]
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.SequenceStartType,
@@ -1470,6 +1533,12 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "flow syntax mapping",
+			/*
+				{ unquoted:	'''single quoted''
+
+
+				  multiline "ათჯერ გაზომე და ერთხელ გაჭერი"',? "explicit key":adjacent,novalue,:,?	}
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.MappingStartType,
@@ -1674,6 +1743,24 @@ func TestParser(t *testing.T) {
 		},
 		{
 			name: "mix",
+			/*
+				%RESERVED PARAMETER
+				#directivecomment
+				%TAG ! !local-tag-
+				---
+				-  -	!<!baz> entity
+				   - plain
+
+				     multi
+				     line
+				- >-
+
+				  	spaced
+				   text
+
+				#trail
+				#comments
+			*/
 			tokens: []token.Token{
 				{
 					Type:   token.DirectiveType,
@@ -2036,31 +2123,431 @@ func TestParser(t *testing.T) {
 				},
 			),
 		},
+		{
+			name: "mix2",
+			/*
+				...
+				<BOM># stream comment
+				---
+				# document
+				...
+				&anchor
+				...
+				[*anchor : , plain: [],: emptyk,"adjacent":value]
+
+			*/
+			tokens: []token.Token{
+				{
+					Type:   token.DocumentEndType,
+					Origin: "...",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.BOMType,
+					Origin: "\uFEFF",
+				},
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "stream",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "comment",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DirectiveEndType,
+					Origin: "---",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "document",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DocumentEndType,
+					Origin: "...",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.AnchorType,
+					Origin: "&",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "anchor",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DocumentEndType,
+					Origin: "...",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DocumentEndType,
+					Origin: "...",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.SequenceStartType,
+					Origin: "[",
+				},
+				{
+					Type:   token.AliasType,
+					Origin: "*",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "anchor",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.CollectEntryType,
+					Origin: ",",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "plain",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.SequenceStartType,
+					Origin: "[",
+				},
+				{
+					Type:   token.SequenceEndType,
+					Origin: "]",
+				},
+				{
+					Type:   token.CollectEntryType,
+					Origin: ",",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "emptyk",
+				},
+				{
+					Type:   token.CollectEntryType,
+					Origin: ",",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "adjacent",
+				},
+				{
+					Type:   token.DoubleQuoteType,
+					Origin: "\"",
+				},
+				{
+					Type:   token.MappingValueType,
+					Origin: ":",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "value",
+				},
+				{
+					Type:   token.SequenceEndType,
+					Origin: "]",
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewNullNode(token.Position{}),
+					ast.NewScalarNode(
+						token.Position{},
+						token.Position{},
+						ast.NewPropertiesNode(
+							token.Position{},
+							token.Position{},
+							ast.NewInvalidNode(
+								token.Position{},
+								token.Position{},
+							),
+							ast.NewAnchorNode(
+								token.Position{},
+								token.Position{},
+								"anchor",
+							),
+						),
+						ast.NewNullNode(token.Position{}),
+					),
+					ast.NewSequenceNode(
+						token.Position{},
+						token.Position{},
+						[]ast.Node{
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewAliasNode(
+									token.Position{},
+									token.Position{},
+									"anchor",
+								),
+								ast.NewNullNode(token.Position{}),
+							),
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewTextNode(
+									token.Position{},
+									token.Position{},
+									"plain",
+								),
+								ast.NewSequenceNode(
+									token.Position{},
+									token.Position{},
+									nil,
+								),
+							),
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewNullNode(token.Position{}),
+								ast.NewTextNode(
+									token.Position{},
+									token.Position{},
+									"emptyk",
+								),
+							),
+							ast.NewMappingEntryNode(
+								token.Position{},
+								token.Position{},
+								ast.NewScalarNode(
+									token.Position{},
+									token.Position{},
+									ast.NewInvalidNode(
+										token.Position{},
+										token.Position{},
+									),
+									ast.NewTextNode(
+										token.Position{},
+										token.Position{},
+										"adjacent",
+									),
+								),
+								ast.NewTextNode(
+									token.Position{},
+									token.Position{},
+									"value",
+								),
+							),
+						},
+					),
+				},
+			),
+		},
+		{
+			name: "document with BOMs",
+			tokens: []token.Token{
+				{
+					Type:   token.StringType,
+					Origin: "a",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.DirectiveEndType,
+					Origin: "---",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.BOMType,
+					Origin: "\uFEFF",
+				},
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "comment",
+				},
+				{
+					Type: token.EOFType,
+				},
+			},
+			expectedAST: ast.NewStreamNode(
+				token.Position{},
+				token.Position{},
+				[]ast.Node{
+					ast.NewTextNode(
+						token.Position{},
+						token.Position{},
+						"a",
+					),
+					ast.NewNullNode(token.Position{}),
+				},
+			),
+		},
 	}
-	cmp := astutils.NewComparator()
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := parser.Parse(&testTokenStream{
 				tokens: tc.tokens,
 				index:  0,
 			})
-			if !cmp.Equal(tc.expectedAST, result) {
-				printer := astutils.NewPrinter()
-				var s strings.Builder
-				if err := printer.Print(tc.expectedAST, &s); err != nil {
-					t.Fatalf("failed to print AST: %v", err)
-				}
-				expected := s.String()
-				s.Reset()
-				if err := printer.Print(result, &s); err != nil {
-					t.Fatalf("failed to print AST: %v", err)
-				}
-				got := s.String()
-				s.Reset()
-				t.Errorf("AST are not equal:\n\nExpected:\n%s\n\nGot:\n%s\n", expected, got)
-				t.Fail()
-			}
+			compareAST(t, tc.expectedAST, result)
 		})
 
+	}
+}
+
+func TestParserInvalidDocuments(t *testing.T) {
+	t.Skip()
+
+	type tcase struct {
+		name   string
+		tokens []token.Token
+	}
+
+	tcases := []tcase{
+		{
+			name: "broken explicit document",
+			tokens: []token.Token{
+				{
+					Type:   token.DirectiveEndType,
+					Origin: "---",
+				},
+				{
+					Type:   token.LineBreakType,
+					Origin: "\n",
+				},
+				{
+					Type:   token.CommentType,
+					Origin: "#",
+				},
+				{
+					Type:   token.BOMType,
+					Origin: "\uFEFF",
+				},
+			},
+		},
+	}
+
+	expectedAST := ast.NewStreamNode(
+		token.Position{},
+		token.Position{},
+		nil,
+	)
+
+	for _, tc := range tcases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := parser.Parse(&testTokenStream{
+				tokens: tc.tokens,
+				index:  0,
+			})
+			compareAST(t, expectedAST, result)
+		})
+	}
+
+}
+
+func compareAST(t *testing.T, expectedAST, gotAST ast.Node) {
+	t.Helper()
+
+	cmp := astutils.NewComparator()
+	printer := astutils.NewPrinter()
+
+	if !cmp.Equal(expectedAST, gotAST) {
+		var s strings.Builder
+		if err := printer.Print(expectedAST, &s); err != nil {
+			t.Fatalf("failed to print AST: %v", err)
+		}
+		expected := s.String()
+		s.Reset()
+		if err := printer.Print(gotAST, &s); err != nil {
+			t.Fatalf("failed to print AST: %v", err)
+		}
+		got := s.String()
+		s.Reset()
+		t.Errorf("AST are not equal:\n\nExpected:\n%s\n\nGot:\n%s\n", expected, got)
+		t.Fail()
 	}
 }

@@ -73,8 +73,19 @@ func (p *parser) Parse() ast.Node {
 }
 
 func (p *parser) next() {
-	p.startOfLine = p.tok.Type == token.LineBreakType
+	p.startOfLine = isStartOfLine(p.startOfLine, p.tok)
 	p.tok = p.ta.Next()
+}
+
+func isStartOfLine(startOfLine bool, tok token.Token) bool {
+	switch tok.Type {
+	case token.LineBreakType:
+		return true
+	case token.BOMType:
+		return startOfLine
+	default:
+		return false
+	}
 }
 
 func (p *parser) setCheckpoint() {
@@ -125,15 +136,22 @@ func (p *parser) parseStream() ast.Node {
 
 	for {
 		p.setCheckpoint()
-		doc = p.parseDocumentWithSuffixesAndPrefixes()
-		if ast.ValidNode(doc) {
+		if ast.ValidNode(p.parseSuffixesAndPrefixes()) {
 			p.commit()
-			docs = append(docs, doc)
+			p.setCheckpoint()
+			doc = p.parseAnyDocument()
+			if !ast.ValidNode(doc) {
+				p.rollback()
+			} else {
+				docs = append(docs, doc)
+				p.commit()
+			}
 			continue
 		}
 		p.rollback()
 
 		if p.tok.Type == token.BOMType {
+			p.next()
 			continue
 		}
 
@@ -157,7 +175,7 @@ func (p *parser) parseStream() ast.Node {
 	return ast.NewStreamNode(start, p.tok.End, docs)
 }
 
-func (p *parser) parseDocumentWithSuffixesAndPrefixes() ast.Node {
+func (p *parser) parseSuffixesAndPrefixes() ast.Node {
 	start := p.tok.Start
 	if !ast.ValidNode(p.parseDocumentSuffix()) {
 		return ast.NewInvalidNode(start, p.tok.End)
@@ -171,15 +189,15 @@ func (p *parser) parseDocumentWithSuffixesAndPrefixes() ast.Node {
 		p.commit()
 	}
 
-	p.setCheckpoint()
-	doc := p.parseAnyDocument()
-	if !ast.ValidNode(doc) {
-		p.rollback()
-		doc = ast.NewNullNode(p.tok.Start)
-	} else {
+	for {
+		p.setCheckpoint()
+		if prefix := p.parseDocumentPrefix(); !ast.ValidNode(prefix) || prefix.Type() == ast.NullType {
+			p.rollback()
+			break
+		}
 		p.commit()
 	}
-	return doc
+	return ast.NewBasicNode(start, p.tok.End, ast.DocumentPrefixType)
 }
 
 // YAML specification: [210] l-any-document
@@ -744,7 +762,11 @@ func (p *parser) parseFlowMapping(ind *indentation, ctx Context) ast.Node {
 		p.commit()
 	} else {
 		p.rollback()
-		content = ast.NewNullNode(p.tok.Start)
+		content = ast.NewMappingNode(
+			start,
+			p.tok.End,
+			nil,
+		)
 	}
 
 	if p.tok.Type != token.MappingEndType {
@@ -842,7 +864,11 @@ func (p *parser) parseFlowSequence(ind *indentation, ctx Context) ast.Node {
 		p.commit()
 	} else {
 		p.rollback()
-		content = ast.NewNullNode(p.tok.Start)
+		content = ast.NewSequenceNode(
+			start,
+			p.tok.End,
+			nil,
+		)
 	}
 
 	if p.tok.Type != token.SequenceEndType {
