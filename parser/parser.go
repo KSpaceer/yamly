@@ -317,8 +317,11 @@ func (p *parser) parseFlowInBlock(ind *indentation) ast.Node {
 	return node
 }
 
-// YAML specification: [161] ns-flow-node
-func (p *parser) parseFlowNode(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseGenericFlowNode(
+	ind *indentation,
+	ctx Context,
+	contentParse func(*indentation, Context) ast.Node,
+) ast.Node {
 	start := p.tok.Start
 
 	p.setCheckpoint()
@@ -331,7 +334,7 @@ func (p *parser) parseFlowNode(ind *indentation, ctx Context) ast.Node {
 	p.rollback()
 	p.setCheckpoint()
 
-	node = p.parseFlowContent(ind, ctx)
+	node = contentParse(ind, ctx)
 	if ast.ValidNode(node) {
 		p.commit()
 		return node
@@ -348,7 +351,7 @@ func (p *parser) parseFlowNode(ind *indentation, ctx Context) ast.Node {
 
 	p.setCheckpoint()
 	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
-		node = p.parseFlowContent(ind, ctx)
+		node = contentParse(ind, ctx)
 	}
 
 	if ast.ValidNode(node) {
@@ -360,47 +363,14 @@ func (p *parser) parseFlowNode(ind *indentation, ctx Context) ast.Node {
 	return ast.NewScalarNode(start, p.tok.End, properties, ast.NewNullNode(contentPos))
 }
 
+// YAML specification: [161] ns-flow-node
+func (p *parser) parseFlowNode(ind *indentation, ctx Context) ast.Node {
+	return p.parseGenericFlowNode(ind, ctx, p.parseFlowContent)
+}
+
 // YAML specification: [159] ns-flow-yaml-node
 func (p *parser) parseFlowYAMLNode(ind *indentation, ctx Context) ast.Node {
-	start := p.tok.Start
-
-	p.setCheckpoint()
-	node := p.parseAliasNode()
-	if ast.ValidNode(node) {
-		p.commit()
-		return node
-	}
-
-	p.rollback()
-	p.setCheckpoint()
-
-	node = p.parsePlain(ind, ctx)
-	if ast.ValidNode(node) {
-		p.commit()
-		return node
-	}
-
-	p.rollback()
-
-	properties := p.parseProperties(ind, ctx)
-	if !ast.ValidNode(properties) {
-		return ast.NewInvalidNode(start, p.tok.End)
-	}
-
-	contentPos := p.tok.Start
-
-	p.setCheckpoint()
-	if ast.ValidNode(p.parseSeparate(ind, ctx)) {
-		node = p.parsePlain(ind, ctx)
-	}
-
-	if ast.ValidNode(node) {
-		p.commit()
-		return ast.NewScalarNode(start, p.tok.End, properties, node)
-	}
-
-	p.rollback()
-	return ast.NewScalarNode(start, p.tok.End, properties, ast.NewNullNode(contentPos))
+	return p.parseGenericFlowNode(ind, ctx, p.parsePlain)
 }
 
 // YAML specification: [160] c-flow-json-node
