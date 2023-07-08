@@ -22,12 +22,10 @@ func TestParser(t *testing.T) {
 			tokens: []token.Token{
 				{
 					Type:   token.EOFType,
-					Start:  token.Position{},
-					End:    token.Position{},
 					Origin: "",
 				},
 			},
-			expectedAST: ast.NewStreamNode(token.Position{}, token.Position{}, nil),
+			expectedAST: ast.NewStreamNode(nil),
 		},
 		{
 			name: "simple mapping entry",
@@ -63,37 +61,16 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewCollectionNode(
-						token.Position{},
-						token.Position{},
-						nil,
-						ast.NewMappingNode(
-							token.Position{},
-							token.Position{},
-							[]ast.Node{
-								ast.NewMappingEntryNode(
-									token.Position{},
-									token.Position{},
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"key",
-									),
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"value",
-									),
-								),
-							},
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewCollectionNode(nil, ast.NewMappingNode(
+					[]ast.Node{
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("key"),
+							ast.NewTextNode("value"),
 						),
-					),
-				},
-			),
+					},
+				)),
+			}),
 		},
 		{
 			name: "simple sequence",
@@ -134,25 +111,14 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewCollectionNode(
-						token.Position{},
-						token.Position{},
-						nil,
-						ast.NewSequenceNode(
-							token.Position{},
-							token.Position{},
-							[]ast.Node{
-								ast.NewTextNode(token.Position{}, token.Position{}, "value1"),
-								ast.NewTextNode(token.Position{}, token.Position{}, "value2"),
-							},
-						),
-					),
-				},
-			),
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewCollectionNode(nil, ast.NewSequenceNode(
+					[]ast.Node{
+						ast.NewTextNode("value1"),
+						ast.NewTextNode("value2"),
+					},
+				)),
+			}),
 		},
 		{
 			name: "simple mapping with sequence and simple value",
@@ -243,67 +209,28 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewCollectionNode(
-						token.Position{},
-						token.Position{},
-						nil,
-						ast.NewMappingNode(
-							token.Position{},
-							token.Position{},
-							[]ast.Node{
-								ast.NewMappingEntryNode(
-									token.Position{},
-									token.Position{},
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"sequence",
-									),
-									ast.NewCollectionNode(
-										token.Position{},
-										token.Position{},
-										nil,
-										ast.NewSequenceNode(
-											token.Position{},
-											token.Position{},
-											[]ast.Node{
-												ast.NewTextNode(
-													token.Position{},
-													token.Position{},
-													"sequencevalue1",
-												),
-												ast.NewTextNode(
-													token.Position{},
-													token.Position{},
-													"sequencevalue2",
-												),
-											},
-										),
-									),
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewCollectionNode(nil, ast.NewMappingNode(
+					[]ast.Node{
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("sequence"),
+							ast.NewCollectionNode(
+								nil,
+								ast.NewSequenceNode(
+									[]ast.Node{
+										ast.NewTextNode("sequencevalue1"),
+										ast.NewTextNode("sequencevalue2"),
+									},
 								),
-								ast.NewMappingEntryNode(
-									token.Position{},
-									token.Position{},
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"simple",
-									),
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"value",
-									),
-								),
-							},
+							),
 						),
-					),
-				},
-			),
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("simple"),
+							ast.NewTextNode("value"),
+						),
+					},
+				)),
+			}),
 		},
 		{
 			name: "simple sequence with mapping and simple single quoted value",
@@ -393,62 +320,25 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewCollectionNode(
-						token.Position{},
-						token.Position{},
-						nil,
-						ast.NewSequenceNode(
-							token.Position{},
-							token.Position{},
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewCollectionNode(nil, ast.NewSequenceNode(
+					[]ast.Node{
+						ast.NewMappingNode(
 							[]ast.Node{
-								ast.NewMappingNode(
-									token.Position{},
-									token.Position{},
-									[]ast.Node{
-										ast.NewMappingEntryNode(
-											token.Position{},
-											token.Position{},
-											ast.NewTextNode(
-												token.Position{},
-												token.Position{},
-												"key1",
-											),
-											ast.NewTextNode(
-												token.Position{},
-												token.Position{},
-												"value1",
-											),
-										),
-										ast.NewMappingEntryNode(
-											token.Position{},
-											token.Position{},
-											ast.NewTextNode(
-												token.Position{},
-												token.Position{},
-												"key2",
-											),
-											ast.NewTextNode(
-												token.Position{},
-												token.Position{},
-												"value2",
-											),
-										),
-									},
+								ast.NewMappingEntryNode(
+									ast.NewTextNode("key1"),
+									ast.NewTextNode("value1"),
 								),
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"quotedvalue",
+								ast.NewMappingEntryNode(
+									ast.NewTextNode("key2"),
+									ast.NewTextNode("value2"),
 								),
 							},
 						),
-					),
-				},
-			),
+						ast.NewTextNode("quotedvalue"),
+					},
+				)),
+			}),
 		},
 		{
 			name: "nested mapping with properties",
@@ -563,84 +453,33 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewCollectionNode(
-						token.Position{},
-						token.Position{},
-						nil,
-						ast.NewMappingNode(
-							token.Position{},
-							token.Position{},
-							[]ast.Node{
-								ast.NewMappingEntryNode(
-									token.Position{},
-									token.Position{},
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"mapping",
-									),
-									ast.NewCollectionNode(
-										token.Position{},
-										token.Position{},
-										ast.NewPropertiesNode(
-											token.Position{},
-											token.Position{},
-											ast.NewTagNode(
-												token.Position{},
-												token.Position{},
-												"map",
-											),
-											ast.NewAnchorNode(
-												token.Position{},
-												token.Position{},
-												"ref",
-											),
-										),
-										ast.NewMappingNode(
-											token.Position{},
-											token.Position{},
-											[]ast.Node{
-												ast.NewMappingEntryNode(
-													token.Position{},
-													token.Position{},
-													ast.NewTextNode(
-														token.Position{},
-														token.Position{},
-														"innerkey",
-													),
-													ast.NewTextNode(
-														token.Position{},
-														token.Position{},
-														"innervalue",
-													),
-												),
-											},
-										),
-									),
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewCollectionNode(nil, ast.NewMappingNode(
+					[]ast.Node{
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("mapping"),
+							ast.NewCollectionNode(
+								ast.NewPropertiesNode(
+									ast.NewTagNode("map"),
+									ast.NewAnchorNode("ref"),
 								),
-								ast.NewMappingEntryNode(
-									token.Position{},
-									token.Position{},
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"aliased",
-									),
-									ast.NewAliasNode(
-										token.Position{},
-										token.Position{},
-										"ref",
-									),
+								ast.NewMappingNode(
+									[]ast.Node{
+										ast.NewMappingEntryNode(
+											ast.NewTextNode("innerkey"),
+											ast.NewTextNode("innervalue"),
+										),
+									},
 								),
-							},
+							),
 						),
-					),
-				},
-			),
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("aliased"),
+							ast.NewAliasNode("ref"),
+						),
+					},
+				)),
+			}),
 		},
 		{
 			name: "sequence with folded and literal",
@@ -793,61 +632,26 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewCollectionNode(
-						token.Position{},
-						token.Position{},
-						nil,
-						ast.NewSequenceNode(
-							token.Position{},
-							token.Position{},
-							[]ast.Node{
-								ast.NewScalarNode(
-									token.Position{},
-									token.Position{},
-									ast.NewPropertiesNode(
-										token.Position{},
-										token.Position{},
-										nil,
-										ast.NewAnchorNode(
-											token.Position{},
-											token.Position{},
-											"lit",
-										),
-									),
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"firstrow\nsecondrow\n",
-									),
-								),
-								ast.NewScalarNode(
-									token.Position{},
-									token.Position{},
-									ast.NewPropertiesNode(
-										token.Position{},
-										token.Position{},
-										ast.NewTagNode(
-											token.Position{},
-											token.Position{},
-											"primary",
-										),
-										nil,
-									),
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"\nfolded",
-									),
-								),
-							},
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewCollectionNode(nil, ast.NewSequenceNode(
+					[]ast.Node{
+						ast.NewScalarNode(
+							ast.NewPropertiesNode(
+								nil,
+								ast.NewAnchorNode("lit"),
+							),
+							ast.NewTextNode("firstrow\nsecondrow\n"),
 						),
-					),
-				},
-			),
+						ast.NewScalarNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("primary"),
+								nil,
+							),
+							ast.NewTextNode("\nfolded"),
+						),
+					},
+				)),
+			}),
 		},
 		{
 			name: "several documents with comments",
@@ -986,14 +790,10 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewNullNode(token.Position{}),
-					ast.NewTextNode(token.Position{}, token.Position{}, "aaaa "),
-				},
-			),
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewNullNode(),
+				ast.NewTextNode("aaaa "),
+			}),
 		},
 		{
 			name: "null nodes",
@@ -1277,103 +1077,47 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewCollectionNode(
-						token.Position{},
-						token.Position{},
-						nil,
-						ast.NewMappingNode(
-							token.Position{},
-							token.Position{},
-							[]ast.Node{
-								ast.NewMappingEntryNode(
-									token.Position{},
-									token.Position{},
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"mapping",
-									),
-									ast.NewCollectionNode(
-										token.Position{},
-										token.Position{},
-										nil,
-										ast.NewMappingNode(
-											token.Position{},
-											token.Position{},
-											[]ast.Node{
-												ast.NewMappingEntryNode(
-													token.Position{},
-													token.Position{},
-													ast.NewScalarNode(
-														token.Position{},
-														token.Position{},
-														ast.NewInvalidNode(
-															token.Position{},
-															token.Position{},
-														),
-														ast.NewTextNode(
-															token.Position{},
-															token.Position{},
-															"quoted key",
-														),
-													),
-													ast.NewNullNode(token.Position{}),
-												),
-												ast.NewMappingEntryNode(
-													token.Position{},
-													token.Position{},
-													ast.NewNullNode(token.Position{}),
-													ast.NewTextNode(
-														token.Position{},
-														token.Position{},
-														"value",
-													),
-												),
-												ast.NewMappingEntryNode(
-													token.Position{},
-													token.Position{},
-													ast.NewNullNode(token.Position{}),
-													ast.NewNullNode(token.Position{}),
-												),
-											},
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewCollectionNode(nil, ast.NewMappingNode(
+					[]ast.Node{
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("mapping"),
+							ast.NewCollectionNode(
+								nil,
+								ast.NewMappingNode(
+									[]ast.Node{
+										ast.NewMappingEntryNode(
+											ast.NewScalarNode(
+												ast.NewInvalidNode(),
+												ast.NewTextNode("quoted key"),
+											),
+											ast.NewNullNode(),
 										),
-									),
-								),
-								ast.NewMappingEntryNode(
-									token.Position{},
-									token.Position{},
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"sequence",
-									),
-									ast.NewCollectionNode(
-										token.Position{},
-										token.Position{},
-										nil,
-										ast.NewSequenceNode(
-											token.Position{},
-											token.Position{},
-											[]ast.Node{
-												ast.NewNullNode(token.Position{}),
-												ast.NewTextNode(
-													token.Position{},
-													token.Position{},
-													"seqvalue",
-												),
-											},
+										ast.NewMappingEntryNode(
+											ast.NewNullNode(),
+											ast.NewTextNode("value"),
 										),
-									),
+										ast.NewMappingEntryNode(
+											ast.NewNullNode(),
+											ast.NewNullNode(),
+										),
+									},
 								),
-							},
-						),
-					),
-				},
-			),
+							)),
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("sequence"),
+							ast.NewCollectionNode(
+								nil,
+								ast.NewSequenceNode(
+									[]ast.Node{
+										ast.NewNullNode(),
+										ast.NewTextNode("seqvalue"),
+									},
+								),
+							)),
+					},
+				)),
+			}),
 		},
 		{
 			name: "flow syntax sequence",
@@ -1484,52 +1228,19 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewSequenceNode(
-						token.Position{},
-						token.Position{},
-						[]ast.Node{
-							ast.NewTextNode(
-								token.Position{},
-								token.Position{},
-								"plain",
-							),
-							ast.NewTextNode(
-								token.Position{},
-								token.Position{},
-								"\\\"multi\\\"\n\nline",
-							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"flow",
-								),
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"pair",
-								),
-							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewNullNode(
-									token.Position{},
-								),
-								ast.NewNullNode(
-									token.Position{},
-								),
-							),
-						},
-					),
-				},
-			),
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewSequenceNode(
+					[]ast.Node{
+						ast.NewTextNode("plain"),
+						ast.NewTextNode("\\\"multi\\\"\n\nline"),
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("flow"),
+							ast.NewTextNode("pair"),
+						),
+						ast.NewMappingEntryNode(ast.NewNullNode(), ast.NewNullNode()),
+					},
+				),
+			}),
 		},
 		{
 			name: "flow syntax mapping",
@@ -1670,76 +1381,31 @@ func TestParser(t *testing.T) {
 					Origin: "}",
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewMappingNode(
-						token.Position{},
-						token.Position{},
-						[]ast.Node{
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"unquoted",
-								),
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"''single quoted''\n\nmultiline \"ათჯერ გაზომე და ერთხელ გაჭერი\"",
-								),
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewMappingNode(
+					[]ast.Node{
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("unquoted"),
+							ast.NewTextNode(
+								"''single quoted''\n\nmultiline \"ათჯერ გაზომე და ერთხელ გაჭერი\"",
 							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewScalarNode(
-									token.Position{},
-									token.Position{},
-									ast.NewInvalidNode(
-										token.Position{},
-										token.Position{},
-									),
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"explicit key",
-									),
-								),
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"adjacent",
-								),
+						),
+						ast.NewMappingEntryNode(
+							ast.NewScalarNode(
+								ast.NewInvalidNode(),
+								ast.NewTextNode("explicit key"),
 							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"novalue",
-								),
-								ast.NewNullNode(token.Position{}),
-							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewNullNode(token.Position{}),
-								ast.NewNullNode(token.Position{}),
-							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewNullNode(token.Position{}),
-								ast.NewNullNode(token.Position{}),
-							),
-						},
-					),
-				},
-			),
+							ast.NewTextNode("adjacent"),
+						),
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("novalue"),
+							ast.NewNullNode(),
+						),
+						ast.NewMappingEntryNode(ast.NewNullNode(), ast.NewNullNode()),
+						ast.NewMappingEntryNode(ast.NewNullNode(), ast.NewNullNode()),
+					},
+				),
+			}),
 		},
 		{
 			name: "mix",
@@ -2062,66 +1728,28 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewCollectionNode(
-						token.Position{},
-						token.Position{},
-						nil,
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewCollectionNode(nil, ast.NewSequenceNode(
+					[]ast.Node{
 						ast.NewSequenceNode(
-							token.Position{},
-							token.Position{},
 							[]ast.Node{
-								ast.NewSequenceNode(
-									token.Position{},
-									token.Position{},
-									[]ast.Node{
-										ast.NewScalarNode(
-											token.Position{},
-											token.Position{},
-											ast.NewPropertiesNode(
-												token.Position{},
-												token.Position{},
-												ast.NewTagNode(
-													token.Position{},
-													token.Position{},
-													"!baz",
-												),
-												ast.NewInvalidNode(
-													token.Position{},
-													token.Position{},
-												),
-											),
-											ast.NewTextNode(
-												token.Position{},
-												token.Position{},
-												"entity",
-											),
-										),
-										ast.NewTextNode(
-											token.Position{},
-											token.Position{},
-											"plain\nmulti line",
-										),
-									},
-								),
 								ast.NewScalarNode(
-									token.Position{},
-									token.Position{},
-									nil,
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"\n\tspaced\n\n text",
+									ast.NewPropertiesNode(
+										ast.NewTagNode("!baz"),
+										ast.NewInvalidNode(),
 									),
+									ast.NewTextNode("entity"),
 								),
+								ast.NewTextNode("plain\nmulti line"),
 							},
 						),
-					),
-				},
-			),
+						ast.NewScalarNode(
+							nil,
+							ast.NewTextNode("\n\tspaced\n\n text"),
+						),
+					},
+				)),
+			}),
 		},
 		{
 			name: "mix2",
@@ -2330,93 +1958,39 @@ func TestParser(t *testing.T) {
 					Origin: "]",
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewNullNode(token.Position{}),
-					ast.NewScalarNode(
-						token.Position{},
-						token.Position{},
-						ast.NewPropertiesNode(
-							token.Position{},
-							token.Position{},
-							ast.NewInvalidNode(
-								token.Position{},
-								token.Position{},
-							),
-							ast.NewAnchorNode(
-								token.Position{},
-								token.Position{},
-								"anchor",
-							),
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewNullNode(),
+				ast.NewScalarNode(
+					ast.NewPropertiesNode(
+						ast.NewInvalidNode(),
+						ast.NewAnchorNode("anchor"),
+					),
+					ast.NewNullNode(),
+				),
+				ast.NewSequenceNode(
+					[]ast.Node{
+						ast.NewMappingEntryNode(
+							ast.NewAliasNode("anchor"),
+							ast.NewNullNode(),
 						),
-						ast.NewNullNode(token.Position{}),
-					),
-					ast.NewSequenceNode(
-						token.Position{},
-						token.Position{},
-						[]ast.Node{
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewAliasNode(
-									token.Position{},
-									token.Position{},
-									"anchor",
-								),
-								ast.NewNullNode(token.Position{}),
+						ast.NewMappingEntryNode(
+							ast.NewTextNode("plain"),
+							ast.NewSequenceNode(nil),
+						),
+						ast.NewMappingEntryNode(
+							ast.NewNullNode(),
+							ast.NewTextNode("emptyk"),
+						),
+						ast.NewMappingEntryNode(
+							ast.NewScalarNode(
+								ast.NewInvalidNode(),
+								ast.NewTextNode("adjacent"),
 							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"plain",
-								),
-								ast.NewSequenceNode(
-									token.Position{},
-									token.Position{},
-									nil,
-								),
-							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewNullNode(token.Position{}),
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"emptyk",
-								),
-							),
-							ast.NewMappingEntryNode(
-								token.Position{},
-								token.Position{},
-								ast.NewScalarNode(
-									token.Position{},
-									token.Position{},
-									ast.NewInvalidNode(
-										token.Position{},
-										token.Position{},
-									),
-									ast.NewTextNode(
-										token.Position{},
-										token.Position{},
-										"adjacent",
-									),
-								),
-								ast.NewTextNode(
-									token.Position{},
-									token.Position{},
-									"value",
-								),
-							),
-						},
-					),
-				},
-			),
+							ast.NewTextNode("value"),
+						),
+					},
+				),
+			}),
 		},
 		{
 			name: "document with BOMs",
@@ -2453,18 +2027,10 @@ func TestParser(t *testing.T) {
 					Type: token.EOFType,
 				},
 			},
-			expectedAST: ast.NewStreamNode(
-				token.Position{},
-				token.Position{},
-				[]ast.Node{
-					ast.NewTextNode(
-						token.Position{},
-						token.Position{},
-						"a",
-					),
-					ast.NewNullNode(token.Position{}),
-				},
-			),
+			expectedAST: ast.NewStreamNode([]ast.Node{
+				ast.NewTextNode("a"),
+				ast.NewNullNode(),
+			}),
 		},
 	}
 	for _, tc := range tcases {
@@ -2511,11 +2077,7 @@ func TestParserInvalidDocuments(t *testing.T) {
 		},
 	}
 
-	expectedAST := ast.NewStreamNode(
-		token.Position{},
-		token.Position{},
-		nil,
-	)
+	expectedAST := ast.NewStreamNode(nil)
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {

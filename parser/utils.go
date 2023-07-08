@@ -2,16 +2,17 @@ package parser
 
 // TODO: use those functions during parsing
 
-func zeroOrOne(p *parser, callback func() bool) {
+func zeroOrOne(p *parser, callback func() bool) bool {
 	p.setCheckpoint()
 	if callback() {
 		p.commit()
 	} else {
 		p.rollback()
 	}
+	return true
 }
 
-func zeroOrMore(p *parser, callback func() bool) {
+func zeroOrMore(p *parser, callback func() bool) bool {
 	for {
 		p.setCheckpoint()
 		if callback() {
@@ -21,6 +22,7 @@ func zeroOrMore(p *parser, callback func() bool) {
 			break
 		}
 	}
+	return true
 }
 
 func oneOrMore(p *parser, callback func() bool) bool {
