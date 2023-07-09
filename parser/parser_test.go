@@ -2113,3 +2113,17 @@ func compareAST(t *testing.T, expectedAST, gotAST ast.Node) {
 		t.Fail()
 	}
 }
+
+type testTokenStream struct {
+	tokens []token.Token
+	index  int
+}
+
+func (t *testTokenStream) Next() token.Token {
+	if t.index >= len(t.tokens) {
+		return token.Token{Type: token.EOFType}
+	}
+	tok := t.tokens[t.index]
+	t.index++
+	return tok
+}

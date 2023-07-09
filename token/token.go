@@ -5,7 +5,7 @@ const (
 	TagDirective  = "TAG"
 )
 
-type Character = byte
+type Character = rune
 
 const (
 	SequenceEntryCharacter     Character = '-'
@@ -33,9 +33,8 @@ const (
 	TabCharacter               Character = '\t'
 	EscapeCharacter            Character = '\\'
 	DotCharacter               Character = '.'
+	ByteOrderMarkCharacter     Character = 0xFEFF
 )
-
-const byteOrderMark = 0xFEFF
 
 type Type uint8
 

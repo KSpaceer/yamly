@@ -1,45 +1,44 @@
-package parser
+package cpaccessor
 
-import (
-	"github.com/KSpaceer/fastyaml/lexer"
-	"github.com/KSpaceer/fastyaml/token"
-)
+type ResourceStream[T any] interface {
+	Next() T
+}
 
-type TokenAccessor struct {
-	ts               lexer.TokenStream
-	buf              []token.Token
-	saved            token.Token
+type CheckpointingAccessor[T any] struct {
+	stream           ResourceStream[T]
+	buf              []T
+	saved            T
 	bufIndicator     int
 	checkpointsStack []int
 }
 
 const (
-	tokenBufferPreallocationSize      = 8
-	checkpointsStackPreallocationSize = 2
+	bufferPreallocationSize           = 32
+	checkpointsStackPreallocationSize = 16
 
 	withoutBuffer = -1
 )
 
-func NewTokenAccessor(ts lexer.TokenStream) TokenAccessor {
-	return TokenAccessor{
-		ts:               ts,
-		buf:              make([]token.Token, 0, tokenBufferPreallocationSize),
+func NewCheckpointingAccessor[T any](stream ResourceStream[T]) CheckpointingAccessor[T] {
+	return CheckpointingAccessor[T]{
+		stream:           stream,
+		buf:              make([]T, 0, bufferPreallocationSize),
 		bufIndicator:     withoutBuffer,
 		checkpointsStack: make([]int, 0, checkpointsStackPreallocationSize),
 	}
 }
 
-func (a *TokenAccessor) Next() token.Token {
-	var tok token.Token
+func (a *CheckpointingAccessor[T]) Next() T {
+	var val T
 	if a.bufIndicator == withoutBuffer {
-		tok = a.ts.Next()
+		val = a.stream.Next()
 		if len(a.checkpointsStack) > 0 {
-			a.buf = append(a.buf, tok)
+			a.buf = append(a.buf, val)
 		} else {
-			a.saved = tok
+			a.saved = val
 		}
 	} else {
-		tok = a.buf[a.bufIndicator]
+		val = a.buf[a.bufIndicator]
 		a.bufIndicator++
 		if a.bufIndicator == len(a.buf) {
 			if len(a.checkpointsStack) == 0 {
@@ -48,10 +47,10 @@ func (a *TokenAccessor) Next() token.Token {
 			a.bufIndicator = withoutBuffer
 		}
 	}
-	return tok
+	return val
 }
 
-func (a *TokenAccessor) SetCheckpoint() {
+func (a *CheckpointingAccessor[T]) SetCheckpoint() {
 	if a.bufIndicator == withoutBuffer {
 		a.checkpointsStack = append(a.checkpointsStack, len(a.buf)-1)
 	} else {
@@ -59,20 +58,20 @@ func (a *TokenAccessor) SetCheckpoint() {
 	}
 }
 
-func (a *TokenAccessor) Rollback() token.Token {
+func (a *CheckpointingAccessor[T]) Rollback() T {
 	switch stackLen := len(a.checkpointsStack); stackLen {
 	case 0:
 		return a.saved
 	default:
 		a.bufIndicator = a.checkpointsStack[stackLen-1]
-		var restoredTok token.Token
+		var restoredVal T
 		if a.bufIndicator == withoutBuffer {
-			restoredTok = a.saved
+			restoredVal = a.saved
 			if len(a.buf) > 0 {
 				a.bufIndicator = 0
 			}
 		} else {
-			restoredTok = a.buf[a.bufIndicator]
+			restoredVal = a.buf[a.bufIndicator]
 			a.bufIndicator++
 			if a.bufIndicator == len(a.buf) {
 				if len(a.checkpointsStack) == 0 {
@@ -82,11 +81,11 @@ func (a *TokenAccessor) Rollback() token.Token {
 			}
 		}
 		a.checkpointsStack = a.checkpointsStack[:stackLen-1]
-		return restoredTok
+		return restoredVal
 	}
 }
 
-func (a *TokenAccessor) Commit() {
+func (a *CheckpointingAccessor[T]) Commit() {
 	switch stackLen := len(a.checkpointsStack); stackLen {
 	case 0:
 	case 1:

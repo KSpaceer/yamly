@@ -1,7 +1,7 @@
-package parser_test
+package cpaccessor_test
 
 import (
-	"github.com/KSpaceer/fastyaml/parser"
+	"github.com/KSpaceer/fastyaml/cpaccessor"
 	"github.com/KSpaceer/fastyaml/token"
 	"testing"
 )
@@ -403,7 +403,7 @@ func TestTokenAccessor(t *testing.T) {
 				index:  0,
 			}
 			result := make([]token.Token, 0, len(tc.ExpectedTokens))
-			tokenAccessor := parser.NewTokenAccessor(stream)
+			tokenAccessor := cpaccessor.NewCheckpointingAccessor[token.Token](stream)
 
 			var (
 				checkpointIdx int
