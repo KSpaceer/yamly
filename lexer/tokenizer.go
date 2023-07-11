@@ -18,16 +18,18 @@ const (
 )
 
 type tokenizer struct {
-	ra           cpaccessor.CheckpointingAccessor[rune]
-	ctxStack     []scanningContext
-	pos          token.Position
-	lookaheadBuf []rune
+	ra            cpaccessor.CheckpointingAccessor[rune]
+	ctxStack      []scanningContext
+	pos           token.Position
+	currentRune   rune
+	lookaheadBuf  []rune
+	lookbehindTok token.Token
 }
 
 const lookaheadBufferPreallocationSize = 8
 
 func NewTokenStream(src string) TokenStream {
-	return &tokenizer{
+	t := &tokenizer{
 		ra:           cpaccessor.NewCheckpointingAccessor[rune](newRuneStream(src)),
 		lookaheadBuf: make([]rune, 0, lookaheadBufferPreallocationSize),
 		pos: token.Position{
@@ -35,6 +37,8 @@ func NewTokenStream(src string) TokenStream {
 			Column: 0,
 		},
 	}
+	t.currentRune = t.ra.Next()
+	return t
 }
 
 func (t *tokenizer) Next() token.Token {
@@ -42,23 +46,22 @@ func (t *tokenizer) Next() token.Token {
 	if len(t.ctxStack) > 0 {
 		ctx = t.ctxStack[len(t.ctxStack)-1]
 	}
-	startingRune := t.ra.Next()
 	t.pos.Column++
 	switch ctx {
 	case baseContext:
-		return t.emitBaseContextToken(startingRune)
+		return t.emitBaseContextToken()
 	}
 	return token.Token{}
 }
 
-func (t *tokenizer) emitBaseContextToken(startingRune rune) token.Token {
+func (t *tokenizer) emitBaseContextToken() token.Token {
 	tok := token.Token{
 		Type:   0,
 		Start:  t.pos,
 		End:    token.Position{},
 		Origin: "",
 	}
-	r := startingRune
+	r := t.currentRune
 	for {
 		switch r {
 		case EOF:
@@ -71,9 +74,11 @@ func (t *tokenizer) emitBaseContextToken(startingRune rune) token.Token {
 			tok.Origin = string([]rune{r})
 			return tok
 		case token.SequenceEntryCharacter:
-			if t.lookahead(1, func(runes []rune) bool {
-				return token.IsWhitespaceChar(runes[0])
-			}) {
+			lookaheadPred := func(runes []rune) bool {
+				return token.IsWhitespaceChar(runes[0]) || token.IsLineBreakChar(runes[0])
+			}
+
+			if t.lookahead(1, lookaheadPred) && t.lookbehind(isNonWordTypedToken) {
 				t.ctxStack = append(t.ctxStack, blockObjectContext)
 				tok.End = t.pos
 				tok.Type = token.SequenceEntryType
@@ -83,8 +88,7 @@ func (t *tokenizer) emitBaseContextToken(startingRune rune) token.Token {
 		case token.MappingKeyCharacter:
 			if t.lookahead(1, func(runes []rune) bool {
 				return token.IsWhitespaceChar(runes[0])
-			}) {
-				t.ctxStack = append(t.ctxStack, blockObjectContext)
+			}) && t.lookbehind(isNonWordTypedToken) {
 				tok.End = t.pos
 				tok.Type = token.MappingKeyType
 				tok.Origin = string([]rune{r})
@@ -94,69 +98,99 @@ func (t *tokenizer) emitBaseContextToken(startingRune rune) token.Token {
 			if t.lookahead(1, func(runes []rune) bool {
 				return token.IsWhitespaceChar(runes[0])
 			}) {
-				t.ctxStack = append(t.ctxStack, blockObjectContext)
 				tok.End = t.pos
 				tok.Type = token.MappingValueType
 				tok.Origin = string([]rune{r})
 				return tok
 			}
 		case token.SequenceStartCharacter:
-			t.ctxStack = append(t.ctxStack, flowObjectContext)
-			tok.End = t.pos
-			tok.Type = token.SequenceStartType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				t.ctxStack = append(t.ctxStack, flowObjectContext)
+				tok.End = t.pos
+				tok.Type = token.SequenceStartType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
+
+			if t.lookahead(3, func(runes []rune) bool {
+				return runes[0] == runes[1] && runes[1] == token.DirectiveEndCharacter &&
+					token.IsWhitespaceChar(runes[2])
+			}) && t.lookbehind(isNonWordTypedToken) {
+				tok.Origin = string([]rune{r, t.ra.Next(), t.ra.Next()})
+				t.pos.Column += 2
+				tok.End = t.pos
+				tok.Type = token.DirectiveEndType
+			}
+
 		case token.MappingStartCharacter:
-			t.ctxStack = append(t.ctxStack, flowObjectContext)
-			tok.End = t.pos
-			tok.Type = token.MappingStartType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				t.ctxStack = append(t.ctxStack, flowObjectContext)
+				tok.End = t.pos
+				tok.Type = token.MappingStartType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.CommentCharacter:
-			t.ctxStack = append(t.ctxStack, commentContext)
-			tok.End = t.pos
-			tok.Type = token.CommentType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				t.ctxStack = append(t.ctxStack, commentContext)
+				tok.End = t.pos
+				tok.Type = token.CommentType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.AnchorCharacter:
-			tok.End = t.pos
-			tok.Type = token.AnchorType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				tok.End = t.pos
+				tok.Type = token.AnchorType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.AliasCharacter:
-			tok.End = t.pos
-			tok.Type = token.AliasType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				tok.End = t.pos
+				tok.Type = token.AliasType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.TagCharacter:
-			tok.End = t.pos
-			tok.Type = token.TagType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				tok.End = t.pos
+				tok.Type = token.TagType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.LiteralCharacter:
-			t.ctxStack = append(t.ctxStack, multilineBlockStartContext)
-			tok.End = t.pos
-			tok.Type = token.LiteralType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				t.ctxStack = append(t.ctxStack, multilineBlockStartContext)
+				tok.End = t.pos
+				tok.Type = token.LiteralType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.FoldedCharacter:
-			t.ctxStack = append(t.ctxStack, multilineBlockStartContext)
-			tok.End = t.pos
-			tok.Type = token.FoldedType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				t.ctxStack = append(t.ctxStack, multilineBlockStartContext)
+				tok.End = t.pos
+				tok.Type = token.FoldedType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.SingleQuoteCharacter:
-			t.ctxStack = append(t.ctxStack, singleQuoteContext)
-			tok.End = t.pos
-			tok.Type = token.SingleQuoteType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				t.ctxStack = append(t.ctxStack, singleQuoteContext)
+				tok.End = t.pos
+				tok.Type = token.SingleQuoteType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.DoubleQuoteCharacter:
-			t.ctxStack = append(t.ctxStack, doubleQuoteContext)
-			tok.End = t.pos
-			tok.Type = token.DoubleQuoteType
-			tok.Origin = string([]rune{r})
-			return tok
+			if t.lookbehind(isNonWordTypedToken) {
+				t.ctxStack = append(t.ctxStack, doubleQuoteContext)
+				tok.End = t.pos
+				tok.Type = token.DoubleQuoteType
+				tok.Origin = string([]rune{r})
+				return tok
+			}
 		case token.DirectiveCharacter:
 			tok.End = t.pos
 			tok.Type = token.DirectiveType
@@ -183,7 +217,7 @@ func (t *tokenizer) emitBaseContextToken(startingRune rune) token.Token {
 			tok.Type = token.LineBreakType
 			tok.Origin = string([]rune{r})
 			return tok
-		case token.SpaceType:
+		case token.SpaceCharacter:
 			tok.End = t.pos
 			tok.Type = token.SpaceType
 			tok.Origin = string([]rune{r})
@@ -193,8 +227,22 @@ func (t *tokenizer) emitBaseContextToken(startingRune rune) token.Token {
 			tok.Type = token.TabType
 			tok.Origin = string([]rune{r})
 			return tok
+		case token.DocumentEndCharacter:
+			if t.lookahead(3, func(runes []rune) bool {
+				return runes[0] == runes[1] && runes[1] == token.DocumentEndCharacter &&
+					token.IsWhitespaceChar(runes[2])
+			}) && t.lookbehind(isNonWordTypedToken) {
+				tok.Origin = string([]rune{r, t.ra.Next(), t.ra.Next()})
+				t.pos.Column += 2
+				tok.End = t.pos
+				tok.Type = token.DocumentEndType
+			}
+		default:
+			return token.Token{}
 		}
 	}
+
+	return token.Token{}
 }
 
 func (t *tokenizer) lookahead(count int, predicate func([]rune) bool) bool {
@@ -206,4 +254,17 @@ func (t *tokenizer) lookahead(count int, predicate func([]rune) bool) bool {
 	t.lookaheadBuf = t.lookaheadBuf[:0]
 	t.ra.Rollback()
 	return result
+}
+
+func (t *tokenizer) lookbehind(predicate func(token.Token) bool) bool {
+	return predicate(t.lookbehindTok)
+}
+
+func isNonWordTypedToken(t token.Token) bool {
+	switch t.Type {
+	case token.SpaceType, token.TabType, token.LineBreakType, token.UnknownType:
+		return true
+	default:
+		return false
+	}
 }

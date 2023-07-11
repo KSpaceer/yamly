@@ -34,6 +34,8 @@ const (
 	EscapeCharacter            Character = '\\'
 	DotCharacter               Character = '.'
 	ByteOrderMarkCharacter     Character = 0xFEFF
+	DirectiveEndCharacter      Character = '-'
+	DocumentEndCharacter       Character = '.'
 )
 
 type Type uint8
@@ -97,6 +99,15 @@ func IsWhiteSpace(tok Token) bool {
 		return true
 	default:
 		return false
+	}
+}
+
+func IsNonBreak(tok Token) bool {
+	switch tok.Type {
+	case BOMType, LineBreakType, EOFType:
+		return false
+	default:
+		return true
 	}
 }
 

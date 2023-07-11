@@ -75,7 +75,7 @@ func (p *parser) parseCommentText() ast.Node {
 	}
 	p.next()
 
-	for p.tok.Type == token.StringType || token.IsWhiteSpace(p.tok) {
+	for token.IsNonBreak(p.tok) {
 		p.next()
 	}
 	return ast.NewBasicNode(ast.CommentType)

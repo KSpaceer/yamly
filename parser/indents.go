@@ -134,7 +134,7 @@ func (p *parser) parseEmpty(ind *indentation, ctx Context, buf *bytes.Buffer) as
 	if p.tok.Type != token.LineBreakType {
 		return ast.NewInvalidNode()
 	}
-	buf.WriteRune(token.LineFeedCharacter)
+	buf.WriteString(p.tok.Origin)
 	p.next()
 	return ast.NewBasicNode(ast.IndentType)
 }

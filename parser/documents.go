@@ -337,7 +337,7 @@ func isCorrectYAMLVersion(s string) bool {
 				return false
 			}
 		case metFirstPart:
-			if c == token.DotCharacter {
+			if c == '.' {
 				currentState = metDot
 			} else if !unicode.IsDigit(c) {
 				return false

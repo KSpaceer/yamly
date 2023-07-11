@@ -231,5 +231,9 @@ func IsEscapedCharacter(runes []rune, i int) (int, bool) {
 }
 
 func IsWhitespaceChar(r rune) bool {
-	return r == ' ' || r == '\t'
+	return r == SpaceCharacter || r == TabCharacter
+}
+
+func IsLineBreakChar(r rune) bool {
+	return r == LineFeedCharacter || r == CarriageReturnCharacter
 }

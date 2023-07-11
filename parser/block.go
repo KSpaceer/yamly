@@ -467,7 +467,7 @@ func (p *parser) parseDiffLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 			p.rollback()
 			break
 		}
-		buf.WriteRune(token.LineFeedCharacter)
+		buf.WriteString(p.tok.Origin)
 		if !ast.ValidNode(p.parseSameLines(ind, buf)) {
 			buf.Truncate(savedLen)
 			p.rollback()
@@ -546,7 +546,7 @@ func (p *parser) parseSpacedText(ind *indentation, buf *bytes.Buffer) ast.Node {
 	}
 	buf.WriteString(p.tok.Origin)
 	p.next()
-	for p.tok.Type == token.StringType || token.IsWhiteSpace(p.tok) {
+	for token.IsNonBreak(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
@@ -558,7 +558,7 @@ func (p *parser) parseSpacedLineBreak(ind *indentation, buf *bytes.Buffer) ast.N
 	if p.tok.Type != token.LineBreakType {
 		return ast.NewInvalidNode()
 	}
-	buf.WriteRune(token.LineFeedCharacter)
+	buf.WriteString(p.tok.Origin)
 
 	savedLen := buf.Len()
 
@@ -606,12 +606,12 @@ func (p *parser) parseFoldedText(ind *indentation, buf *bytes.Buffer) ast.Node {
 	if !ast.ValidNode(p.parseIndent(ind)) {
 		return ast.NewInvalidNode()
 	}
-	if p.tok.Type != token.StringType {
+	if !token.IsNonBreak(p.tok) || token.IsWhiteSpace(p.tok) {
 		return ast.NewInvalidNode()
 	}
 	buf.WriteString(p.tok.Origin)
 	p.next()
-	for p.tok.Type == token.StringType || token.IsWhiteSpace(p.tok) {
+	for token.IsNonBreak(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
@@ -635,7 +635,7 @@ func (p *parser) parseFoldedLineBreak(ind *indentation, ctx Context, buf *bytes.
 	if p.tok.Type != token.LineBreakType {
 		return ast.NewInvalidNode()
 	}
-	buf.WriteRune(token.SpaceCharacter)
+	buf.WriteRune(' ')
 	p.next()
 
 	return ast.NewBasicNode(ast.TextType)
@@ -741,7 +741,7 @@ func (p *parser) parseChompedLast(chomping ast.ChompingType, buf *bytes.Buffer) 
 	case ast.ClipChompingType, ast.KeepChompingType:
 		switch p.tok.Type {
 		case token.LineBreakType:
-			buf.WriteRune(token.LineFeedCharacter)
+			buf.WriteString(p.tok.Origin)
 		case token.EOFType:
 		default:
 			return ast.NewInvalidNode()
@@ -841,7 +841,7 @@ func (p *parser) parseLiteralNext(ind *indentation, buf *bytes.Buffer) ast.Node 
 		return ast.NewInvalidNode()
 	}
 	savedLen := buf.Len()
-	buf.WriteRune(token.LineFeedCharacter)
+	buf.WriteString(p.tok.Origin)
 	p.next()
 	if !ast.ValidNode(p.parseLiteralText(ind, buf)) {
 		buf.Truncate(savedLen)
@@ -863,10 +863,10 @@ func (p *parser) parseLiteralText(ind *indentation, buf *bytes.Buffer) ast.Node 
 	if !ast.ValidNode(p.parseIndent(ind)) {
 		return ast.NewInvalidNode()
 	}
-	if p.tok.Type != token.StringType && !token.IsWhiteSpace(p.tok) {
+	if !token.IsNonBreak(p.tok) {
 		return ast.NewInvalidNode()
 	}
-	for p.tok.Type == token.StringType || token.IsWhiteSpace(p.tok) {
+	for token.IsNonBreak(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
