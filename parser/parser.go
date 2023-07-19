@@ -3,8 +3,6 @@ package parser
 import (
 	"bytes"
 	"github.com/KSpaceer/fastyaml/ast"
-	"github.com/KSpaceer/fastyaml/cpaccessor"
-	"github.com/KSpaceer/fastyaml/lexer"
 	"github.com/KSpaceer/fastyaml/token"
 	"sync"
 )
@@ -39,7 +37,7 @@ type indentation struct {
 }
 
 type parser struct {
-	ta          cpaccessor.CheckpointingAccessor[token.Token]
+	tokSrc      *tokenSource
 	tok         token.Token
 	savedStates []state
 	state
@@ -49,14 +47,14 @@ type state struct {
 	startOfLine bool
 }
 
-func Parse(ts lexer.TokenStream) ast.Node {
-	p := newParser(ts)
+func Parse(cts ConfigurableTokenStream) ast.Node {
+	p := newParser(cts)
 	return p.Parse()
 }
 
-func newParser(ts lexer.TokenStream) *parser {
+func newParser(cts ConfigurableTokenStream) *parser {
 	return &parser{
-		ta: cpaccessor.NewCheckpointingAccessor[token.Token](ts),
+		tokSrc: newTokenSource(cts),
 		state: state{
 			startOfLine: true,
 		},
@@ -71,7 +69,7 @@ func (p *parser) Parse() ast.Node {
 
 func (p *parser) next() {
 	p.startOfLine = isStartOfLine(p.startOfLine, p.tok)
-	p.tok = p.ta.Next()
+	p.tok = p.tokSrc.Next()
 }
 
 func isStartOfLine(startOfLine bool, tok token.Token) bool {
@@ -86,21 +84,21 @@ func isStartOfLine(startOfLine bool, tok token.Token) bool {
 }
 
 func (p *parser) setCheckpoint() {
-	p.ta.SetCheckpoint()
+	p.tokSrc.SetCheckpoint()
 	p.savedStates = append(p.savedStates, state{
 		startOfLine: p.startOfLine,
 	})
 }
 
 func (p *parser) commit() {
-	p.ta.Commit()
+	p.tokSrc.Commit()
 	if savedStatesLen := len(p.savedStates); savedStatesLen > 0 {
 		p.savedStates = p.savedStates[:savedStatesLen-1]
 	}
 }
 
 func (p *parser) rollback() {
-	p.tok = p.ta.Rollback()
+	p.tok = p.tokSrc.Rollback()
 	if savedStatesLen := len(p.savedStates); savedStatesLen > 0 {
 		p.state = p.savedStates[savedStatesLen-1]
 		p.savedStates = p.savedStates[:savedStatesLen-1]

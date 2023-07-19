@@ -2127,3 +2127,7 @@ func (t *testTokenStream) Next() token.Token {
 	t.index++
 	return tok
 }
+
+func (t *testTokenStream) SetRawMode() {}
+
+func (*testTokenStream) UnsetRawMode() {}
