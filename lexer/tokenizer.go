@@ -4,6 +4,7 @@ import (
 	"github.com/KSpaceer/fastyaml/cpaccessor"
 	"github.com/KSpaceer/fastyaml/token"
 	"strings"
+	"unicode/utf8"
 )
 
 type scanningContext int8
@@ -56,6 +57,7 @@ func (t *tokenizer) UnsetRawMode() {
 
 func (t *tokenizer) Next() token.Token {
 	if t.hasPreparedToken {
+		t.lookbehindTok = t.preparedToken
 		tok := t.preparedToken
 		t.preparedToken = token.Token{}
 		t.hasPreparedToken = false
@@ -72,6 +74,13 @@ func (t *tokenizer) Next() token.Token {
 		specialTokenMatcher = tryGetBlockSpecialToken
 	case commentContext:
 		specialTokenMatcher = tryGetCommentSpecialToken
+	case rawContext:
+		specialTokenMatcher = tryGetRawSpecialToken
+	case multilineBlockStartContext:
+		specialTokenMatcher = tryGetMultilineBlockStartSpecialToken
+	case singleQuoteContext:
+		specialTokenMatcher = tryGetSingleQuoteSpecialToken
+	case doubleQuoteContext:
 	default:
 		return token.Token{}
 	}
@@ -101,22 +110,38 @@ func (t *tokenizer) emitToken(specialTokenMatcher func(*tokenizer, rune) (token.
 				tok.End = curPos
 			} else {
 				tok = specialTok
+				t.lookbehindTok = tok
 			}
 			break
 		}
 
 		if tok.Type == token.UnknownType {
 			tok.Type = token.StringType
+			t.lookbehindTok = tok
 		}
 		originBuilder.WriteRune(r)
 	}
 	return tok
 }
 
-func tryGetCommentSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
+func tryGetSingleQuoteSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
-
 	switch r {
+	case token.SingleQuoteCharacter:
+		noQuoteBefore := func(tok token.Token) bool {
+			lastRune, _ := utf8.DecodeLastRuneInString(tok.Origin)
+			return tok.Type != token.StringType || lastRune != token.SingleQuoteCharacter
+		}
+
+		if t.lookbehind(noQuoteBefore) && t.lookahead(1, func(runes []rune) bool {
+			return runes[0] != token.SingleQuoteCharacter
+		}) {
+			t.popContext()
+			tok.End = t.pos
+			tok.Type = token.SingleQuoteType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
 	case EOF:
 		tok.End = t.pos
 		tok.Type = token.EOFType
@@ -127,7 +152,64 @@ func tryGetCommentSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 		tok.Origin = string([]rune{r})
 		return tok, true
 	case token.CarriageReturnCharacter:
-		t.popContext()
+		origin := []rune{r}
+		if t.lookahead(1, func(runes []rune) bool {
+			return runes[0] == token.LineFeedCharacter
+		}) {
+			origin = append(origin, t.ra.Next())
+			t.pos.Column++
+		}
+		tok.End = t.pos
+		t.pos.Column = 0
+		t.pos.Row++
+		tok.Type = token.LineBreakType
+		tok.Origin = string(origin)
+		return tok, true
+	case token.LineFeedCharacter:
+		tok.End = t.pos
+		t.pos.Column = 0
+		t.pos.Row++
+		tok.Type = token.LineBreakType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.SpaceCharacter:
+		tok.End = t.pos
+		tok.Type = token.SpaceType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.TabCharacter:
+		tok.End = t.pos
+		tok.Type = token.TabType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	}
+	return token.Token{}, false
+}
+
+func tryGetMultilineBlockStartSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
+	tok := token.Token{Start: t.pos}
+	switch r {
+	case token.StripChompingCharacter:
+		tok.End = t.pos
+		tok.Type = token.StripChompingType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.KeepChompingCharacter:
+		tok.End = t.pos
+		tok.Type = token.KeepChompingType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case EOF:
+		tok.End = t.pos
+		tok.Type = token.EOFType
+		return tok, true
+	case token.ByteOrderMarkCharacter:
+		tok.End = t.pos
+		tok.Type = token.BOMType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.CarriageReturnCharacter:
+		t.lineBreakContextSwitch()
 
 		origin := []rune{r}
 		if t.lookahead(1, func(runes []rune) bool {
@@ -143,7 +225,7 @@ func tryGetCommentSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 		tok.Origin = string(origin)
 		return tok, true
 	case token.LineFeedCharacter:
-		t.popContext()
+		t.lineBreakContextSwitch()
 
 		tok.End = t.pos
 		t.pos.Column = 0
@@ -161,6 +243,114 @@ func tryGetCommentSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 		tok.Type = token.TabType
 		tok.Origin = string([]rune{r})
 		return tok, true
+	case token.CommentCharacter:
+		if t.lookbehind(isNonWordTypedToken) {
+			t.pushContext(commentContext)
+			tok.End = t.pos
+			tok.Type = token.CommentType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
+	}
+	return token.Token{}, false
+}
+
+func tryGetRawSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
+	tok := token.Token{Start: t.pos}
+	switch r {
+	case EOF:
+		tok.End = t.pos
+		tok.Type = token.EOFType
+		return tok, true
+	case token.ByteOrderMarkCharacter:
+		tok.End = t.pos
+		tok.Type = token.BOMType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.CarriageReturnCharacter:
+		origin := []rune{r}
+		if t.lookahead(1, func(runes []rune) bool {
+			return runes[0] == token.LineFeedCharacter
+		}) {
+			origin = append(origin, t.ra.Next())
+			t.pos.Column++
+		}
+		tok.End = t.pos
+		t.pos.Column = 0
+		t.pos.Row++
+		tok.Type = token.LineBreakType
+		tok.Origin = string(origin)
+		return tok, true
+	case token.LineFeedCharacter:
+		tok.End = t.pos
+		t.pos.Column = 0
+		t.pos.Row++
+		tok.Type = token.LineBreakType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.SpaceCharacter:
+		tok.End = t.pos
+		tok.Type = token.SpaceType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.TabCharacter:
+		tok.End = t.pos
+		tok.Type = token.TabType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	}
+	return token.Token{}, false
+}
+
+func tryGetCommentSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
+	tok := token.Token{Start: t.pos}
+
+	switch r {
+	case EOF:
+		tok.End = t.pos
+		tok.Type = token.EOFType
+		return tok, true
+	case token.ByteOrderMarkCharacter:
+		tok.End = t.pos
+		tok.Type = token.BOMType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.CarriageReturnCharacter:
+		t.lineBreakContextSwitch()
+
+		origin := []rune{r}
+		if t.lookahead(1, func(runes []rune) bool {
+			return runes[0] == token.LineFeedCharacter
+		}) {
+			origin = append(origin, t.ra.Next())
+			t.pos.Column++
+		}
+		tok.End = t.pos
+		t.pos.Column = 0
+		t.pos.Row++
+		tok.Type = token.LineBreakType
+		tok.Origin = string(origin)
+		return tok, true
+	case token.LineFeedCharacter:
+		t.lineBreakContextSwitch()
+
+		tok.End = t.pos
+		t.pos.Column = 0
+		t.pos.Row++
+		tok.Type = token.LineBreakType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.SpaceCharacter:
+		tok.End = t.pos
+		tok.Type = token.SpaceType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.TabCharacter:
+		tok.End = t.pos
+		tok.Type = token.TabType
+		tok.Origin = string([]rune{r})
+		return tok, true
+
 	}
 	return token.Token{}, false
 }

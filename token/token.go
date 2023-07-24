@@ -35,6 +35,8 @@ const (
 	DotCharacter               Character = '.'
 	ByteOrderMarkCharacter     Character = 0xFEFF
 	DirectiveEndCharacter      Character = '-'
+	StripChompingCharacter     Character = '-'
+	KeepChompingCharacter      Character = '+'
 	DocumentEndCharacter       Character = '.'
 )
 

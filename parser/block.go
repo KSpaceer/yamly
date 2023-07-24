@@ -546,10 +546,12 @@ func (p *parser) parseSpacedText(ind *indentation, buf *bytes.Buffer) ast.Node {
 	}
 	buf.WriteString(p.tok.Origin)
 	p.next()
+	p.tokSrc.SetRawMode()
 	for token.IsNonBreak(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
+	p.tokSrc.UnsetRawMode()
 	return ast.NewBasicNode(ast.TextType)
 }
 
@@ -611,10 +613,12 @@ func (p *parser) parseFoldedText(ind *indentation, buf *bytes.Buffer) ast.Node {
 	}
 	buf.WriteString(p.tok.Origin)
 	p.next()
+	p.tokSrc.SetRawMode()
 	for token.IsNonBreak(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
+	p.tokSrc.UnsetRawMode()
 	return ast.NewBasicNode(ast.TextType)
 }
 
@@ -866,9 +870,11 @@ func (p *parser) parseLiteralText(ind *indentation, buf *bytes.Buffer) ast.Node 
 	if !token.IsNonBreak(p.tok) {
 		return ast.NewInvalidNode()
 	}
+	p.tokSrc.SetRawMode()
 	for token.IsNonBreak(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
 	}
+	p.tokSrc.UnsetRawMode()
 	return ast.NewBasicNode(ast.TextType)
 }
