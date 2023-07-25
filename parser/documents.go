@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"github.com/KSpaceer/fastyaml/ast"
-	"github.com/KSpaceer/fastyaml/token"
+	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yayamls/token"
 	"unicode"
 )
 

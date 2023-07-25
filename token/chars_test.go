@@ -1,7 +1,7 @@
 package token_test
 
 import (
-	"github.com/KSpaceer/fastyaml/token"
+	"github.com/KSpaceer/yayamls/token"
 	"testing"
 )
 

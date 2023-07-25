@@ -2,7 +2,7 @@ package astutils
 
 import (
 	"fmt"
-	"github.com/KSpaceer/fastyaml/ast"
+	"github.com/KSpaceer/yayamls/ast"
 	"io"
 	"strings"
 )

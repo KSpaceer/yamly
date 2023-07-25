@@ -1,6 +1,6 @@
 package astutils
 
-import "github.com/KSpaceer/fastyaml/ast"
+import "github.com/KSpaceer/yayamls/ast"
 
 type Comparator struct{}
 

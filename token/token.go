@@ -113,6 +113,24 @@ func IsNonBreak(tok Token) bool {
 	}
 }
 
+func MayPrecedeWord(tok Token) bool {
+	switch tok.Type {
+	case SpaceType, TabType, LineBreakType, UnknownType, CollectEntryType:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsClosingFlowIndicator(tok Token) bool {
+	switch tok.Type {
+	case MappingEndType, SequenceEndType, DoubleQuoteType, SingleQuoteType:
+		return true
+	default:
+		return false
+	}
+}
+
 type Token struct {
 	Type            Type
 	Start           Position

@@ -1,10 +1,10 @@
 package parser_test
 
 import (
-	"github.com/KSpaceer/fastyaml/ast"
-	"github.com/KSpaceer/fastyaml/ast/astutils"
-	"github.com/KSpaceer/fastyaml/parser"
-	"github.com/KSpaceer/fastyaml/token"
+	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yayamls/ast/astutils"
+	"github.com/KSpaceer/yayamls/parser"
+	"github.com/KSpaceer/yayamls/token"
 	"strings"
 	"testing"
 )

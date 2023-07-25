@@ -1,8 +1,8 @@
 package lexer
 
 import (
-	"github.com/KSpaceer/fastyaml/cpaccessor"
-	"github.com/KSpaceer/fastyaml/token"
+	"github.com/KSpaceer/yayamls/cpaccessor"
+	"github.com/KSpaceer/yayamls/token"
 	"strings"
 	"unicode/utf8"
 )
@@ -72,6 +72,7 @@ func (t *tokenizer) Next() token.Token {
 	switch ctx {
 	case blockContext:
 		specialTokenMatcher = tryGetBlockSpecialToken
+	case flowContext:
 	case commentContext:
 		specialTokenMatcher = tryGetCommentSpecialToken
 	case rawContext:
@@ -355,6 +356,133 @@ func tryGetCommentSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 	return token.Token{}, false
 }
 
+func tryGetFlowSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
+	tok := token.Token{Start: t.pos}
+
+	switch r {
+	case EOF:
+		tok.End = t.pos
+		tok.Type = token.EOFType
+		return tok, true
+	case token.ByteOrderMarkCharacter:
+		tok.End = t.pos
+		tok.Type = token.BOMType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.MappingKeyCharacter:
+		if t.lookahead(1, func(runes []rune) bool {
+			return token.IsWhitespaceChar(runes[0])
+		}) && t.lookbehind(token.MayPrecedeWord) {
+			tok.End = t.pos
+			tok.Type = token.MappingKeyType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
+	case token.MappingValueCharacter:
+		if t.lookahead(1, func(runes []rune) bool {
+			return token.IsWhitespaceChar(runes[0])
+		}) || t.lookbehind(token.IsClosingFlowIndicator) {
+			tok.End = t.pos
+			tok.Type = token.MappingValueType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
+	case token.SequenceStartCharacter:
+		if t.lookbehind(token.MayPrecedeWord) {
+			t.pushContext(flowContext)
+			tok.End = t.pos
+			tok.Type = token.SequenceStartType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
+	case token.MappingStartCharacter:
+		if t.lookbehind(token.MayPrecedeWord) {
+			t.pushContext(flowContext)
+			tok.End = t.pos
+			tok.Type = token.MappingStartType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
+	case token.SequenceEndCharacter:
+		t.popContext()
+		tok.End = t.pos
+		tok.Type = token.SequenceEndType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.MappingEndCharacter:
+		t.popContext()
+		tok.End = t.pos
+		tok.Type = token.MappingEndType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.AnchorCharacter:
+		if t.lookbehind(token.MayPrecedeWord) {
+			tok.End = t.pos
+			tok.Type = token.AnchorType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
+	case token.AliasCharacter:
+		if t.lookbehind(token.MayPrecedeWord) {
+			tok.End = t.pos
+			tok.Type = token.AliasType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
+	case token.TagCharacter:
+		if t.lookbehind(token.MayPrecedeWord) {
+			tok.End = t.pos
+			tok.Type = token.TagType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
+	case token.SingleQuoteCharacter:
+		t.pushContext(singleQuoteContext)
+		tok.End = t.pos
+		tok.Type = token.SingleQuoteType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.DoubleQuoteCharacter:
+		t.pushContext(doubleQuoteContext)
+		tok.End = t.pos
+		tok.Type = token.DoubleQuoteType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.CarriageReturnCharacter:
+		origin := []rune{r}
+		if t.lookahead(1, func(runes []rune) bool {
+			return runes[0] == token.LineFeedCharacter
+		}) {
+			origin = append(origin, t.ra.Next())
+			t.pos.Column++
+		}
+		tok.End = t.pos
+		t.pos.Column = 0
+		t.pos.Row++
+		tok.Type = token.LineBreakType
+		tok.Origin = string(origin)
+		return tok, true
+	case token.LineFeedCharacter:
+		tok.End = t.pos
+		t.pos.Column = 0
+		t.pos.Row++
+		tok.Type = token.LineBreakType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.SpaceCharacter:
+		tok.End = t.pos
+		tok.Type = token.SpaceType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	case token.TabCharacter:
+		tok.End = t.pos
+		tok.Type = token.TabType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	}
+	return token.Token{}, false
+}
+
 func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{
 		Type:   0,
@@ -378,7 +506,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 			return token.IsWhitespaceChar(runes[0]) || token.IsLineBreakChar(runes[0])
 		}
 
-		if t.lookahead(1, lookaheadPred) && t.lookbehind(isNonWordTypedToken) {
+		if t.lookahead(1, lookaheadPred) && t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.SequenceEntryType
 			tok.Origin = string([]rune{r})
@@ -388,7 +516,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 		if t.lookahead(3, func(runes []rune) bool {
 			return runes[0] == runes[1] && runes[1] == token.DirectiveEndCharacter &&
 				token.IsWhitespaceChar(runes[2])
-		}) && t.lookbehind(isNonWordTypedToken) {
+		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.Origin = string([]rune{r, t.ra.Next(), t.ra.Next()})
 			t.pos.Column += 2
 			tok.End = t.pos
@@ -398,7 +526,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 	case token.MappingKeyCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
 			return token.IsWhitespaceChar(runes[0])
-		}) && t.lookbehind(isNonWordTypedToken) {
+		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.MappingKeyType
 			tok.Origin = string([]rune{r})
@@ -414,7 +542,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.SequenceStartCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			t.pushContext(flowContext)
 			tok.End = t.pos
 			tok.Type = token.SequenceStartType
@@ -423,7 +551,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 		}
 
 	case token.MappingStartCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			t.pushContext(flowContext)
 			tok.End = t.pos
 			tok.Type = token.MappingStartType
@@ -431,7 +559,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.CommentCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			t.pushContext(commentContext)
 			tok.End = t.pos
 			tok.Type = token.CommentType
@@ -439,28 +567,28 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.AnchorCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.AnchorType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
 	case token.AliasCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.AliasType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
 	case token.TagCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.TagType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
 	case token.LiteralCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			t.pushContext(multilineBlockStartContext)
 			tok.End = t.pos
 			tok.Type = token.LiteralType
@@ -468,7 +596,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.FoldedCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			t.pushContext(multilineBlockStartContext)
 			tok.End = t.pos
 			tok.Type = token.FoldedType
@@ -476,7 +604,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.SingleQuoteCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			t.pushContext(singleQuoteContext)
 			tok.End = t.pos
 			tok.Type = token.SingleQuoteType
@@ -484,7 +612,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.DoubleQuoteCharacter:
-		if t.lookbehind(isNonWordTypedToken) {
+		if t.lookbehind(token.MayPrecedeWord) {
 			t.pushContext(doubleQuoteContext)
 			tok.End = t.pos
 			tok.Type = token.DoubleQuoteType
@@ -531,7 +659,7 @@ func tryGetBlockSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 		if t.lookahead(3, func(runes []rune) bool {
 			return runes[0] == runes[1] && runes[1] == token.DocumentEndCharacter &&
 				token.IsWhitespaceChar(runes[2])
-		}) && t.lookbehind(isNonWordTypedToken) {
+		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.Origin = string([]rune{r, t.ra.Next(), t.ra.Next()})
 			t.pos.Column += 2
 			tok.End = t.pos
@@ -585,13 +713,4 @@ func (t *tokenizer) peekContext() scanningContext {
 
 func (t *tokenizer) pushContext(ctx scanningContext) {
 	t.ctxStack = append(t.ctxStack, ctx)
-}
-
-func isNonWordTypedToken(t token.Token) bool {
-	switch t.Type {
-	case token.SpaceType, token.TabType, token.LineBreakType, token.UnknownType:
-		return true
-	default:
-		return false
-	}
 }

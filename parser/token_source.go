@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"github.com/KSpaceer/fastyaml/cpaccessor"
-	"github.com/KSpaceer/fastyaml/token"
+	"github.com/KSpaceer/yayamls/cpaccessor"
+	"github.com/KSpaceer/yayamls/token"
 )
 
 type RawTokenModer interface {
