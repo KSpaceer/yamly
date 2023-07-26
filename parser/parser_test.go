@@ -517,7 +517,7 @@ func TestParser(t *testing.T) {
 					Origin: "|",
 				},
 				{
-					Type:   token.PlusType,
+					Type:   token.KeepChompingType,
 					Origin: "+",
 				},
 				{
