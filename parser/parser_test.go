@@ -498,7 +498,8 @@ func TestParser(t *testing.T) {
 					Origin: "-",
 				},
 				{
-					Type: token.SpaceType, Origin: " ",
+					Type:   token.SpaceType,
+					Origin: " ",
 				},
 				{
 					Type:   token.AnchorType,

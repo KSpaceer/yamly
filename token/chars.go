@@ -237,3 +237,8 @@ func IsWhitespaceChar(r rune) bool {
 func IsLineBreakChar(r rune) bool {
 	return r == LineFeedCharacter || r == CarriageReturnCharacter
 }
+
+// IsWhitespaceChar OR IsLineBreakChar
+func IsBlankChar(r rune) bool {
+	return IsWhitespaceChar(r) || IsLineBreakChar(r)
+}

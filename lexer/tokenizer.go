@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"github.com/KSpaceer/yayamls/cpaccessor"
+	"github.com/KSpaceer/yayamls/parser"
 	"github.com/KSpaceer/yayamls/token"
 	"strings"
 )
@@ -20,7 +21,7 @@ type tokenizer struct {
 	hasPreparedToken bool
 }
 
-func NewTokenStream(src string) TokenStream {
+func NewTokenStream(src string) parser.ConfigurableTokenStream {
 	t := &tokenizer{
 		ra:           cpaccessor.NewCheckpointingAccessor[rune](newRuneStream(src)),
 		ctx:          newContext(),
@@ -71,6 +72,8 @@ func (t *tokenizer) emitToken() token.Token {
 
 				tok.Origin = originBuilder.String()
 				tok.End = curPos
+				// decreasing column, because we are currently at rune right after
+				// string token
 				tok.End.Column--
 			} else {
 				tok = specialTok

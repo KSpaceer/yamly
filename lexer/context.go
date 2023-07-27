@@ -11,6 +11,7 @@ const (
 	multilineBlockStartContextType
 	singleQuoteContextType
 	doubleQuoteContextType
+	tagContextType
 	rawContextType
 )
 
@@ -44,6 +45,19 @@ func (c *context) revertContext() {
 	}
 }
 
+func (c *context) whitespaceRevertContext() {
+	ctxType := c.currentType()
+	for {
+		switch ctxType {
+		case tagContextType:
+		default:
+			return
+		}
+		c.revertContext()
+		ctxType = c.currentType()
+	}
+}
+
 func (c *context) lineBreakRevertContext() {
 	ctxType := c.currentType()
 	for {
@@ -71,6 +85,8 @@ func (c *context) matchSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 		return c.singleQuoteMatching(t, r)
 	case doubleQuoteContextType:
 		return c.doubleQuoteMatching(t, r)
+	case tagContextType:
+		return c.tagMatching(t, r)
 	case rawContextType:
 		return c.rawMatching(t, r)
 	default:
@@ -83,7 +99,7 @@ func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
 	switch r {
 	case token.SequenceEntryCharacter:
 		lookaheadPred := func(runes []rune) bool {
-			return token.IsWhitespaceChar(runes[0]) || token.IsLineBreakChar(runes[0])
+			return token.IsBlankChar(runes[0]) || runes[0] == EOF
 		}
 
 		if t.lookahead(1, lookaheadPred) && t.lookbehind(token.MayPrecedeWord) {
@@ -95,7 +111,7 @@ func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
 
 		if t.lookahead(3, func(runes []rune) bool {
 			return runes[0] == runes[1] && runes[1] == token.DirectiveEndCharacter &&
-				token.IsWhitespaceChar(runes[2])
+				(token.IsBlankChar(runes[2]) || runes[2] == EOF)
 		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.Origin = string([]rune{r, t.ra.Next(), t.ra.Next()})
 			t.pos.Column += 2
@@ -105,7 +121,7 @@ func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
 		}
 	case token.MappingKeyCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
-			return token.IsWhitespaceChar(runes[0])
+			return token.IsBlankChar(runes[0]) || runes[0] == EOF
 		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.MappingKeyType
@@ -114,7 +130,7 @@ func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
 		}
 	case token.MappingValueCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
-			return token.IsWhitespaceChar(runes[0]) || token.IsLineBreakChar(runes[0])
+			return token.IsBlankChar(runes[0]) || runes[0] == EOF
 		}) {
 			tok.End = t.pos
 			tok.Type = token.MappingValueType
@@ -161,12 +177,11 @@ func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.TagCharacter:
-		if t.lookbehind(token.MayPrecedeWord) {
-			tok.End = t.pos
-			tok.Type = token.TagType
-			tok.Origin = string([]rune{r})
-			return tok, true
-		}
+		c.switchContext(tagContextType)
+		tok.End = t.pos
+		tok.Type = token.TagType
+		tok.Origin = string([]rune{r})
+		return tok, true
 	case token.LiteralCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			c.switchContext(multilineBlockStartContextType)
@@ -207,12 +222,13 @@ func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
 	case token.DocumentEndCharacter:
 		if t.lookahead(3, func(runes []rune) bool {
 			return runes[0] == runes[1] && runes[1] == token.DocumentEndCharacter &&
-				token.IsWhitespaceChar(runes[2])
+				(token.IsBlankChar(runes[2]) || runes[2] == EOF)
 		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.Origin = string([]rune{r, t.ra.Next(), t.ra.Next()})
 			t.pos.Column += 2
 			tok.End = t.pos
 			tok.Type = token.DocumentEndType
+			return tok, true
 		}
 	}
 	return c.baseMatching(t, r)
@@ -224,7 +240,7 @@ func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
 	switch r {
 	case token.MappingKeyCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
-			return token.IsWhitespaceChar(runes[0])
+			return token.IsBlankChar(runes[0]) || runes[0] == EOF
 		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.MappingKeyType
@@ -233,7 +249,7 @@ func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
 		}
 	case token.MappingValueCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
-			return token.IsWhitespaceChar(runes[0])
+			return token.IsBlankChar(runes[0]) || runes[0] == EOF
 		}) || t.lookbehind(token.IsClosingFlowIndicator) {
 			tok.End = t.pos
 			tok.Type = token.MappingValueType
@@ -283,12 +299,11 @@ func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.TagCharacter:
-		if t.lookbehind(token.MayPrecedeWord) {
-			tok.End = t.pos
-			tok.Type = token.TagType
-			tok.Origin = string([]rune{r})
-			return tok, true
-		}
+		c.switchContext(tagContextType)
+		tok.End = t.pos
+		tok.Type = token.TagType
+		tok.Origin = string([]rune{r})
+		return tok, true
 	case token.SingleQuoteCharacter:
 		c.switchContext(singleQuoteContextType)
 		tok.End = t.pos
@@ -379,6 +394,18 @@ func (c *context) doubleQuoteMatching(t *tokenizer, r rune) (token.Token, bool) 
 	return c.baseMatching(t, r)
 }
 
+func (c *context) tagMatching(t *tokenizer, r rune) (token.Token, bool) {
+	tok := token.Token{Start: t.pos}
+	switch r {
+	case token.TagCharacter:
+		tok.End = t.pos
+		tok.Type = token.TagType
+		tok.Origin = string([]rune{r})
+		return tok, true
+	}
+	return c.baseMatching(t, r)
+}
+
 func (c *context) rawMatching(t *tokenizer, r rune) (token.Token, bool) {
 	return c.baseMatching(t, r)
 }
@@ -419,11 +446,13 @@ func (c *context) baseMatching(t *tokenizer, r rune) (token.Token, bool) {
 		tok.Origin = string([]rune{r})
 		return tok, true
 	case token.SpaceCharacter:
+		c.whitespaceRevertContext()
 		tok.End = t.pos
 		tok.Type = token.SpaceType
 		tok.Origin = string([]rune{r})
 		return tok, true
 	case token.TabCharacter:
+		c.whitespaceRevertContext()
 		tok.End = t.pos
 		tok.Type = token.TabType
 		tok.Origin = string([]rune{r})

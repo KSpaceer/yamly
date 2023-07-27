@@ -139,7 +139,10 @@ func (p *parser) parseTagProperty() ast.Node {
 	if p.tok.Type != token.TagType {
 		return ast.NewInvalidNode()
 	}
+	// raw mode for URI string
+	p.tokSrc.SetRawMode()
 	p.next()
+	p.tokSrc.UnsetRawMode()
 
 	// verbatim tag
 	// YAML specification: [98] c-verbatim-tag
