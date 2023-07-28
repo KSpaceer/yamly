@@ -1310,7 +1310,47 @@ func TestParser(t *testing.T) {
 				},
 				{
 					Type:   token.StringType,
-					Origin: "multiline \"ათჯერ გაზომე და ერთხელ გაჭერი\"",
+					Origin: "multiline",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "\"ათჯერ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "გაზომე",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "და",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "ერთხელ",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Origin: "გაჭერი\"",
 				},
 				{
 					Type:   token.SingleQuoteType,

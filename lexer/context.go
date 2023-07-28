@@ -199,21 +199,17 @@ func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.SingleQuoteCharacter:
-		if t.lookbehind(token.MayPrecedeWord) {
-			c.switchContext(singleQuoteContextType)
-			tok.End = t.pos
-			tok.Type = token.SingleQuoteType
-			tok.Origin = string([]rune{r})
-			return tok, true
-		}
+		c.switchContext(singleQuoteContextType)
+		tok.End = t.pos
+		tok.Type = token.SingleQuoteType
+		tok.Origin = string([]rune{r})
+		return tok, true
 	case token.DoubleQuoteCharacter:
-		if t.lookbehind(token.MayPrecedeWord) {
-			c.switchContext(doubleQuoteContextType)
-			tok.End = t.pos
-			tok.Type = token.DoubleQuoteType
-			tok.Origin = string([]rune{r})
-			return tok, true
-		}
+		c.switchContext(doubleQuoteContextType)
+		tok.End = t.pos
+		tok.Type = token.DoubleQuoteType
+		tok.Origin = string([]rune{r})
+		return tok, true
 	case token.DirectiveCharacter:
 		tok.End = t.pos
 		tok.Type = token.DirectiveType
@@ -249,7 +245,7 @@ func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
 		}
 	case token.MappingValueCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
-			return token.IsBlankChar(runes[0]) || runes[0] == EOF
+			return token.IsBlankChar(runes[0]) || token.IsFlowIndicator(runes[0]) || runes[0] == EOF
 		}) || t.lookbehind(token.IsClosingFlowIndicator) {
 			tok.End = t.pos
 			tok.Type = token.MappingValueType
@@ -311,7 +307,7 @@ func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
 		tok.Origin = string([]rune{r})
 		return tok, true
 	case token.DoubleQuoteCharacter:
-		c.switchContext(singleQuoteContextType)
+		c.switchContext(doubleQuoteContextType)
 		tok.End = t.pos
 		tok.Type = token.DoubleQuoteType
 		tok.Origin = string([]rune{r})

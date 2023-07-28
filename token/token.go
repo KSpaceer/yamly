@@ -184,7 +184,7 @@ func MayPrecedeWord(tok Token) bool {
 
 func IsClosingFlowIndicator(tok Token) bool {
 	switch tok.Type {
-	case MappingEndType, SequenceEndType, DoubleQuoteType, SingleQuoteType:
+	case MappingEndType, SequenceEndType, DoubleQuoteType, SingleQuoteType, CollectEntryType:
 		return true
 	default:
 		return false
