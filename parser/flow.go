@@ -60,11 +60,11 @@ func (p *parser) parseGenericFlowNode(
 
 	if ast.ValidNode(node) {
 		p.commit()
-		return ast.NewScalarNode(properties, node)
+		return ast.NewContentNode(properties, node)
 	}
 
 	p.rollback()
-	return ast.NewScalarNode(properties, ast.NewNullNode())
+	return ast.NewContentNode(properties, ast.NewNullNode())
 }
 
 // YAML specification: [161] ns-flow-node
@@ -90,7 +90,7 @@ func (p *parser) parseFlowJSONNode(ind *indentation, ctx Context) ast.Node {
 	if !ast.ValidNode(content) {
 		return ast.NewInvalidNode()
 	}
-	return ast.NewScalarNode(properties, content)
+	return ast.NewContentNode(properties, content)
 }
 
 // YAML specification: [158] ns-flow-content

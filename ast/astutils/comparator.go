@@ -86,7 +86,7 @@ func (t *comparingVisitor) VisitTextNode(n *ast.TextNode) {
 	t.cmpChan <- n
 }
 
-func (t *comparingVisitor) VisitScalarNode(n *ast.ScalarNode) {
+func (t *comparingVisitor) VisitContentNode(n *ast.ContentNode) {
 	t.cmpChan <- n
 	properties, content := n.Properties(), n.Content()
 	if properties != nil {
@@ -94,17 +94,6 @@ func (t *comparingVisitor) VisitScalarNode(n *ast.ScalarNode) {
 	}
 	if content != nil {
 		content.Accept(t)
-	}
-}
-
-func (t *comparingVisitor) VisitCollectionNode(n *ast.CollectionNode) {
-	t.cmpChan <- n
-	properties, collection := n.Properties(), n.Collection()
-	if properties != nil {
-		properties.Accept(t)
-	}
-	if collection != nil {
-		collection.Accept(t)
 	}
 }
 

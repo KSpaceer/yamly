@@ -6,11 +6,10 @@ type Visitor interface {
 	VisitAnchorNode(n *AnchorNode)
 	VisitAliasNode(n *AliasNode)
 	VisitTextNode(n *TextNode)
-	VisitScalarNode(n *ScalarNode)
-	VisitCollectionNode(n *CollectionNode)
 	VisitSequenceNode(n *SequenceNode)
 	VisitMappingNode(n *MappingNode)
 	VisitMappingEntryNode(n *MappingEntryNode)
 	VisitNullNode(n *NullNode)
 	VisitPropertiesNode(n *PropertiesNode)
+	VisitContentNode(n *ContentNode)
 }

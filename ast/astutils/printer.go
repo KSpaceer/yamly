@@ -132,7 +132,7 @@ func (p *Printer) VisitAliasNode(n *ast.AliasNode) {}
 
 func (p *Printer) VisitTextNode(n *ast.TextNode) {}
 
-func (p *Printer) VisitScalarNode(n *ast.ScalarNode) {
+func (p *Printer) VisitContentNode(n *ast.ContentNode) {
 	levelsEnded := p.levelsEnded
 	defer func() {
 		p.levelsEnded = levelsEnded
@@ -170,48 +170,6 @@ func (p *Printer) VisitScalarNode(n *ast.ScalarNode) {
 		p.printValue(content)
 		p.level++
 		content.Accept(p)
-		p.level--
-	}
-}
-
-func (p *Printer) VisitCollectionNode(n *ast.CollectionNode) {
-	levelsEnded := p.levelsEnded
-	defer func() {
-		p.levelsEnded = levelsEnded
-	}()
-
-	properties, collection := n.Properties(), n.Collection()
-	var count, maxCount int
-	if properties != nil {
-		maxCount++
-	}
-	if collection != nil {
-		maxCount++
-	}
-
-	if properties != nil {
-		p.edgeType = edgeMid
-		if count == maxCount-1 {
-			p.levelsEnded = append(p.levelsEnded, p.level)
-			p.edgeType = edgeEnd
-		}
-		count++
-		p.printValue(properties)
-		p.level++
-		properties.Accept(p)
-		p.level--
-	}
-
-	if collection != nil {
-		p.edgeType = edgeMid
-		if count == maxCount-1 {
-			p.levelsEnded = append(p.levelsEnded, p.level)
-			p.edgeType = edgeEnd
-		}
-		count++
-		p.printValue(collection)
-		p.level++
-		collection.Accept(p)
 		p.level--
 	}
 }

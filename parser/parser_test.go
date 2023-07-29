@@ -63,7 +63,7 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil, ast.NewMappingNode(
+				ast.NewContentNode(nil, ast.NewMappingNode(
 					[]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("key"),
@@ -113,7 +113,7 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil, ast.NewSequenceNode(
+				ast.NewContentNode(nil, ast.NewSequenceNode(
 					[]ast.Node{
 						ast.NewTextNode("value1"),
 						ast.NewTextNode("value2"),
@@ -211,11 +211,11 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil, ast.NewMappingNode(
+				ast.NewContentNode(nil, ast.NewMappingNode(
 					[]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("sequence"),
-							ast.NewCollectionNode(
+							ast.NewContentNode(
 								nil,
 								ast.NewSequenceNode(
 									[]ast.Node{
@@ -322,7 +322,7 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil, ast.NewSequenceNode(
+				ast.NewContentNode(nil, ast.NewSequenceNode(
 					[]ast.Node{
 						ast.NewMappingNode(
 							[]ast.Node{
@@ -455,11 +455,11 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil, ast.NewMappingNode(
+				ast.NewContentNode(nil, ast.NewMappingNode(
 					[]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("mapping"),
-							ast.NewCollectionNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("map"),
 									ast.NewAnchorNode("ref"),
@@ -635,16 +635,16 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil, ast.NewSequenceNode(
+				ast.NewContentNode(nil, ast.NewSequenceNode(
 					[]ast.Node{
-						ast.NewScalarNode(
+						ast.NewContentNode(
 							ast.NewPropertiesNode(
 								nil,
 								ast.NewAnchorNode("lit"),
 							),
 							ast.NewTextNode("firstrow\nsecondrow\n\n"),
 						),
-						ast.NewScalarNode(
+						ast.NewContentNode(
 							ast.NewPropertiesNode(
 								ast.NewTagNode("primary"),
 								nil,
@@ -1080,16 +1080,16 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil, ast.NewMappingNode(
+				ast.NewContentNode(nil, ast.NewMappingNode(
 					[]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("mapping"),
-							ast.NewCollectionNode(
+							ast.NewContentNode(
 								nil,
 								ast.NewMappingNode(
 									[]ast.Node{
 										ast.NewMappingEntryNode(
-											ast.NewScalarNode(
+											ast.NewContentNode(
 												ast.NewInvalidNode(),
 												ast.NewTextNode("quoted key"),
 											),
@@ -1108,7 +1108,7 @@ func TestParseTokens(t *testing.T) {
 							)),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("sequence"),
-							ast.NewCollectionNode(
+							ast.NewContentNode(
 								nil,
 								ast.NewSequenceNode(
 									[]ast.Node{
@@ -1433,7 +1433,7 @@ func TestParseTokens(t *testing.T) {
 							),
 						),
 						ast.NewMappingEntryNode(
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewInvalidNode(),
 								ast.NewTextNode("explicit key"),
 							),
@@ -1771,11 +1771,11 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil, ast.NewSequenceNode(
+				ast.NewContentNode(nil, ast.NewSequenceNode(
 					[]ast.Node{
 						ast.NewSequenceNode(
 							[]ast.Node{
-								ast.NewScalarNode(
+								ast.NewContentNode(
 									ast.NewPropertiesNode(
 										ast.NewTagNode("!baz"),
 										ast.NewInvalidNode(),
@@ -1785,7 +1785,7 @@ func TestParseTokens(t *testing.T) {
 								ast.NewTextNode("plain\nmulti line"),
 							},
 						),
-						ast.NewScalarNode(
+						ast.NewContentNode(
 							nil,
 							ast.NewTextNode("\n\tspaced\n\n text"),
 						),
@@ -2006,7 +2006,7 @@ func TestParseTokens(t *testing.T) {
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
 				ast.NewNullNode(),
-				ast.NewScalarNode(
+				ast.NewContentNode(
 					ast.NewPropertiesNode(
 						ast.NewInvalidNode(),
 						ast.NewAnchorNode("anchor"),
@@ -2028,7 +2028,7 @@ func TestParseTokens(t *testing.T) {
 							ast.NewTextNode("emptyk"),
 						),
 						ast.NewMappingEntryNode(
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewInvalidNode(),
 								ast.NewTextNode("adjacent"),
 							),
@@ -2109,11 +2109,11 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
                         - 10.10.10.2/24
 				`,
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil,
+				ast.NewContentNode(nil,
 					ast.NewMappingNode([]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("network"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("version"),
@@ -2125,15 +2125,15 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 									),
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("ethernets"),
-										ast.NewCollectionNode(nil,
+										ast.NewContentNode(nil,
 											ast.NewMappingNode([]ast.Node{
 												ast.NewMappingEntryNode(
 													ast.NewTextNode("enp3s0"),
-													ast.NewCollectionNode(nil,
+													ast.NewContentNode(nil,
 														ast.NewMappingNode([]ast.Node{
 															ast.NewMappingEntryNode(
 																ast.NewTextNode("addresses"),
-																ast.NewCollectionNode(nil,
+																ast.NewContentNode(nil,
 																	ast.NewSequenceNode([]ast.Node{
 																		ast.NewTextNode("10.10.10.2/24"),
 																	}),
@@ -2175,7 +2175,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
                   allow.textmode=true
             `,
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil,
+				ast.NewContentNode(nil,
 					ast.NewMappingNode([]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("apiVersion"),
@@ -2187,7 +2187,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("metadata"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("name"),
@@ -2198,7 +2198,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("data"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("player_initial_lives"),
@@ -2210,13 +2210,13 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 									),
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("game.properties"),
-										ast.NewScalarNode(nil,
+										ast.NewContentNode(nil,
 											ast.NewTextNode("enemy.types=aliens,monsters\nplayer.maximum-lives=5\n"),
 										),
 									),
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("user-interface.properties"),
-										ast.NewScalarNode(nil,
+										ast.NewContentNode(nil,
 											ast.NewTextNode("color.good=purple\ncolor.bad=yellow\nallow.textmode=true\n"),
 										),
 									),
@@ -2234,7 +2234,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 				ast.NewMappingNode([]ast.Node{
 					ast.NewMappingEntryNode(
 						ast.NewTextNode("key"),
-						ast.NewScalarNode(
+						ast.NewContentNode(
 							ast.NewPropertiesNode(
 								ast.NewTagNode("str"),
 								ast.NewAnchorNode("ref"),
@@ -2260,7 +2260,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 				return string(data)
 			}(),
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewCollectionNode(nil,
+				ast.NewContentNode(nil,
 					ast.NewMappingNode([]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("key"),
@@ -2323,7 +2323,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 							ast.NewTextNode("A string, enclosed in quotes."),
 						),
 						ast.NewMappingEntryNode(
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewInvalidNode(),
 								ast.NewTextNode("Keys can be quoted too."),
 							),
@@ -2347,7 +2347,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("literal_block"),
-							ast.NewScalarNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewTextNode("This entire block of text will be the value of the "+
 									"'literal_block' key,\nwith line breaks being preserved.\n"+
 									"\nThe literal continues until de-dented, and the leading indentation "+
@@ -2358,7 +2358,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("folded_style"),
-							ast.NewScalarNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewTextNode("This entire block of text will be the value of "+
 									"'folded_style', but this time, all newlines will be replaced "+
 									"with a single space.\nBlank lines, like above, are converted to a newline "+
@@ -2369,7 +2369,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("literal_strip"),
-							ast.NewScalarNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewTextNode("This entire block of text will be the value of the "+
 									"'literal_block' key,\nwith trailing blank line being stripped.",
 								),
@@ -2377,7 +2377,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("block_strip"),
-							ast.NewScalarNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewTextNode("This entire block of text will be the value of "+
 									"'folded_style', but this time, all newlines will be replaced with a "+
 									"single space and trailing blank line being stripped.",
@@ -2386,14 +2386,14 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("literal_keep"),
-							ast.NewScalarNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewTextNode("This entire block of text will be the value of the "+
 									"'literal_block' key,\nwith trailing blank line being kept.\n\n"),
 							),
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("block_keep"),
-							ast.NewScalarNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewTextNode("This entire block of text will be the value of "+
 									"'folded_style', but this time, all newlines will be replaced "+
 									"with a single space and trailing blank line being kept.\n\n",
@@ -2402,7 +2402,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("a_nested_map"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("key"),
@@ -2414,7 +2414,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 									),
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("another_nested_map"),
-										ast.NewCollectionNode(nil,
+										ast.NewContentNode(nil,
 											ast.NewMappingNode([]ast.Node{
 												ast.NewMappingEntryNode(
 													ast.NewTextNode("hello"),
@@ -2431,7 +2431,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 							ast.NewTextNode("a float key"),
 						),
 						ast.NewMappingEntryNode(
-							ast.NewScalarNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewTextNode("This is a key\nthat has multiple lines\n"),
 							),
 							ast.NewTextNode("and this is its value"),
@@ -2448,7 +2448,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("a_sequence"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewSequenceNode([]ast.Node{
 									ast.NewTextNode("Item 1"),
 									ast.NewTextNode("Item 2"),
@@ -2481,7 +2481,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 							ast.NewTextNode("json_map"),
 							ast.NewMappingNode([]ast.Node{
 								ast.NewMappingEntryNode(
-									ast.NewScalarNode(
+									ast.NewContentNode(
 										ast.NewInvalidNode(),
 										ast.NewTextNode("key"),
 									),
@@ -2514,7 +2514,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("anchored_content"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(nil,
 									ast.NewAnchorNode("anchor_name"),
 								),
@@ -2527,7 +2527,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("base"),
-							ast.NewCollectionNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewInvalidNode(),
 									ast.NewAnchorNode("base"),
@@ -2542,7 +2542,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("foo"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("<<"),
@@ -2561,7 +2561,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("bar"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("<<"),
@@ -2576,7 +2576,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("explicit_boolean"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("bool"),
 									ast.NewInvalidNode(),
@@ -2586,7 +2586,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("explicit_integer"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("int"),
 									ast.NewInvalidNode(),
@@ -2596,7 +2596,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("explicit_float"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("float"),
 									ast.NewInvalidNode(),
@@ -2606,7 +2606,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("explicit_string"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("str"),
 									ast.NewInvalidNode(),
@@ -2616,7 +2616,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("explicit_datetime"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("timestamp"),
 									ast.NewInvalidNode(),
@@ -2626,7 +2626,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("explicit_null"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("null"),
 									nil,
@@ -2636,7 +2636,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("python_complex_number"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("python/complex"),
 									ast.NewInvalidNode(),
@@ -2645,7 +2645,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 							),
 						),
 						ast.NewMappingEntryNode(
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("python/tuple"),
 									ast.NewInvalidNode(),
@@ -2671,7 +2671,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("date_explicit"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("timestamp"),
 									nil,
@@ -2681,7 +2681,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("gif_file"),
-							ast.NewScalarNode(
+							ast.NewContentNode(
 								ast.NewPropertiesNode(
 									ast.NewTagNode("binary"),
 									ast.NewInvalidNode(),
@@ -2695,7 +2695,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("set"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("item1"),
@@ -2731,7 +2731,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("set2"),
-							ast.NewCollectionNode(nil,
+							ast.NewContentNode(nil,
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
 										ast.NewTextNode("item1"),

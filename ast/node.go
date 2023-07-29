@@ -9,8 +9,7 @@ type NodeType int8
 const (
 	InvalidType NodeType = iota
 	DocumentType
-	ScalarType
-	CollectionType
+	ContentType
 	MappingType
 	MappingEntryType
 	SequenceType
@@ -35,10 +34,8 @@ func (t NodeType) String() string {
 		return "invalid"
 	case DocumentType:
 		return "document"
-	case ScalarType:
-		return "scalar"
-	case CollectionType:
-		return "collection"
+	case ContentType:
+		return "content"
 	case MappingType:
 		return "mapping"
 	case MappingEntryType:
@@ -293,59 +290,31 @@ func NewTextNode(text string) Node {
 	}
 }
 
-type ScalarNode struct {
+type ContentNode struct {
 	properties Node
 	content    Node
 }
 
-func (*ScalarNode) Type() NodeType {
-	return ScalarType
+func (*ContentNode) Type() NodeType {
+	return ContentType
 }
 
-func (s *ScalarNode) Accept(v Visitor) {
-	v.VisitScalarNode(s)
+func (c *ContentNode) Accept(v Visitor) {
+	v.VisitContentNode(c)
 }
 
-func (s *ScalarNode) Properties() Node {
-	return s.properties
-}
-
-func (s *ScalarNode) Content() Node {
-	return s.content
-}
-
-func NewScalarNode(properties, content Node) Node {
-	return &ScalarNode{
-		properties: properties,
-		content:    content,
-	}
-}
-
-type CollectionNode struct {
-	properties Node
-	collection Node
-}
-
-func (*CollectionNode) Type() NodeType {
-	return CollectionType
-}
-
-func (c *CollectionNode) Accept(v Visitor) {
-	v.VisitCollectionNode(c)
-}
-
-func (c *CollectionNode) Properties() Node {
+func (c *ContentNode) Properties() Node {
 	return c.properties
 }
 
-func (c *CollectionNode) Collection() Node {
-	return c.collection
+func (c *ContentNode) Content() Node {
+	return c.content
 }
 
-func NewCollectionNode(properties, collection Node) Node {
-	return &CollectionNode{
+func NewContentNode(properties, content Node) Node {
+	return &ContentNode{
 		properties: properties,
-		collection: collection,
+		content:    content,
 	}
 }
 
