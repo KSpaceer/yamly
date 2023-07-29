@@ -175,7 +175,16 @@ func IsNonBreak(tok Token) bool {
 
 func MayPrecedeWord(tok Token) bool {
 	switch tok.Type {
-	case SpaceType, TabType, LineBreakType, UnknownType, CollectEntryType:
+	case SpaceType, TabType, LineBreakType, UnknownType:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsOpeningFlowIndicator(tok Token) bool {
+	switch tok.Type {
+	case MappingStartType, SequenceStartType, CollectEntryType:
 		return true
 	default:
 		return false
@@ -184,11 +193,15 @@ func MayPrecedeWord(tok Token) bool {
 
 func IsClosingFlowIndicator(tok Token) bool {
 	switch tok.Type {
-	case MappingEndType, SequenceEndType, DoubleQuoteType, SingleQuoteType, CollectEntryType:
+	case MappingEndType, SequenceEndType, CollectEntryType:
 		return true
 	default:
 		return false
 	}
+}
+
+func IsFlowIndicator(tok Token) bool {
+	return IsOpeningFlowIndicator(tok) || IsClosingFlowIndicator(tok)
 }
 
 type Token struct {

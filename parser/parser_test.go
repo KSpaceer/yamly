@@ -1796,7 +1796,7 @@ func TestParser(t *testing.T) {
 			name: "mix2",
 			/*
 				...
-				<BOM># stream comment
+				<BOM> # stream comment
 				---
 				# document
 				...
@@ -1817,6 +1817,10 @@ func TestParser(t *testing.T) {
 				{
 					Type:   token.BOMType,
 					Origin: "\uFEFF",
+				},
+				{
+					Type:   token.SpaceType,
+					Origin: " ",
 				},
 				{
 					Type:   token.CommentType,

@@ -34,13 +34,11 @@ func NewTokenStream(src string) parser.ConfigurableTokenStream {
 }
 
 func (t *tokenizer) SetRawMode() {
-	t.ctx.switchContext(rawContextType)
+	t.ctx.setRawModeValue(true)
 }
 
 func (t *tokenizer) UnsetRawMode() {
-	if t.ctx.currentType() == rawContextType {
-		t.ctx.revertContext()
-	}
+	t.ctx.setRawModeValue(false)
 }
 
 func (t *tokenizer) Next() token.Token {

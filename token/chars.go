@@ -60,7 +60,7 @@ func IsURI(s string) bool {
 			i++
 		default:
 			r := runes[i]
-			if !(IsDigit(r) || IsASCIILetter(r) || IsFlowIndicator(r) || strings.IndexRune(URIOnlyChars, r) != -1) {
+			if !(IsDigit(r) || IsASCIILetter(r) || IsFlowIndicatorChar(r) || strings.IndexRune(URIOnlyChars, r) != -1) {
 				return false
 			}
 		}
@@ -101,7 +101,7 @@ func IsAnchorString(s string) bool {
 // YAML specification: [129] ns-plain-safe-in
 func IsPlainSafeString(s string) bool {
 	for _, c := range s {
-		if IsFlowIndicator(c) {
+		if IsFlowIndicatorChar(c) {
 			return false
 		}
 	}
@@ -157,7 +157,7 @@ func IsDoubleQuotedString(s string) bool {
 }
 
 // YAML specification: [23] c-flow-indicator
-func IsFlowIndicator(r rune) bool {
+func IsFlowIndicatorChar(r rune) bool {
 	switch r {
 	case ',', '[', ']', '{', '}':
 		return true

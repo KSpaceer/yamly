@@ -12,7 +12,6 @@ const (
 	singleQuoteContextType
 	doubleQuoteContextType
 	tagContextType
-	rawContextType
 )
 
 const contextStackPreallocationSize = 4
@@ -20,12 +19,17 @@ const contextStackPreallocationSize = 4
 type context struct {
 	ctxStack []contextType
 	escaped  bool
+	rawMode  bool
 }
 
 func newContext() context {
 	return context{
 		ctxStack: make([]contextType, 0, contextStackPreallocationSize),
 	}
+}
+
+func (c *context) setRawModeValue(value bool) {
+	c.rawMode = value
 }
 
 func (c *context) switchContext(ctxType contextType) {
@@ -62,7 +66,10 @@ func (c *context) lineBreakRevertContext() {
 	ctxType := c.currentType()
 	for {
 		switch ctxType {
-		case blockContextType, flowContextType, doubleQuoteContextType, singleQuoteContextType, rawContextType:
+		case blockContextType,
+			flowContextType,
+			doubleQuoteContextType,
+			singleQuoteContextType:
 			return
 		}
 
@@ -72,6 +79,10 @@ func (c *context) lineBreakRevertContext() {
 }
 
 func (c *context) matchSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
+	if c.rawMode {
+		return c.rawMatching(t, r)
+	}
+
 	switch c.currentType() {
 	case blockContextType:
 		return c.blockMatching(t, r)
@@ -87,8 +98,6 @@ func (c *context) matchSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 		return c.doubleQuoteMatching(t, r)
 	case tagContextType:
 		return c.tagMatching(t, r)
-	case rawContextType:
-		return c.rawMatching(t, r)
 	default:
 		return c.baseMatching(t, r)
 	}
@@ -237,37 +246,38 @@ func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
 	case token.MappingKeyCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
 			return token.IsBlankChar(runes[0]) || runes[0] == EOF
-		}) && t.lookbehind(token.MayPrecedeWord) {
+		}) && t.lookbehind(mayPrecedeWordInFlow) {
 			tok.End = t.pos
 			tok.Type = token.MappingKeyType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
 	case token.MappingValueCharacter:
+		canBeAdjacent := func(tok token.Token) bool {
+			return token.IsClosingFlowIndicator(tok) || tok.Type == token.DoubleQuoteType ||
+				tok.Type == token.SingleQuoteType
+		}
+
 		if t.lookahead(1, func(runes []rune) bool {
-			return token.IsBlankChar(runes[0]) || token.IsFlowIndicator(runes[0]) || runes[0] == EOF
-		}) || t.lookbehind(token.IsClosingFlowIndicator) {
+			return token.IsBlankChar(runes[0]) || token.IsFlowIndicatorChar(runes[0]) || runes[0] == EOF
+		}) || t.lookbehind(canBeAdjacent) {
 			tok.End = t.pos
 			tok.Type = token.MappingValueType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
 	case token.SequenceStartCharacter:
-		if t.lookbehind(token.MayPrecedeWord) {
-			c.switchContext(flowContextType)
-			tok.End = t.pos
-			tok.Type = token.SequenceStartType
-			tok.Origin = string([]rune{r})
-			return tok, true
-		}
+		c.switchContext(flowContextType)
+		tok.End = t.pos
+		tok.Type = token.SequenceStartType
+		tok.Origin = string([]rune{r})
+		return tok, true
 	case token.MappingStartCharacter:
-		if t.lookbehind(token.MayPrecedeWord) {
-			c.switchContext(flowContextType)
-			tok.End = t.pos
-			tok.Type = token.MappingStartType
-			tok.Origin = string([]rune{r})
-			return tok, true
-		}
+		c.switchContext(flowContextType)
+		tok.End = t.pos
+		tok.Type = token.MappingStartType
+		tok.Origin = string([]rune{r})
+		return tok, true
 	case token.SequenceEndCharacter:
 		c.revertContext()
 		tok.End = t.pos
@@ -281,14 +291,14 @@ func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
 		tok.Origin = string([]rune{r})
 		return tok, true
 	case token.AnchorCharacter:
-		if t.lookbehind(token.MayPrecedeWord) {
+		if t.lookbehind(mayPrecedeWordInFlow) {
 			tok.End = t.pos
 			tok.Type = token.AnchorType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
 	case token.AliasCharacter:
-		if t.lookbehind(token.MayPrecedeWord) {
+		if t.lookbehind(mayPrecedeWordInFlow) {
 			tok.End = t.pos
 			tok.Type = token.AliasType
 			tok.Origin = string([]rune{r})
@@ -319,6 +329,10 @@ func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
 		return tok, true
 	}
 	return c.baseMatching(t, r)
+}
+
+func mayPrecedeWordInFlow(tok token.Token) bool {
+	return token.MayPrecedeWord(tok) || token.IsOpeningFlowIndicator(tok)
 }
 
 func (c *context) commentMatching(t *tokenizer, r rune) (token.Token, bool) {

@@ -174,7 +174,10 @@ func (p *parser) parseDirective() ast.Node {
 	if p.tok.Type != token.DirectiveType {
 		return ast.NewInvalidNode()
 	}
+	// directive may have any name
+	p.tokSrc.SetRawMode()
 	p.next()
+	p.tokSrc.UnsetRawMode()
 	var directiveNode ast.Node
 	switch p.tok.Origin {
 	case token.YAMLDirective:
@@ -201,6 +204,8 @@ func (p *parser) parseReservedDirective() ast.Node {
 	if p.tok.Type != token.StringType {
 		return ast.NewInvalidNode()
 	}
+	// reserved directive may have any parameters
+	p.tokSrc.SetRawMode()
 	p.next()
 	for {
 		p.setCheckpoint()
@@ -215,6 +220,7 @@ func (p *parser) parseReservedDirective() ast.Node {
 		p.next()
 		p.commit()
 	}
+	p.tokSrc.UnsetRawMode()
 
 	return ast.NewBasicNode(ast.DirectiveType)
 }
@@ -227,6 +233,9 @@ func (p *parser) parseTagDirective() ast.Node {
 	if !ast.ValidNode(p.parseTagHandle()) {
 		return ast.NewInvalidNode()
 	}
+	// tag prefix may have almost all possible characters
+	p.tokSrc.SetRawMode()
+	defer p.tokSrc.UnsetRawMode()
 	if !ast.ValidNode(p.parseSeparateInLine()) {
 		return ast.NewInvalidNode()
 	}
