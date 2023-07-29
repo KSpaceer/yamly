@@ -78,7 +78,7 @@ func (c *context) lineBreakRevertContext() {
 	}
 }
 
-func (c *context) matchSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) matchSpecialToken(t *Tokenizer, r rune) (token.Token, bool) {
 	if c.rawMode {
 		return c.rawMatching(t, r)
 	}
@@ -103,7 +103,7 @@ func (c *context) matchSpecialToken(t *tokenizer, r rune) (token.Token, bool) {
 	}
 }
 
-func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	switch r {
 	case token.SequenceEntryCharacter:
@@ -239,7 +239,7 @@ func (c *context) blockMatching(t *tokenizer, r rune) (token.Token, bool) {
 	return c.baseMatching(t, r)
 }
 
-func (c *context) flowMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) flowMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 
 	switch r {
@@ -335,11 +335,11 @@ func mayPrecedeWordInFlow(tok token.Token) bool {
 	return token.MayPrecedeWord(tok) || token.IsOpeningFlowIndicator(tok)
 }
 
-func (c *context) commentMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) commentMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	return c.baseMatching(t, r)
 }
 
-func (c *context) multilineBlockStartMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) multilineBlockStartMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	switch r {
 	case token.StripChompingCharacter:
@@ -364,7 +364,7 @@ func (c *context) multilineBlockStartMatching(t *tokenizer, r rune) (token.Token
 	return c.baseMatching(t, r)
 }
 
-func (c *context) singleQuoteMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) singleQuoteMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	var escaped bool
 	if r == token.SingleQuoteCharacter {
@@ -383,7 +383,7 @@ func (c *context) singleQuoteMatching(t *tokenizer, r rune) (token.Token, bool) 
 	return c.baseMatching(t, r)
 }
 
-func (c *context) doubleQuoteMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) doubleQuoteMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	var escaped bool
 	switch r {
@@ -404,7 +404,7 @@ func (c *context) doubleQuoteMatching(t *tokenizer, r rune) (token.Token, bool) 
 	return c.baseMatching(t, r)
 }
 
-func (c *context) tagMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) tagMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	switch r {
 	case token.TagCharacter:
@@ -416,11 +416,11 @@ func (c *context) tagMatching(t *tokenizer, r rune) (token.Token, bool) {
 	return c.baseMatching(t, r)
 }
 
-func (c *context) rawMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) rawMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	return c.baseMatching(t, r)
 }
 
-func (c *context) baseMatching(t *tokenizer, r rune) (token.Token, bool) {
+func (c *context) baseMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	switch r {
 	case EOF:

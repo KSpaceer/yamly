@@ -398,9 +398,10 @@ func TestTokenAccessor(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			stream := &testTokenStream{
-				tokens: tc.LoadedTokens,
-				index:  0,
+			stream := &testStream[token.Token]{
+				values:       tc.LoadedTokens,
+				defaultValue: token.Token{Type: token.EOFType},
+				index:        0,
 			}
 			result := make([]token.Token, 0, len(tc.ExpectedTokens))
 			tokenAccessor := cpaccessor.NewCheckpointingAccessor[token.Token](stream)
@@ -446,16 +447,41 @@ func TestTokenAccessor(t *testing.T) {
 	}
 }
 
-type testTokenStream struct {
-	tokens []token.Token
-	index  int
+type testStream[T any] struct {
+	values       []T
+	defaultValue T
+	index        int
 }
 
-func (t *testTokenStream) Next() token.Token {
-	if t.index >= len(t.tokens) {
-		return token.Token{Type: token.EOFType}
+func (t *testStream[T]) Next() T {
+	if t.index >= len(t.values) {
+		return t.defaultValue
 	}
-	tok := t.tokens[t.index]
+	tok := t.values[t.index]
 	t.index++
 	return tok
+}
+
+// Accessor must preserve all values rollbacked with nested rollback
+// after committing the last existing checkpoint
+func TestCommitWithNestedRollback(t *testing.T) {
+	stream := &testStream[int]{
+		values: []int{1, 2, 3},
+	}
+
+	accessor := cpaccessor.NewCheckpointingAccessor[int](stream)
+
+	accessor.SetCheckpoint()
+	accessor.Next()
+	accessor.Next()
+	accessor.SetCheckpoint()
+	accessor.Next()
+	accessor.Rollback()
+	accessor.Commit()
+
+	value := accessor.Next()
+	if value != 3 {
+		t.Fatalf("expected %d but got %d", 3, value)
+	}
+
 }

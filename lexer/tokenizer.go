@@ -2,14 +2,13 @@ package lexer
 
 import (
 	"github.com/KSpaceer/yayamls/cpaccessor"
-	"github.com/KSpaceer/yayamls/parser"
 	"github.com/KSpaceer/yayamls/token"
 	"strings"
 )
 
 const lookaheadBufferPreallocationSize = 8
 
-type tokenizer struct {
+type Tokenizer struct {
 	ra  cpaccessor.CheckpointingAccessor[rune]
 	ctx context
 	pos token.Position
@@ -21,8 +20,8 @@ type tokenizer struct {
 	hasPreparedToken bool
 }
 
-func NewTokenStream(src string) parser.ConfigurableTokenStream {
-	t := &tokenizer{
+func NewTokenizer(src string) *Tokenizer {
+	t := &Tokenizer{
 		ra:           cpaccessor.NewCheckpointingAccessor[rune](newRuneStream(src)),
 		ctx:          newContext(),
 		lookaheadBuf: make([]rune, 0, lookaheadBufferPreallocationSize),
@@ -33,15 +32,15 @@ func NewTokenStream(src string) parser.ConfigurableTokenStream {
 	return t
 }
 
-func (t *tokenizer) SetRawMode() {
+func (t *Tokenizer) SetRawMode() {
 	t.ctx.setRawModeValue(true)
 }
 
-func (t *tokenizer) UnsetRawMode() {
+func (t *Tokenizer) UnsetRawMode() {
 	t.ctx.setRawModeValue(false)
 }
 
-func (t *tokenizer) Next() token.Token {
+func (t *Tokenizer) Next() token.Token {
 	if t.hasPreparedToken {
 		t.lookbehindTok = t.preparedToken
 		tok := t.preparedToken
@@ -52,7 +51,7 @@ func (t *tokenizer) Next() token.Token {
 	return t.emitToken()
 }
 
-func (t *tokenizer) emitToken() token.Token {
+func (t *Tokenizer) emitToken() token.Token {
 	tok := token.Token{}
 	var originBuilder strings.Builder
 	for {
@@ -90,7 +89,7 @@ func (t *tokenizer) emitToken() token.Token {
 	return tok
 }
 
-func (t *tokenizer) lookahead(count int, predicate func([]rune) bool) bool {
+func (t *Tokenizer) lookahead(count int, predicate func([]rune) bool) bool {
 	t.ra.SetCheckpoint()
 	for i := 0; i < count; i++ {
 		t.lookaheadBuf = append(t.lookaheadBuf, t.ra.Next())
@@ -101,6 +100,6 @@ func (t *tokenizer) lookahead(count int, predicate func([]rune) bool) bool {
 	return result
 }
 
-func (t *tokenizer) lookbehind(predicate func(token.Token) bool) bool {
+func (t *Tokenizer) lookbehind(predicate func(token.Token) bool) bool {
 	return predicate(t.lookbehindTok)
 }

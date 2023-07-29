@@ -3,6 +3,7 @@ package parser
 import (
 	"bytes"
 	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yayamls/lexer"
 	"github.com/KSpaceer/yayamls/token"
 	"sync"
 )
@@ -47,14 +48,41 @@ type state struct {
 	startOfLine bool
 }
 
-func Parse(cts ConfigurableTokenStream) ast.Node {
-	p := newParser(cts)
+func ParseTokenStream(cts ConfigurableTokenStream) ast.Node {
+	p := newParser(newTokenSource(cts))
 	return p.Parse()
 }
 
-func newParser(cts ConfigurableTokenStream) *parser {
+func ParseTokens(tokens []token.Token) ast.Node {
+	tokSrc := newTokenSource(newSimpleTokenStream(tokens))
+	p := newParser(tokSrc)
+	return p.Parse()
+}
+
+func ParseString(src string, opts ...ParseOption) ast.Node {
+	o := applyOptions(opts...)
+
+	var cts ConfigurableTokenStream
+	if o.tokenStreamConstructor != nil {
+		cts = o.tokenStreamConstructor(src)
+	} else {
+		cts = lexer.NewTokenizer(src)
+	}
+	return ParseTokenStream(cts)
+}
+
+func ParseBytes(src []byte, opts ...ParseOption) ast.Node {
+	return ParseString(string(src), opts...)
+}
+
+func Parse(cts ConfigurableTokenStream) ast.Node {
+	p := newParser(newTokenSource(cts))
+	return p.Parse()
+}
+
+func newParser(tokSrc *tokenSource) *parser {
 	return &parser{
-		tokSrc: newTokenSource(cts),
+		tokSrc: tokSrc,
 		state: state{
 			startOfLine: true,
 		},

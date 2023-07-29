@@ -15,6 +15,11 @@ type ConfigurableTokenStream interface {
 	RawTokenModer
 }
 
+type tokenSource struct {
+	cpaccessor.CheckpointingAccessor[token.Token]
+	RawTokenModer
+}
+
 func newTokenSource(cts ConfigurableTokenStream) *tokenSource {
 	return &tokenSource{
 		CheckpointingAccessor: cpaccessor.NewCheckpointingAccessor[token.Token](cts),
@@ -22,7 +27,27 @@ func newTokenSource(cts ConfigurableTokenStream) *tokenSource {
 	}
 }
 
-type tokenSource struct {
-	cpaccessor.CheckpointingAccessor[token.Token]
-	RawTokenModer
+type simpleTokenStream struct {
+	tokens []token.Token
+	index  int
 }
+
+func newSimpleTokenStream(tokens []token.Token) ConfigurableTokenStream {
+	return &simpleTokenStream{
+		tokens: tokens,
+		index:  0,
+	}
+}
+
+func (t *simpleTokenStream) Next() token.Token {
+	if t.index >= len(t.tokens) {
+		return token.Token{Type: token.EOFType}
+	}
+	tok := t.tokens[t.index]
+	t.index++
+	return tok
+}
+
+func (t *simpleTokenStream) SetRawMode() {}
+
+func (*simpleTokenStream) UnsetRawMode() {}

@@ -468,6 +468,7 @@ func (p *parser) parseDiffLines(ind *indentation, buf *bytes.Buffer) ast.Node {
 			break
 		}
 		buf.WriteString(p.tok.Origin)
+		p.next()
 		if !ast.ValidNode(p.parseSameLines(ind, buf)) {
 			buf.Truncate(savedLen)
 			p.rollback()
@@ -770,16 +771,15 @@ func (p *parser) parseChompedEmpty(ind *indentation, chomping ast.ChompingType, 
 // YAML specification: [168] l-keep-empty
 func (p *parser) parseKeepEmpty(ind *indentation, buf *bytes.Buffer) ast.Node {
 	savedLen := buf.Len()
-	localLen := savedLen
 	for {
 		p.setCheckpoint()
 		if !ast.ValidNode(p.parseEmpty(ind, BlockInContext, buf)) {
 			p.rollback()
-			buf.Truncate(localLen)
+			buf.Truncate(savedLen)
 			break
 		}
 		p.commit()
-		localLen = buf.Len()
+		savedLen = buf.Len()
 	}
 	p.setCheckpoint()
 	if !ast.ValidNode(p.parseTrailComments(ind)) {

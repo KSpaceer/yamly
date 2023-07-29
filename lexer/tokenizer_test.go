@@ -2550,11 +2550,492 @@ func TestTokenizer(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "real example",
+			src: `
+				network:
+				  version: 2
+				  renderer: networkd
+				  ethernets:
+				    enp3s0:
+					  addresses:
+					    - 10.10.10.2/24
+				`,
+			expectedTokens: []token.Token{
+				{
+					Type:   token.LineBreakType,
+					Start:  token.Position{Row: 1, Column: 1},
+					End:    token.Position{Row: 1, Column: 1},
+					Origin: "\n",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 2, Column: 1},
+					End:    token.Position{Row: 2, Column: 1},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 2, Column: 2},
+					End:    token.Position{Row: 2, Column: 2},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 2, Column: 3},
+					End:    token.Position{Row: 2, Column: 3},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 2, Column: 4},
+					End:    token.Position{Row: 2, Column: 4},
+					Origin: "\t",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 2, Column: 5},
+					End:    token.Position{Row: 2, Column: 11},
+					Origin: "network",
+				},
+				{
+					Type:   token.MappingValueType,
+					Start:  token.Position{Row: 2, Column: 12},
+					End:    token.Position{Row: 2, Column: 12},
+					Origin: ":",
+				},
+				{
+					Type:   token.LineBreakType,
+					Start:  token.Position{Row: 2, Column: 13},
+					End:    token.Position{Row: 2, Column: 13},
+					Origin: "\n",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 3, Column: 1},
+					End:    token.Position{Row: 3, Column: 1},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 3, Column: 2},
+					End:    token.Position{Row: 3, Column: 2},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 3, Column: 3},
+					End:    token.Position{Row: 3, Column: 3},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 3, Column: 4},
+					End:    token.Position{Row: 3, Column: 4},
+					Origin: "\t",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 3, Column: 5},
+					End:    token.Position{Row: 3, Column: 5},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 3, Column: 6},
+					End:    token.Position{Row: 3, Column: 6},
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 3, Column: 7},
+					End:    token.Position{Row: 3, Column: 13},
+					Origin: "version",
+				},
+				{
+					Type:   token.MappingValueType,
+					Start:  token.Position{Row: 3, Column: 14},
+					End:    token.Position{Row: 3, Column: 14},
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 3, Column: 15},
+					End:    token.Position{Row: 3, Column: 15},
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 3, Column: 16},
+					End:    token.Position{Row: 3, Column: 16},
+					Origin: "2",
+				},
+				{
+					Type:   token.LineBreakType,
+					Start:  token.Position{Row: 3, Column: 17},
+					End:    token.Position{Row: 3, Column: 17},
+					Origin: "\n",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 4, Column: 1},
+					End:    token.Position{Row: 4, Column: 1},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 4, Column: 2},
+					End:    token.Position{Row: 4, Column: 2},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 4, Column: 3},
+					End:    token.Position{Row: 4, Column: 3},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 4, Column: 4},
+					End:    token.Position{Row: 4, Column: 4},
+					Origin: "\t",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 4, Column: 5},
+					End:    token.Position{Row: 4, Column: 5},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 4, Column: 6},
+					End:    token.Position{Row: 4, Column: 6},
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 4, Column: 7},
+					End:    token.Position{Row: 4, Column: 14},
+					Origin: "renderer",
+				},
+				{
+					Type:   token.MappingValueType,
+					Start:  token.Position{Row: 4, Column: 15},
+					End:    token.Position{Row: 4, Column: 15},
+					Origin: ":",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 4, Column: 16},
+					End:    token.Position{Row: 4, Column: 16},
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 4, Column: 17},
+					End:    token.Position{Row: 4, Column: 24},
+					Origin: "networkd",
+				},
+				{
+					Type:   token.LineBreakType,
+					Start:  token.Position{Row: 4, Column: 25},
+					End:    token.Position{Row: 4, Column: 25},
+					Origin: "\n",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 5, Column: 1},
+					End:    token.Position{Row: 5, Column: 1},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 5, Column: 2},
+					End:    token.Position{Row: 5, Column: 2},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 5, Column: 3},
+					End:    token.Position{Row: 5, Column: 3},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 5, Column: 4},
+					End:    token.Position{Row: 5, Column: 4},
+					Origin: "\t",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 5, Column: 5},
+					End:    token.Position{Row: 5, Column: 5},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 5, Column: 6},
+					End:    token.Position{Row: 5, Column: 6},
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 5, Column: 7},
+					End:    token.Position{Row: 5, Column: 15},
+					Origin: "ethernets",
+				},
+				{
+					Type:   token.MappingValueType,
+					Start:  token.Position{Row: 5, Column: 16},
+					End:    token.Position{Row: 5, Column: 16},
+					Origin: ":",
+				},
+				{
+					Type:   token.LineBreakType,
+					Start:  token.Position{Row: 5, Column: 17},
+					End:    token.Position{Row: 5, Column: 17},
+					Origin: "\n",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 6, Column: 1},
+					End:    token.Position{Row: 6, Column: 1},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 6, Column: 2},
+					End:    token.Position{Row: 6, Column: 2},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 6, Column: 3},
+					End:    token.Position{Row: 6, Column: 3},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 6, Column: 4},
+					End:    token.Position{Row: 6, Column: 4},
+					Origin: "\t",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 6, Column: 5},
+					End:    token.Position{Row: 6, Column: 5},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 6, Column: 6},
+					End:    token.Position{Row: 6, Column: 6},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 6, Column: 7},
+					End:    token.Position{Row: 6, Column: 7},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 6, Column: 8},
+					End:    token.Position{Row: 6, Column: 8},
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 6, Column: 9},
+					End:    token.Position{Row: 6, Column: 14},
+					Origin: "enp3s0",
+				},
+				{
+					Type:   token.MappingValueType,
+					Start:  token.Position{Row: 6, Column: 15},
+					End:    token.Position{Row: 6, Column: 15},
+					Origin: ":",
+				},
+				{
+					Type:   token.LineBreakType,
+					Start:  token.Position{Row: 6, Column: 16},
+					End:    token.Position{Row: 6, Column: 16},
+					Origin: "\n",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 7, Column: 1},
+					End:    token.Position{Row: 7, Column: 1},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 7, Column: 2},
+					End:    token.Position{Row: 7, Column: 2},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 7, Column: 3},
+					End:    token.Position{Row: 7, Column: 3},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 7, Column: 4},
+					End:    token.Position{Row: 7, Column: 4},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 7, Column: 5},
+					End:    token.Position{Row: 7, Column: 5},
+					Origin: "\t",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 7, Column: 6},
+					End:    token.Position{Row: 7, Column: 6},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 7, Column: 7},
+					End:    token.Position{Row: 7, Column: 7},
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 7, Column: 8},
+					End:    token.Position{Row: 7, Column: 16},
+					Origin: "addresses",
+				},
+				{
+					Type:   token.MappingValueType,
+					Start:  token.Position{Row: 7, Column: 17},
+					End:    token.Position{Row: 7, Column: 17},
+					Origin: ":",
+				},
+				{
+					Type:   token.LineBreakType,
+					Start:  token.Position{Row: 7, Column: 18},
+					End:    token.Position{Row: 7, Column: 18},
+					Origin: "\n",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 8, Column: 1},
+					End:    token.Position{Row: 8, Column: 1},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 8, Column: 2},
+					End:    token.Position{Row: 8, Column: 2},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 8, Column: 3},
+					End:    token.Position{Row: 8, Column: 3},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 8, Column: 4},
+					End:    token.Position{Row: 8, Column: 4},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 8, Column: 5},
+					End:    token.Position{Row: 8, Column: 5},
+					Origin: "\t",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 8, Column: 6},
+					End:    token.Position{Row: 8, Column: 6},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 8, Column: 7},
+					End:    token.Position{Row: 8, Column: 7},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 8, Column: 8},
+					End:    token.Position{Row: 8, Column: 8},
+					Origin: " ",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 8, Column: 9},
+					End:    token.Position{Row: 8, Column: 9},
+					Origin: " ",
+				},
+				{
+					Type:   token.SequenceEntryType,
+					Start:  token.Position{Row: 8, Column: 10},
+					End:    token.Position{Row: 8, Column: 10},
+					Origin: "-",
+				},
+				{
+					Type:   token.SpaceType,
+					Start:  token.Position{Row: 8, Column: 11},
+					End:    token.Position{Row: 8, Column: 11},
+					Origin: " ",
+				},
+				{
+					Type:   token.StringType,
+					Start:  token.Position{Row: 8, Column: 12},
+					End:    token.Position{Row: 8, Column: 24},
+					Origin: "10.10.10.2/24",
+				},
+				{
+					Type:   token.LineBreakType,
+					Start:  token.Position{Row: 8, Column: 25},
+					End:    token.Position{Row: 8, Column: 25},
+					Origin: "\n",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 9, Column: 1},
+					End:    token.Position{Row: 9, Column: 1},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 9, Column: 2},
+					End:    token.Position{Row: 9, Column: 2},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 9, Column: 3},
+					End:    token.Position{Row: 9, Column: 3},
+					Origin: "\t",
+				},
+				{
+					Type:   token.TabType,
+					Start:  token.Position{Row: 9, Column: 4},
+					End:    token.Position{Row: 9, Column: 4},
+					Origin: "\t",
+				},
+				{
+					Type:  token.EOFType,
+					Start: token.Position{Row: 9, Column: 5},
+					End:   token.Position{Row: 9, Column: 5},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			ts := lexer.NewTokenStream(tc.src)
+			tokenizer := lexer.NewTokenizer(tc.src)
 
 			var rawModEnableIndex, rawModDisableIndex int
 
@@ -2564,16 +3045,16 @@ func TestTokenizer(t *testing.T) {
 			)
 			for i := 0; currentToken.Type != token.EOFType; i++ {
 				if rawModDisableIndex != len(tc.rawModDisableIndices) && i == tc.rawModDisableIndices[rawModDisableIndex] {
-					ts.UnsetRawMode()
+					tokenizer.UnsetRawMode()
 					rawModDisableIndex++
 				}
 
 				if rawModEnableIndex != len(tc.rawModEnableIndices) && i == tc.rawModEnableIndices[rawModEnableIndex] {
-					ts.SetRawMode()
+					tokenizer.SetRawMode()
 					rawModEnableIndex++
 				}
 
-				currentToken = ts.Next()
+				currentToken = tokenizer.Next()
 				tokens = append(tokens, currentToken)
 			}
 			compareTokens(t, tc.expectedTokens, tokens)

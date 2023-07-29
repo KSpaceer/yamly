@@ -91,9 +91,8 @@ func (a *CheckpointingAccessor[T]) Commit() {
 	case 1:
 		if a.bufIndicator == withoutBuffer && len(a.buf) != 0 {
 			a.saved = a.buf[len(a.buf)-1]
+			a.buf = a.buf[:0]
 		}
-		a.bufIndicator = -1
-		a.buf = a.buf[:0]
 		fallthrough
 	default:
 		a.checkpointsStack = a.checkpointsStack[:stackLen-1]
