@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+	"errors"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/lexer"
 	"github.com/KSpaceer/yayamls/token"
@@ -42,42 +43,11 @@ type parser struct {
 	tok         token.Token
 	savedStates []state
 	state
+	errors []error
 }
 
 type state struct {
 	startOfLine bool
-}
-
-func ParseTokenStream(cts ConfigurableTokenStream) ast.Node {
-	p := newParser(newTokenSource(cts))
-	return p.Parse()
-}
-
-func ParseTokens(tokens []token.Token) ast.Node {
-	tokSrc := newTokenSource(newSimpleTokenStream(tokens))
-	p := newParser(tokSrc)
-	return p.Parse()
-}
-
-func ParseString(src string, opts ...ParseOption) ast.Node {
-	o := applyOptions(opts...)
-
-	var cts ConfigurableTokenStream
-	if o.tokenStreamConstructor != nil {
-		cts = o.tokenStreamConstructor(src)
-	} else {
-		cts = lexer.NewTokenizer(src)
-	}
-	return ParseTokenStream(cts)
-}
-
-func ParseBytes(src []byte, opts ...ParseOption) ast.Node {
-	return ParseString(string(src), opts...)
-}
-
-func Parse(cts ConfigurableTokenStream) ast.Node {
-	p := newParser(newTokenSource(cts))
-	return p.Parse()
 }
 
 func newParser(tokSrc *tokenSource) *parser {
@@ -89,10 +59,42 @@ func newParser(tokSrc *tokenSource) *parser {
 	}
 }
 
-func (p *parser) Parse() ast.Node {
+func ParseTokenStream(cts ConfigurableTokenStream) (ast.Node, error) {
+	p := newParser(newTokenSource(cts))
+	return p.Parse()
+}
+
+func ParseTokens(tokens []token.Token) (ast.Node, error) {
+	tokSrc := newTokenSource(newSimpleTokenStream(tokens))
+	p := newParser(tokSrc)
+	return p.Parse()
+}
+
+func ParseString(src string, opts ...ParseOption) (ast.Node, error) {
+	o := applyOptions(opts...)
+	var cts ConfigurableTokenStream
+	if o.tokenStreamConstructor != nil {
+		cts = o.tokenStreamConstructor(src)
+	} else {
+		cts = lexer.NewTokenizer(src)
+	}
+	return ParseTokenStream(cts)
+}
+
+func ParseBytes(src []byte, opts ...ParseOption) (ast.Node, error) {
+	return ParseString(string(src), opts...)
+}
+
+func Parse(cts ConfigurableTokenStream) (ast.Node, error) {
+	p := newParser(newTokenSource(cts))
+	return p.Parse()
+}
+
+func (p *parser) Parse() (ast.Node, error) {
 	p.next()
 	p.startOfLine = true
-	return p.parseStream()
+	result := p.parseStream()
+	return result, p.error()
 }
 
 func (p *parser) next() {
@@ -109,6 +111,18 @@ func isStartOfLine(startOfLine bool, tok token.Token) bool {
 	default:
 		return false
 	}
+}
+
+func (p *parser) appendError(err error) {
+	p.errors = append(p.errors, err)
+}
+
+func (p *parser) hasErrors() bool {
+	return len(p.errors) > 0
+}
+
+func (p *parser) error() error {
+	return errors.Join(p.errors...)
 }
 
 func (p *parser) setCheckpoint() {
