@@ -27,15 +27,15 @@ func (b *BalanceChecker[T]) Add(r T) bool {
 		return false
 	}
 	_, isCloser := b.closers[r]
-	if isCloser {
-		if len(b.stack) == 0 || b.openers[b.stack[len(b.stack)-1]] != r {
-			b.cannotBeBalanced = true
-			return false
-		}
-		b.stack = b.stack[:len(b.stack)-1]
-	}
 	_, isOpener := b.openers[r]
-	if isOpener {
+	canPop := len(b.stack) > 0 && b.openers[b.stack[len(b.stack)-1]] == r
+	if isCloser && !isOpener && !canPop {
+		b.cannotBeBalanced = true
+		return false
+	}
+	if isCloser && canPop {
+		b.stack = b.stack[:len(b.stack)-1]
+	} else if isOpener {
 		b.stack = append(b.stack, r)
 	}
 	return true
