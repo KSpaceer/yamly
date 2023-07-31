@@ -1,28 +1,28 @@
-package balanceaccount
+package balancecheck
 
-type BalanceAccounter struct {
-	openers          map[rune]rune
-	closers          map[rune]struct{}
-	stack            []rune
+type BalanceChecker[T comparable] struct {
+	openers          map[T]T
+	closers          map[T]struct{}
+	stack            []T
 	cannotBeBalanced bool
 }
 
 const preallocationSize = 8
 
-func NewBalancer(pairs [][2]rune) *BalanceAccounter {
-	b := BalanceAccounter{
-		openers: make(map[rune]rune, len(pairs)),
-		closers: make(map[rune]struct{}, len(pairs)),
-		stack:   make([]rune, 0, preallocationSize),
+func NewBalanceChecker[T comparable](pairs [][2]T) BalanceChecker[T] {
+	b := BalanceChecker[T]{
+		openers: make(map[T]T, len(pairs)),
+		closers: make(map[T]struct{}, len(pairs)),
+		stack:   make([]T, 0, preallocationSize),
 	}
 	for _, pair := range pairs {
 		b.openers[pair[0]] = pair[1]
 		b.closers[pair[1]] = struct{}{}
 	}
-	return &b
+	return b
 }
 
-func (b *BalanceAccounter) AccountRune(r rune) bool {
+func (b *BalanceChecker[T]) Add(r T) bool {
 	if b.cannotBeBalanced {
 		return false
 	}
@@ -41,23 +41,23 @@ func (b *BalanceAccounter) AccountRune(r rune) bool {
 	return true
 }
 
-func (b *BalanceAccounter) IsBalanced() bool {
+func (b *BalanceChecker[T]) IsBalanced() bool {
 	return !b.cannotBeBalanced && len(b.stack) == 0
 }
 
-type BalanceAccountMemento struct {
+type BalanceCheckerMemento struct {
 	stackSize        int
 	cannotBeBalanced bool
 }
 
-func (b *BalanceAccounter) Memento() BalanceAccountMemento {
-	return BalanceAccountMemento{
+func (b *BalanceChecker[T]) Memento() BalanceCheckerMemento {
+	return BalanceCheckerMemento{
 		stackSize:        len(b.stack),
 		cannotBeBalanced: b.cannotBeBalanced,
 	}
 }
 
-func (b *BalanceAccounter) SetMemento(m BalanceAccountMemento) {
+func (b *BalanceChecker[T]) SetMemento(m BalanceCheckerMemento) {
 	stackSize := m.stackSize
 	if cap(b.stack) < stackSize {
 		stackSize = cap(b.stack)

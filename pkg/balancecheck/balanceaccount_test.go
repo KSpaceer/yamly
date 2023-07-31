@@ -1,7 +1,7 @@
-package balanceaccount_test
+package balancecheck_test
 
 import (
-	"github.com/KSpaceer/yayamls/pkg/balanceaccount"
+	"github.com/KSpaceer/yayamls/pkg/balancecheck"
 	"testing"
 )
 
@@ -37,13 +37,13 @@ func TestParenthesesBalance(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			b := balanceaccount.NewBalancer([][2]rune{
+			b := balancecheck.NewBalanceChecker([][2]rune{
 				{'{', '}'},
 				{'[', ']'},
 				{'(', ')'},
 			})
 			for _, r := range tc.src {
-				if !b.AccountRune(r) {
+				if !b.Add(r) {
 					break
 				}
 			}

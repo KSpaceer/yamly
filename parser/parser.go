@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/lexer"
+	"github.com/KSpaceer/yayamls/pkg/balancecheck"
 	"github.com/KSpaceer/yayamls/token"
 	"sync"
 )
@@ -43,11 +44,13 @@ type parser struct {
 	tok         token.Token
 	savedStates []state
 	state
-	errors []error
+	errors         []error
+	balanceChecker balancecheck.BalanceChecker[token.Type]
 }
 
 type state struct {
-	startOfLine bool
+	startOfLine         bool
+	balanceCheckMemento balancecheck.BalanceCheckerMemento
 }
 
 func newParser(tokSrc *tokenSource) *parser {
@@ -56,6 +59,10 @@ func newParser(tokSrc *tokenSource) *parser {
 		state: state{
 			startOfLine: true,
 		},
+		balanceChecker: balancecheck.NewBalanceChecker([][2]token.Type{
+			{token.SequenceStartType, token.SequenceEndType},
+			{token.MappingStartType, token.MappingEndType},
+		}),
 	}
 }
 
@@ -100,6 +107,21 @@ func (p *parser) Parse() (ast.Node, error) {
 func (p *parser) next() {
 	p.startOfLine = isStartOfLine(p.startOfLine, p.tok)
 	p.tok = p.tokSrc.Next()
+	switch p.tok.Type {
+	case token.EOFType:
+		if !p.balanceChecker.IsBalanced() {
+			p.appendError(UnbalancedParenthesesError{isClosing: false})
+		}
+	case token.MappingStartType, token.SequenceStartType:
+		p.balanceChecker.Add(p.tok.Type)
+	case token.MappingEndType, token.SequenceEndType:
+		if !p.balanceChecker.Add(p.tok.Type) {
+			p.appendError(UnbalancedParenthesesError{
+				isClosing: true,
+				tok:       p.tok,
+			})
+		}
+	}
 }
 
 func isStartOfLine(startOfLine bool, tok token.Token) bool {
@@ -128,7 +150,8 @@ func (p *parser) error() error {
 func (p *parser) setCheckpoint() {
 	p.tokSrc.SetCheckpoint()
 	p.savedStates = append(p.savedStates, state{
-		startOfLine: p.startOfLine,
+		startOfLine:         p.startOfLine,
+		balanceCheckMemento: p.balanceChecker.Memento(),
 	})
 }
 
@@ -144,5 +167,6 @@ func (p *parser) rollback() {
 	if savedStatesLen := len(p.savedStates); savedStatesLen > 0 {
 		p.state = p.savedStates[savedStatesLen-1]
 		p.savedStates = p.savedStates[:savedStatesLen-1]
+		p.balanceChecker.SetMemento(p.state.balanceCheckMemento)
 	}
 }
