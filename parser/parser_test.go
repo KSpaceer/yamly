@@ -2756,15 +2756,15 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, _ := parser.ParseString(tc.src)
-			compareAST(t, tc.expectedAST, result)
+			result, err := parser.ParseString(tc.src)
+			if err == nil {
+				compareAST(t, tc.expectedAST, result)
+			} else {
+				t.Errorf("unexpected error: %s", err)
+			}
 		})
 
 	}
-}
-
-func TestAboba(t *testing.T) {
-	parser.ParseString("[[[[[[[[[[]]]]]]]]]]")
 }
 
 func FuzzParseString(f *testing.F) {

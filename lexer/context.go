@@ -311,17 +311,25 @@ func (c *context) flowMatching(t *Tokenizer, r rune) (token.Token, bool) {
 		tok.Origin = string([]rune{r})
 		return tok, true
 	case token.SingleQuoteCharacter:
-		c.switchContext(singleQuoteContextType)
-		tok.End = t.pos
-		tok.Type = token.SingleQuoteType
-		tok.Origin = string([]rune{r})
-		return tok, true
+		if t.lookbehind(func(tok token.Token) bool {
+			return mayPrecedeWordInFlow(tok) || tok.Type == token.MappingValueType
+		}) {
+			c.switchContext(singleQuoteContextType)
+			tok.End = t.pos
+			tok.Type = token.SingleQuoteType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
 	case token.DoubleQuoteCharacter:
-		c.switchContext(doubleQuoteContextType)
-		tok.End = t.pos
-		tok.Type = token.DoubleQuoteType
-		tok.Origin = string([]rune{r})
-		return tok, true
+		if t.lookbehind(func(tok token.Token) bool {
+			return mayPrecedeWordInFlow(tok) || tok.Type == token.MappingValueType
+		}) {
+			c.switchContext(doubleQuoteContextType)
+			tok.End = t.pos
+			tok.Type = token.DoubleQuoteType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
 	case token.CollectEntryCharacter:
 		tok.End = t.pos
 		tok.Type = token.CollectEntryType
