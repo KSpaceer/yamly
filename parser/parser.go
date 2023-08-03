@@ -110,16 +110,17 @@ func (p *parser) next() {
 	switch p.tok.Type {
 	case token.EOFType:
 		if !p.balanceChecker.IsBalanced() {
-			p.appendError(UnbalancedParenthesesError{isClosing: false})
+			unbalanced, _ := p.balanceChecker.PeekLastUnbalanced()
+			p.appendError(UnbalancedOpeningParenthesisError{
+				Type:        tokenTypeToParenthesesType(unbalanced),
+				ExpectedPos: p.tok.Start,
+			})
 		}
 	case token.MappingStartType, token.SequenceStartType, token.SingleQuoteType, token.DoubleQuoteType:
 		p.balanceChecker.Add(p.tok.Type)
 	case token.MappingEndType, token.SequenceEndType:
 		if !p.balanceChecker.Add(p.tok.Type) {
-			p.appendError(UnbalancedParenthesesError{
-				isClosing: true,
-				tok:       p.tok,
-			})
+			p.appendError(UnbalancedClosingParenthesisError{p.tok})
 		}
 	}
 }

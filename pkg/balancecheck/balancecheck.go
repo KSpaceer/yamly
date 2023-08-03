@@ -45,6 +45,15 @@ func (b *BalanceChecker[T]) IsBalanced() bool {
 	return !b.cannotBeBalanced && len(b.stack) == 0
 }
 
+func (b *BalanceChecker[T]) PeekLastUnbalanced() (T, bool) {
+	var peeked T
+	if len(b.stack) == 0 {
+		return peeked, false
+	}
+	peeked = b.stack[len(b.stack)-1]
+	return peeked, true
+}
+
 type BalanceCheckerMemento struct {
 	stackSize        int
 	cannotBeBalanced bool

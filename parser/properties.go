@@ -169,6 +169,15 @@ func (p *parser) parseTagProperty() ast.Node {
 		}
 	}
 
+	// if the token after tag is string, therefore
+	// it is a broken tag name - we cannot parse data further, so we throw an error
+	if p.tok.Type == token.StringType {
+		p.appendError(TagError{
+			Src: p.tok.Origin,
+			Pos: p.tok.Start,
+		})
+	}
+
 	// non specific tag
 	// YAML specification: [100] c-non-specific-tag
 	return ast.NewTagNode("")
