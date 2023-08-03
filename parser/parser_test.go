@@ -2771,7 +2771,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 }
 
 func TestAboba(t *testing.T) {
-	parser.ParseString("[[[[[[[[[[[[[[[[[[[[[[!=>")
+	parser.ParseString("[[[[[[[[[[[[[[[[[[[[[[[[[O[[[[\xff\x7f")
 }
 
 func FuzzParseString(f *testing.F) {

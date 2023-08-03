@@ -267,17 +267,21 @@ func (c *context) flowMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 	case token.SequenceStartCharacter:
-		c.switchContext(flowContextType)
-		tok.End = t.pos
-		tok.Type = token.SequenceStartType
-		tok.Origin = string([]rune{r})
-		return tok, true
+		if t.lookbehind(mayPrecedeWordInFlow) {
+			c.switchContext(flowContextType)
+			tok.End = t.pos
+			tok.Type = token.SequenceStartType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
 	case token.MappingStartCharacter:
-		c.switchContext(flowContextType)
-		tok.End = t.pos
-		tok.Type = token.MappingStartType
-		tok.Origin = string([]rune{r})
-		return tok, true
+		if t.lookbehind(mayPrecedeWordInFlow) {
+			c.switchContext(flowContextType)
+			tok.End = t.pos
+			tok.Type = token.MappingStartType
+			tok.Origin = string([]rune{r})
+			return tok, true
+		}
 	case token.SequenceEndCharacter:
 		c.revertContext()
 		tok.End = t.pos

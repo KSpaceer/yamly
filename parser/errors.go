@@ -96,3 +96,11 @@ func (t TagError) Error() string {
 	return fmt.Sprintf("cannot use string %q at position %s as tag",
 		t.Src, t.Pos)
 }
+
+type DeadEndError struct {
+	Pos token.Position
+}
+
+func (d DeadEndError) Error() string {
+	return fmt.Sprintf("failed to parse data: meeting a 'dead end' token at position %s", d.Pos)
+}

@@ -1005,6 +1005,9 @@ func (p *parser) parsePlainOneLine(ctx Context) ast.Node {
 		bufsPool.Put(buf)
 	}()
 	if !ast.ValidNode(p.parsePlainFirst(ctx, buf)) {
+		if p.deadEndFinder.Mark(p.tok) {
+			p.appendError(DeadEndError{Pos: p.tok.Start})
+		}
 		return ast.NewInvalidNode()
 	}
 	if !ast.ValidNode(p.parsePlainInLine(ctx, buf)) {

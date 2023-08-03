@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/lexer"
+	"github.com/KSpaceer/yayamls/parser/deadend"
 	"github.com/KSpaceer/yayamls/pkg/balancecheck"
 	"github.com/KSpaceer/yayamls/token"
 	"sync"
@@ -46,6 +47,7 @@ type parser struct {
 	state
 	errors         []error
 	balanceChecker balancecheck.BalanceChecker[token.Type]
+	deadEndFinder  deadend.Finder
 }
 
 type state struct {
@@ -63,6 +65,7 @@ func newParser(tokSrc *tokenSource) *parser {
 			{token.SequenceStartType, token.SequenceEndType},
 			{token.MappingStartType, token.MappingEndType},
 		}),
+		deadEndFinder: deadend.NewFinder(),
 	}
 }
 
