@@ -70,7 +70,7 @@ func (p *parser) parseStream() ast.Node {
 }
 
 func (p *parser) parseSuffixesAndPrefixes() ast.Node {
-	if !ast.ValidNode(p.parseDocumentSuffix()) {
+	if p.hasErrors() || !ast.ValidNode(p.parseDocumentSuffix()) {
 		return ast.NewInvalidNode()
 	}
 	for {
@@ -95,6 +95,9 @@ func (p *parser) parseSuffixesAndPrefixes() ast.Node {
 
 // YAML specification: [210] l-any-document
 func (p *parser) parseAnyDocument() ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	p.setCheckpoint()
 	doc := p.parseDirectiveDocument()
 	if ast.ValidNode(doc) {
@@ -124,7 +127,7 @@ func (p *parser) parseAnyDocument() ast.Node {
 
 // YAML specification: [209] l-directive-document
 func (p *parser) parseDirectiveDocument() ast.Node {
-	if !ast.ValidNode(p.parseDirective()) {
+	if p.hasErrors() || !ast.ValidNode(p.parseDirective()) {
 		return ast.NewInvalidNode()
 	}
 
@@ -142,7 +145,7 @@ func (p *parser) parseDirectiveDocument() ast.Node {
 
 // YAML specification: [208] l-explicit-document
 func (p *parser) parseExplicitDocument() ast.Node {
-	if p.tok.Type != token.DirectiveEndType {
+	if p.hasErrors() || p.tok.Type != token.DirectiveEndType {
 		return ast.NewInvalidNode()
 	}
 	p.next()
@@ -171,7 +174,7 @@ func (p *parser) parseBareDocument() ast.Node {
 
 // YAML specification: [82] l-directive
 func (p *parser) parseDirective() ast.Node {
-	if p.tok.Type != token.DirectiveType {
+	if p.hasErrors() || p.tok.Type != token.DirectiveType {
 		return ast.NewInvalidNode()
 	}
 	// directive may have any name
@@ -201,7 +204,7 @@ func (p *parser) parseDirective() ast.Node {
 
 // YAML specification: [83] ns-reserved-directive
 func (p *parser) parseReservedDirective() ast.Node {
-	if p.tok.Type != token.StringType {
+	if p.hasErrors() || p.tok.Type != token.StringType {
 		return ast.NewInvalidNode()
 	}
 	// reserved directive may have any parameters
@@ -227,7 +230,7 @@ func (p *parser) parseReservedDirective() ast.Node {
 
 // YAML specification: [88] ns-tag-directive
 func (p *parser) parseTagDirective() ast.Node {
-	if !ast.ValidNode(p.parseSeparateInLine()) {
+	if p.hasErrors() || !ast.ValidNode(p.parseSeparateInLine()) {
 		return ast.NewInvalidNode()
 	}
 	if !ast.ValidNode(p.parseTagHandle()) {
@@ -247,7 +250,7 @@ func (p *parser) parseTagDirective() ast.Node {
 
 // YAML specification: [89] c-tag-handle
 func (p *parser) parseTagHandle() ast.Node {
-	if p.tok.Type != token.TagType {
+	if p.hasErrors() || p.tok.Type != token.TagType {
 		return ast.NewInvalidNode()
 	}
 	p.next()
@@ -277,6 +280,9 @@ func (p *parser) parseTagHandle() ast.Node {
 
 // YAML specification: [93] ns-tag-prefix
 func (p *parser) parseTagPrefix() ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	p.setCheckpoint()
 	if ast.ValidNode(p.parseLocalTagPrefix()) {
 		p.commit()
@@ -299,7 +305,7 @@ func (p *parser) parseTagPrefix() ast.Node {
 
 // YAML specification: [94] c-ns-local-tag-prefix
 func (p *parser) parseLocalTagPrefix() ast.Node {
-	if p.tok.Type != token.TagType {
+	if p.hasErrors() || p.tok.Type != token.TagType {
 		return ast.NewInvalidNode()
 	}
 	p.next()
@@ -311,6 +317,9 @@ func (p *parser) parseLocalTagPrefix() ast.Node {
 
 // YAML specification: [86] ns-yaml-directive
 func (p *parser) parseYAMLDirective() ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	for token.IsWhiteSpace(p.tok) {
 		p.next()
 	}
@@ -322,7 +331,7 @@ func (p *parser) parseYAMLDirective() ast.Node {
 
 // YAML specification: [87] ns-yaml-version
 func (p *parser) parseYAMLVersion() ast.Node {
-	if p.tok.Type != token.StringType || !isCorrectYAMLVersion(p.tok.Origin) {
+	if p.hasErrors() || p.tok.Type != token.StringType || !isCorrectYAMLVersion(p.tok.Origin) {
 		return ast.NewInvalidNode()
 	}
 	p.next()
@@ -363,6 +372,9 @@ func isCorrectYAMLVersion(s string) bool {
 
 // YAML specification: [202] l-document-prefix
 func (p *parser) parseDocumentPrefix() ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	// document prefix without tokens (null prefix) is valid
 	// so we have to break the endless loop of null prefixes
 	var notNull bool
@@ -388,7 +400,7 @@ func (p *parser) parseDocumentPrefix() ast.Node {
 
 // YAML specification: [205] l-document-suffix
 func (p *parser) parseDocumentSuffix() ast.Node {
-	if p.tok.Type != token.DocumentEndType {
+	if p.hasErrors() || p.tok.Type != token.DocumentEndType {
 		return ast.NewInvalidNode()
 	}
 	p.next()

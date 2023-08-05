@@ -10,6 +10,9 @@ import (
 
 // YAML specification: [162] c-b-block-header
 func (p *parser) parseBlockHeader() ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	chompingIndicator := p.parseChompingIndicator()
 	indentationIndicator, err := p.parseIndentationIndicator()
 	if err != nil {
@@ -58,6 +61,9 @@ func (p *parser) parseIndentationIndicator() (int, error) {
 
 // YAML specification: [96] c-ns-properties
 func (p *parser) parseProperties(ind *indentation, ctx Context) ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	var tag, anchor ast.Node
 	switch p.tok.Type {
 	case token.TagType:
@@ -92,7 +98,7 @@ func (p *parser) parseProperties(ind *indentation, ctx Context) ast.Node {
 
 // YAML specification: [104] c-ns-alias-node
 func (p *parser) parseAliasNode() ast.Node {
-	if p.tok.Type != token.AliasType {
+	if p.hasErrors() || p.tok.Type != token.AliasType {
 		return ast.NewInvalidNode()
 	}
 	p.next()
@@ -106,7 +112,7 @@ func (p *parser) parseAliasNode() ast.Node {
 
 // YAML specification: [101] c-ns-anchor-property
 func (p *parser) parseAnchorProperty() ast.Node {
-	if p.tok.Type != token.AnchorType {
+	if p.hasErrors() || p.tok.Type != token.AnchorType {
 		return ast.NewInvalidNode()
 	}
 	p.setCheckpoint()
@@ -124,6 +130,9 @@ func (p *parser) parseAnchorProperty() ast.Node {
 
 // YAML specification: [97] c-ns-tag-property
 func (p *parser) parseTagProperty() ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	p.setCheckpoint()
 	// shorthand tag
 	// YAML specification: [99] c-ns-shorthand-tag
@@ -158,6 +167,15 @@ func (p *parser) parseTagProperty() ast.Node {
 			p.next()
 			return ast.NewTagNode(cutToken.Origin)
 		}
+	}
+
+	// if the token after tag is string, therefore
+	// it is a broken tag name - we cannot parse data further, so we throw an error
+	if p.tok.Type == token.StringType {
+		p.appendError(TagError{
+			Src: p.tok.Origin,
+			Pos: p.tok.Start,
+		})
 	}
 
 	// non specific tag

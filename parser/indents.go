@@ -19,6 +19,9 @@ func (p *parser) parseSeparate(ind *indentation, ctx Context) ast.Node {
 
 // YAML specification: [81] s-separate-lines
 func (p *parser) parseSeparateLines(ind *indentation) ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	p.setCheckpoint()
 	if ast.ValidNode(p.parseComments()) && ast.ValidNode(p.parseFlowLinePrefix(ind)) {
 		p.commit()
@@ -33,7 +36,7 @@ func (p *parser) parseSeparateLines(ind *indentation) ast.Node {
 
 // YAML specification: [66] s-separate-in-line
 func (p *parser) parseSeparateInLine() ast.Node {
-	if !token.IsWhiteSpace(p.tok) && !p.startOfLine {
+	if p.hasErrors() || !token.IsWhiteSpace(p.tok) && !p.startOfLine {
 		return ast.NewInvalidNode()
 	}
 	for token.IsWhiteSpace(p.tok) {
@@ -61,7 +64,7 @@ func (p *parser) parseIndent(ind *indentation) ast.Node {
 }
 
 func (p *parser) parseIndentWithStrictEquality(indentation int) ast.Node {
-	if indentation < 0 {
+	if p.hasErrors() || indentation < 0 {
 		return ast.NewInvalidNode()
 	}
 	for i := indentation; i > 0; i-- {
@@ -74,6 +77,9 @@ func (p *parser) parseIndentWithStrictEquality(indentation int) ast.Node {
 }
 
 func (p *parser) parseIndentWithLowerBound(lowerBound int) ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	var indent int
 	for ; indent < lowerBound; indent++ {
 		if p.tok.Type != token.SpaceType {
@@ -101,7 +107,7 @@ func (p *parser) parseIndentLessThanOrEqual(indentation int) ast.Node {
 }
 
 func (p *parser) parseBorderedIndent(indentation int, lowBorder int) ast.Node {
-	if indentation < lowBorder {
+	if p.hasErrors() || indentation < lowBorder {
 		return ast.NewInvalidNode()
 	}
 	var currentIndent int
@@ -120,6 +126,9 @@ func (p *parser) parseBorderedIndent(indentation int, lowBorder int) ast.Node {
 
 // YAML specification: [70] l-empty
 func (p *parser) parseEmpty(ind *indentation, ctx Context, buf *bytes.Buffer) ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	p.setCheckpoint()
 	lp := p.parseLinePrefix(ind, ctx)
 	if !ast.ValidNode(lp) {
@@ -158,6 +167,9 @@ func (p *parser) parseLinePrefix(ind *indentation, ctx Context) ast.Node {
 
 // YAML specification: [69] s-flow-line-prefix
 func (p *parser) parseFlowLinePrefix(ind *indentation) ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	indent := p.parseIndent(ind)
 	if !ast.ValidNode(indent) {
 		return ast.NewInvalidNode()

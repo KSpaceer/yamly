@@ -2081,7 +2081,10 @@ func TestParseTokens(t *testing.T) {
 	}
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parser.ParseTokens(tc.tokens)
+			result, err := parser.ParseTokens(tc.tokens)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
 			compareAST(t, tc.expectedAST, result)
 		})
 
@@ -2756,11 +2759,45 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := parser.ParseString(tc.src)
-			compareAST(t, tc.expectedAST, result)
+			result, err := parser.ParseString(tc.src)
+			if err == nil {
+				compareAST(t, tc.expectedAST, result)
+			} else {
+				t.Errorf("unexpected error: %s", err)
+			}
 		})
 
 	}
+}
+
+func TestAboba(t *testing.T) {
+	parser.ParseString("[[[[[[[[[[[[[[[[[[[[[[[[[O[[[[\xff\x7f")
+}
+
+func FuzzParseString(f *testing.F) {
+	seeds := []string{
+		"key:key",
+		"hello",
+		"key: value",
+		"- value\n- value",
+		"key: |\n  value\n  value",
+		"key: >\n  value\n  value",
+		"{\"key\":'value'}",
+		"[value,value,value]",
+		func() string {
+			data, err := os.ReadFile("testdata/learnyaml.yaml")
+			if err != nil {
+				panic(err)
+			}
+			return string(data)
+		}(),
+	}
+	for i := range seeds {
+		f.Add(seeds[i])
+	}
+	f.Fuzz(func(t *testing.T, src string) {
+		parser.ParseString(src)
+	})
 }
 
 func compareAST(t *testing.T, expectedAST, gotAST ast.Node) {

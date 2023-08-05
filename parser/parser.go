@@ -2,8 +2,11 @@ package parser
 
 import (
 	"bytes"
+	"errors"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/lexer"
+	"github.com/KSpaceer/yayamls/parser/deadend"
+	"github.com/KSpaceer/yayamls/pkg/balancecheck"
 	"github.com/KSpaceer/yayamls/token"
 	"sync"
 )
@@ -42,26 +45,43 @@ type parser struct {
 	tok         token.Token
 	savedStates []state
 	state
+	errors         []error
+	balanceChecker balancecheck.BalanceChecker[token.Type]
+	deadEndFinder  deadend.Finder
 }
 
 type state struct {
-	startOfLine bool
+	startOfLine         bool
+	balanceCheckMemento balancecheck.BalanceCheckerMemento
 }
 
-func ParseTokenStream(cts ConfigurableTokenStream) ast.Node {
+func newParser(tokSrc *tokenSource) *parser {
+	return &parser{
+		tokSrc: tokSrc,
+		state: state{
+			startOfLine: true,
+		},
+		balanceChecker: balancecheck.NewBalanceChecker([][2]token.Type{
+			{token.SequenceStartType, token.SequenceEndType},
+			{token.MappingStartType, token.MappingEndType},
+		}),
+		deadEndFinder: deadend.NewFinder(),
+	}
+}
+
+func ParseTokenStream(cts ConfigurableTokenStream) (ast.Node, error) {
 	p := newParser(newTokenSource(cts))
 	return p.Parse()
 }
 
-func ParseTokens(tokens []token.Token) ast.Node {
+func ParseTokens(tokens []token.Token) (ast.Node, error) {
 	tokSrc := newTokenSource(newSimpleTokenStream(tokens))
 	p := newParser(tokSrc)
 	return p.Parse()
 }
 
-func ParseString(src string, opts ...ParseOption) ast.Node {
+func ParseString(src string, opts ...ParseOption) (ast.Node, error) {
 	o := applyOptions(opts...)
-
 	var cts ConfigurableTokenStream
 	if o.tokenStreamConstructor != nil {
 		cts = o.tokenStreamConstructor(src)
@@ -71,33 +91,41 @@ func ParseString(src string, opts ...ParseOption) ast.Node {
 	return ParseTokenStream(cts)
 }
 
-func ParseBytes(src []byte, opts ...ParseOption) ast.Node {
+func ParseBytes(src []byte, opts ...ParseOption) (ast.Node, error) {
 	return ParseString(string(src), opts...)
 }
 
-func Parse(cts ConfigurableTokenStream) ast.Node {
+func Parse(cts ConfigurableTokenStream) (ast.Node, error) {
 	p := newParser(newTokenSource(cts))
 	return p.Parse()
 }
 
-func newParser(tokSrc *tokenSource) *parser {
-	return &parser{
-		tokSrc: tokSrc,
-		state: state{
-			startOfLine: true,
-		},
-	}
-}
-
-func (p *parser) Parse() ast.Node {
+func (p *parser) Parse() (ast.Node, error) {
 	p.next()
 	p.startOfLine = true
-	return p.parseStream()
+	result := p.parseStream()
+	return result, p.error()
 }
 
 func (p *parser) next() {
 	p.startOfLine = isStartOfLine(p.startOfLine, p.tok)
 	p.tok = p.tokSrc.Next()
+	switch p.tok.Type {
+	case token.EOFType:
+		if !p.balanceChecker.IsBalanced() {
+			unbalanced, _ := p.balanceChecker.PeekLastUnbalanced()
+			p.appendError(UnbalancedOpeningParenthesisError{
+				Type:        tokenTypeToParenthesesType(unbalanced),
+				ExpectedPos: p.tok.Start,
+			})
+		}
+	case token.MappingStartType, token.SequenceStartType, token.SingleQuoteType, token.DoubleQuoteType:
+		p.balanceChecker.Add(p.tok.Type)
+	case token.MappingEndType, token.SequenceEndType:
+		if !p.balanceChecker.Add(p.tok.Type) {
+			p.appendError(UnbalancedClosingParenthesisError{p.tok})
+		}
+	}
 }
 
 func isStartOfLine(startOfLine bool, tok token.Token) bool {
@@ -111,10 +139,23 @@ func isStartOfLine(startOfLine bool, tok token.Token) bool {
 	}
 }
 
+func (p *parser) appendError(err error) {
+	p.errors = append(p.errors, err)
+}
+
+func (p *parser) hasErrors() bool {
+	return len(p.errors) > 0
+}
+
+func (p *parser) error() error {
+	return errors.Join(p.errors...)
+}
+
 func (p *parser) setCheckpoint() {
 	p.tokSrc.SetCheckpoint()
 	p.savedStates = append(p.savedStates, state{
-		startOfLine: p.startOfLine,
+		startOfLine:         p.startOfLine,
+		balanceCheckMemento: p.balanceChecker.Memento(),
 	})
 }
 
@@ -130,5 +171,6 @@ func (p *parser) rollback() {
 	if savedStatesLen := len(p.savedStates); savedStatesLen > 0 {
 		p.state = p.savedStates[savedStatesLen-1]
 		p.savedStates = p.savedStates[:savedStatesLen-1]
+		p.balanceChecker.SetMemento(p.state.balanceCheckMemento)
 	}
 }

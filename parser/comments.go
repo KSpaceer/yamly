@@ -7,6 +7,9 @@ import (
 
 // YAML specification: [79] s-l-comments
 func (p *parser) parseComments() ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	p.setCheckpoint()
 	if !ast.ValidNode(p.parseSeparatedComment()) {
 		p.rollback()
@@ -29,6 +32,9 @@ func (p *parser) parseComments() ast.Node {
 
 // YAML specification: [77] s-b-comment
 func (p *parser) parseSeparatedComment() ast.Node {
+	if p.hasErrors() {
+		return ast.NewInvalidNode()
+	}
 	p.setCheckpoint()
 
 	if !ast.ValidNode(p.parseSeparateInLine()) {
@@ -52,7 +58,7 @@ func (p *parser) parseSeparatedComment() ast.Node {
 
 // YAML specification: [78] l-comment
 func (p *parser) parseCommentLine() ast.Node {
-	if !ast.ValidNode(p.parseSeparateInLine()) {
+	if p.hasErrors() || !ast.ValidNode(p.parseSeparateInLine()) {
 		return ast.NewInvalidNode()
 	}
 	p.setCheckpoint()
@@ -70,7 +76,7 @@ func (p *parser) parseCommentLine() ast.Node {
 
 // YAML specification: [75] c-nb-comment-text
 func (p *parser) parseCommentText() ast.Node {
-	if p.tok.Type != token.CommentType {
+	if p.hasErrors() || p.tok.Type != token.CommentType {
 		return ast.NewInvalidNode()
 	}
 	p.next()
