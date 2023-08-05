@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yayamls/chars"
 	"github.com/KSpaceer/yayamls/token"
 	"strconv"
 	"strings"
@@ -42,7 +43,7 @@ func (p *parser) parseChompingIndicator() ast.ChompingType {
 
 // YAML specification: [163] c-indentation-indicator
 func (p *parser) parseIndentationIndicator() (int, error) {
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.DecimalCharSetType) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(chars.DecimalCharSetType) {
 		return 0, nil
 	}
 
@@ -60,7 +61,7 @@ func (p *parser) parseIndentationIndicator() (int, error) {
 }
 
 // YAML specification: [96] c-ns-properties
-func (p *parser) parseProperties(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseProperties(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -102,7 +103,7 @@ func (p *parser) parseAliasNode() ast.Node {
 		return ast.NewInvalidNode()
 	}
 	p.next()
-	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.AnchorCharSetType) {
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.AnchorCharSetType) {
 		text := p.tok.Origin
 		p.next()
 		return ast.NewAliasNode(text)
@@ -117,7 +118,7 @@ func (p *parser) parseAnchorProperty() ast.Node {
 	}
 	p.setCheckpoint()
 	p.next()
-	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.AnchorCharSetType) {
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.AnchorCharSetType) {
 		anchor := ast.NewAnchorNode(p.tok.Origin)
 		p.next()
 		p.commit()
@@ -137,7 +138,7 @@ func (p *parser) parseTagProperty() ast.Node {
 	// shorthand tag
 	// YAML specification: [99] c-ns-shorthand-tag
 	if ast.ValidNode(p.parseTagHandle()) && p.tok.Type == token.StringType &&
-		p.tok.ConformsCharSet(token.TagCharSetType) {
+		p.tok.ConformsCharSet(chars.TagCharSetType) {
 		p.commit()
 		text := p.tok.Origin
 		p.next()
@@ -162,7 +163,7 @@ func (p *parser) parseTagProperty() ast.Node {
 			End:    p.tok.End,
 			Origin: p.tok.Origin[1 : len(p.tok.Origin)-1],
 		}
-		if len(cutToken.Origin) > 0 && cutToken.ConformsCharSet(token.URICharSetType) &&
+		if len(cutToken.Origin) > 0 && cutToken.ConformsCharSet(chars.URICharSetType) &&
 			p.tok.Origin[len(p.tok.Origin)-1] == '>' {
 			p.next()
 			return ast.NewTagNode(cutToken.Origin)

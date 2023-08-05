@@ -3,6 +3,7 @@ package parser_test
 import (
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/ast/astutils"
+	"github.com/KSpaceer/yayamls/chars"
 	"github.com/KSpaceer/yayamls/parser"
 	"github.com/KSpaceer/yayamls/token"
 	"os"
@@ -694,7 +695,7 @@ func TestParseTokens(t *testing.T) {
 				},
 				{
 					Type:   token.StringType,
-					Origin: token.YAMLDirective,
+					Origin: chars.YAMLDirective,
 				},
 				{
 					Type:   token.SpaceType,
@@ -714,7 +715,7 @@ func TestParseTokens(t *testing.T) {
 				},
 				{
 					Type:   token.StringType,
-					Origin: token.TagDirective,
+					Origin: chars.TagDirective,
 				},
 				{
 					Type:   token.SpaceType,
@@ -1508,7 +1509,7 @@ func TestParseTokens(t *testing.T) {
 				},
 				{
 					Type:   token.StringType,
-					Origin: token.TagDirective,
+					Origin: chars.TagDirective,
 				},
 				{
 					Type:   token.SpaceType,

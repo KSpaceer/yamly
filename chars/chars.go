@@ -1,29 +1,48 @@
-package token
+package chars
 
-import "strings"
+import (
+	"strings"
+)
 
-func ConformsCharSet(s string, cst CharSetType) bool {
-	var result bool
-	switch cst {
-	case DecimalCharSetType:
-		result = IsDecimal(s)
-	case WordCharSetType:
-		result = IsWord(s)
-	case URICharSetType:
-		result = IsURI(s)
-	case TagCharSetType:
-		result = IsTagString(s)
-	case AnchorCharSetType:
-		result = IsAnchorString(s)
-	case PlainSafeCharSetType:
-		result = IsPlainSafeString(s)
-	case SingleQuotedCharSetType:
-		result = IsSingleQuotedString(s)
-	case DoubleQuotedCharSetType:
-		result = IsDoubleQuotedString(s)
-	}
-	return result
-}
+const (
+	YAMLDirective = "YAML"
+	TagDirective  = "TAG"
+)
+
+type Character = rune
+
+const (
+	SequenceEntryCharacter     Character = '-'
+	MappingKeyCharacter        Character = '?'
+	MappingValueCharacter      Character = ':'
+	CollectEntryCharacter      Character = ','
+	SequenceStartCharacter     Character = '['
+	SequenceEndCharacter       Character = ']'
+	MappingStartCharacter      Character = '{'
+	MappingEndCharacter        Character = '}'
+	CommentCharacter           Character = '#'
+	AnchorCharacter            Character = '&'
+	AliasCharacter             Character = '*'
+	TagCharacter               Character = '!'
+	LiteralCharacter           Character = '|'
+	FoldedCharacter            Character = '>'
+	SingleQuoteCharacter       Character = '\''
+	DoubleQuoteCharacter       Character = '"'
+	DirectiveCharacter         Character = '%'
+	ReservedAtCharacter        Character = '@'
+	ReservedBackquoteCharacter Character = '`'
+	LineFeedCharacter          Character = '\n'
+	CarriageReturnCharacter    Character = '\r'
+	SpaceCharacter             Character = ' '
+	TabCharacter               Character = '\t'
+	EscapeCharacter            Character = '\\'
+	DotCharacter               Character = '.'
+	ByteOrderMarkCharacter     Character = 0xFEFF
+	DirectiveEndCharacter      Character = '-'
+	StripChompingCharacter     Character = '-'
+	KeepChompingCharacter      Character = '+'
+	DocumentEndCharacter       Character = '.'
+)
 
 func IsDecimal(s string) bool {
 	for _, c := range s {
@@ -192,10 +211,10 @@ func IsJSONChar(r rune) bool {
 	return r == 0x09 || (r >= 0x20 && r <= 0x10FFFF)
 }
 
-func IsEscapedCharacter(runes []rune, i int) (int, bool) {
-	// YAML specification: [41-58] ns-esc-...
-	const singleEscapedCharacters = "0at\tnvfre \"/\\N_LP"
+// YAML specification: [41-58] ns-esc-...
+const singleEscapedCharacters = "0at\tnvfre \"/\\N_LP"
 
+func IsEscapedCharacter(runes []rune, i int) (int, bool) {
 	if i == len(runes) {
 		return 0, false
 	}

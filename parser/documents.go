@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yayamls/chars"
 	"github.com/KSpaceer/yayamls/token"
 	"unicode"
 )
@@ -169,7 +170,7 @@ func (p *parser) parseExplicitDocument() ast.Node {
 
 // YAML specification: [207] l-bare-document
 func (p *parser) parseBareDocument() ast.Node {
-	return p.parseBlockNode(&indentation{value: -1, mode: StrictEquality}, BlockInContext)
+	return p.parseBlockNode(&indentation{value: -1, mode: strictEqualityIndentationMode}, blockInContext)
 }
 
 // YAML specification: [82] l-directive
@@ -183,10 +184,10 @@ func (p *parser) parseDirective() ast.Node {
 	p.tokSrc.UnsetRawMode()
 	var directiveNode ast.Node
 	switch p.tok.Origin {
-	case token.YAMLDirective:
+	case chars.YAMLDirective:
 		p.next()
 		directiveNode = p.parseYAMLDirective()
-	case token.TagDirective:
+	case chars.TagDirective:
 		p.next()
 		directiveNode = p.parseTagDirective()
 	default:
@@ -263,7 +264,7 @@ func (p *parser) parseTagHandle() ast.Node {
 
 	// YAML specification: [92] c-named-tag-handle
 	p.setCheckpoint()
-	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.WordCharSetType) {
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.WordCharSetType) {
 		p.next()
 		if p.tok.Type == token.TagType {
 			p.next()
@@ -293,8 +294,8 @@ func (p *parser) parseTagPrefix() ast.Node {
 		if p.tok.Type != token.StringType || len(p.tok.Origin) == 0 {
 			return ast.NewInvalidNode()
 		}
-		if !token.ConformsCharSet(p.tok.Origin[:1], token.TagCharSetType) ||
-			!p.tok.ConformsCharSet(token.URICharSetType) {
+		if !chars.ConformsCharSet(p.tok.Origin[:1], chars.TagCharSetType) ||
+			!p.tok.ConformsCharSet(chars.URICharSetType) {
 			return ast.NewInvalidNode()
 		}
 		p.next()
@@ -309,7 +310,7 @@ func (p *parser) parseLocalTagPrefix() ast.Node {
 		return ast.NewInvalidNode()
 	}
 	p.next()
-	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.URICharSetType) {
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.URICharSetType) {
 		p.next()
 	}
 	return ast.NewBasicNode(ast.TagType)

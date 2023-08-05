@@ -1,17 +1,20 @@
 package token
 
-import "testing"
+import (
+	"github.com/KSpaceer/yayamls/chars"
+	"testing"
+)
 
 func TestConformationBitmap(t *testing.T) {
-	sets := []CharSetType{
-		DecimalCharSetType,
-		WordCharSetType,
-		URICharSetType,
-		TagCharSetType,
-		AnchorCharSetType,
-		PlainSafeCharSetType,
-		SingleQuotedCharSetType,
-		DoubleQuotedCharSetType,
+	sets := []chars.CharSetType{
+		chars.DecimalCharSetType,
+		chars.WordCharSetType,
+		chars.URICharSetType,
+		chars.TagCharSetType,
+		chars.AnchorCharSetType,
+		chars.PlainSafeCharSetType,
+		chars.SingleQuotedCharSetType,
+		chars.DoubleQuotedCharSetType,
 	}
 
 	t.Run("set true", func(t *testing.T) {

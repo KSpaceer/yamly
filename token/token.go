@@ -1,45 +1,8 @@
 package token
 
-import "strconv"
-
-const (
-	YAMLDirective = "YAML"
-	TagDirective  = "TAG"
-)
-
-type Character = rune
-
-const (
-	SequenceEntryCharacter     Character = '-'
-	MappingKeyCharacter        Character = '?'
-	MappingValueCharacter      Character = ':'
-	CollectEntryCharacter      Character = ','
-	SequenceStartCharacter     Character = '['
-	SequenceEndCharacter       Character = ']'
-	MappingStartCharacter      Character = '{'
-	MappingEndCharacter        Character = '}'
-	CommentCharacter           Character = '#'
-	AnchorCharacter            Character = '&'
-	AliasCharacter             Character = '*'
-	TagCharacter               Character = '!'
-	LiteralCharacter           Character = '|'
-	FoldedCharacter            Character = '>'
-	SingleQuoteCharacter       Character = '\''
-	DoubleQuoteCharacter       Character = '"'
-	DirectiveCharacter         Character = '%'
-	ReservedAtCharacter        Character = '@'
-	ReservedBackquoteCharacter Character = '`'
-	LineFeedCharacter          Character = '\n'
-	CarriageReturnCharacter    Character = '\r'
-	SpaceCharacter             Character = ' '
-	TabCharacter               Character = '\t'
-	EscapeCharacter            Character = '\\'
-	DotCharacter               Character = '.'
-	ByteOrderMarkCharacter     Character = 0xFEFF
-	DirectiveEndCharacter      Character = '-'
-	StripChompingCharacter     Character = '-'
-	KeepChompingCharacter      Character = '+'
-	DocumentEndCharacter       Character = '.'
+import (
+	"github.com/KSpaceer/yayamls/chars"
+	"strconv"
 )
 
 type Type uint8
@@ -138,23 +101,6 @@ func (t Type) String() string {
 	}
 }
 
-type CharSetType int16
-
-const (
-	UnknownCharSetType CharSetType = 0
-)
-
-const (
-	DecimalCharSetType CharSetType = 1 << iota
-	WordCharSetType
-	URICharSetType
-	TagCharSetType
-	AnchorCharSetType
-	PlainSafeCharSetType
-	SingleQuotedCharSetType
-	DoubleQuotedCharSetType
-)
-
 func IsWhiteSpace(tok Token) bool {
 	switch tok.Type {
 	case SpaceType, TabType:
@@ -217,7 +163,7 @@ func (t Token) String() string {
 		t.Start.String() + " End:" + t.End.String() + "\n"
 }
 
-func (t *Token) ConformsCharSet(cst CharSetType) bool {
+func (t *Token) ConformsCharSet(cst chars.CharSetType) bool {
 	result, ok := t.conformationMap.Get(cst)
 	if ok {
 		return result
@@ -225,8 +171,8 @@ func (t *Token) ConformsCharSet(cst CharSetType) bool {
 	return t.slowConformation(cst)
 }
 
-func (t *Token) slowConformation(cst CharSetType) bool {
-	result := ConformsCharSet(t.Origin, cst)
+func (t *Token) slowConformation(cst chars.CharSetType) bool {
+	result := chars.ConformsCharSet(t.Origin, cst)
 	t.conformationMap = t.conformationMap.Set(cst, result)
 	return result
 }

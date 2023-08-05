@@ -5,39 +5,39 @@ import (
 	"errors"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/lexer"
-	"github.com/KSpaceer/yayamls/parser/deadend"
-	"github.com/KSpaceer/yayamls/pkg/balancecheck"
+	"github.com/KSpaceer/yayamls/parser/internal/balancecheck"
+	"github.com/KSpaceer/yayamls/parser/internal/deadend"
 	"github.com/KSpaceer/yayamls/token"
 	"sync"
 )
 
-type Context int8
+type context int8
 
 const (
-	NoContext Context = iota
-	BlockInContext
-	BlockOutContext
-	BlockKeyContext
-	FlowInContext
-	FlowOutContext
-	FlowKeyContext
+	noContext context = iota
+	blockInContext
+	blockOutContext
+	blockKeyContext
+	flowInContext
+	flowOutContext
+	flowKeyContext
 )
 
 var bufsPool = sync.Pool{
 	New: func() any { return bytes.NewBuffer(nil) },
 }
 
-type IndentationMode int8
+type indentationMode int8
 
 const (
-	Unknown IndentationMode = iota
-	StrictEquality
-	WithLowerBound
+	unknownIndentationMode indentationMode = iota
+	strictEqualityIndentationMode
+	withLowerBoundIndentationMode
 )
 
 type indentation struct {
 	value int
-	mode  IndentationMode
+	mode  indentationMode
 }
 
 type parser struct {
@@ -46,7 +46,7 @@ type parser struct {
 	savedStates []state
 	state
 	errors         []error
-	balanceChecker balancecheck.BalanceChecker[token.Type]
+	balanceChecker balancecheck.BalanceChecker
 	deadEndFinder  deadend.Finder
 }
 

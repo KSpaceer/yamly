@@ -7,11 +7,11 @@ import (
 )
 
 // YAML specification: [80] s-separate
-func (p *parser) parseSeparate(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseSeparate(ind *indentation, ctx context) ast.Node {
 	switch ctx {
-	case BlockInContext, BlockOutContext, FlowInContext, FlowOutContext:
+	case blockInContext, blockOutContext, flowInContext, flowOutContext:
 		return p.parseSeparateLines(ind)
-	case BlockKeyContext, FlowKeyContext:
+	case blockKeyContext, flowKeyContext:
 		return p.parseSeparateInLine()
 	}
 	return ast.NewInvalidNode()
@@ -48,14 +48,14 @@ func (p *parser) parseSeparateInLine() ast.Node {
 // YAML specification: [63] s-indent
 func (p *parser) parseIndent(ind *indentation) ast.Node {
 	switch ind.mode {
-	case StrictEquality:
+	case strictEqualityIndentationMode:
 		return p.parseIndentWithStrictEquality(ind.value)
-	case WithLowerBound:
+	case withLowerBoundIndentationMode:
 		node, ok := p.parseIndentWithLowerBound(ind.value).(*ast.IndentNode)
 		if !ok || !ast.ValidNode(node) {
 			return ast.NewInvalidNode()
 		}
-		ind.mode = StrictEquality
+		ind.mode = strictEqualityIndentationMode
 		ind.value = node.Indent()
 		return node
 	default:
@@ -125,7 +125,7 @@ func (p *parser) parseBorderedIndent(indentation int, lowBorder int) ast.Node {
 }
 
 // YAML specification: [70] l-empty
-func (p *parser) parseEmpty(ind *indentation, ctx Context, buf *bytes.Buffer) ast.Node {
+func (p *parser) parseEmpty(ind *indentation, ctx context, buf *bytes.Buffer) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -154,11 +154,11 @@ func (p *parser) parseBlockLinePrefix(ind *indentation) ast.Node {
 }
 
 // YAML specification: [67] s-line-prefix
-func (p *parser) parseLinePrefix(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseLinePrefix(ind *indentation, ctx context) ast.Node {
 	switch ctx {
-	case BlockOutContext, BlockInContext:
+	case blockOutContext, blockInContext:
 		return p.parseBlockLinePrefix(ind)
-	case FlowOutContext, FlowInContext:
+	case flowOutContext, flowInContext:
 		return p.parseFlowLinePrefix(ind)
 	default:
 		return ast.NewInvalidNode()

@@ -302,6 +302,10 @@ func (*TextNode) Type() NodeType {
 	return TextType
 }
 
+func (t *TextNode) QuotingType() QuotingType {
+	return t.quotingType
+}
+
 func (t *TextNode) Accept(v Visitor) {
 	v.VisitTextNode(t)
 }

@@ -3,6 +3,7 @@ package parser
 import (
 	"bytes"
 	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yayamls/chars"
 	"github.com/KSpaceer/yayamls/token"
 )
 
@@ -10,12 +11,12 @@ import (
 func (p *parser) parseFlowInBlock(ind *indentation) ast.Node {
 	localInd := indentation{
 		value: ind.value + 1,
-		mode:  StrictEquality,
+		mode:  strictEqualityIndentationMode,
 	}
-	if p.hasErrors() || !ast.ValidNode(p.parseSeparate(&localInd, FlowOutContext)) {
+	if p.hasErrors() || !ast.ValidNode(p.parseSeparate(&localInd, flowOutContext)) {
 		return ast.NewInvalidNode()
 	}
-	node := p.parseFlowNode(&localInd, FlowOutContext)
+	node := p.parseFlowNode(&localInd, flowOutContext)
 	if !ast.ValidNode(node) {
 		return ast.NewInvalidNode()
 	}
@@ -27,8 +28,8 @@ func (p *parser) parseFlowInBlock(ind *indentation) ast.Node {
 
 func (p *parser) parseGenericFlowNode(
 	ind *indentation,
-	ctx Context,
-	contentParse func(*indentation, Context) ast.Node,
+	ctx context,
+	contentParse func(*indentation, context) ast.Node,
 ) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
@@ -71,17 +72,17 @@ func (p *parser) parseGenericFlowNode(
 }
 
 // YAML specification: [161] ns-flow-node
-func (p *parser) parseFlowNode(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowNode(ind *indentation, ctx context) ast.Node {
 	return p.parseGenericFlowNode(ind, ctx, p.parseFlowContent)
 }
 
 // YAML specification: [159] ns-flow-yaml-node
-func (p *parser) parseFlowYAMLNode(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowYAMLNode(ind *indentation, ctx context) ast.Node {
 	return p.parseGenericFlowNode(ind, ctx, p.parsePlain)
 }
 
 // YAML specification: [160] c-flow-json-node
-func (p *parser) parseFlowJSONNode(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowJSONNode(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -100,7 +101,7 @@ func (p *parser) parseFlowJSONNode(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [158] ns-flow-content
-func (p *parser) parseFlowContent(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowContent(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -116,7 +117,7 @@ func (p *parser) parseFlowContent(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [157] c-flow-json-content
-func (p *parser) parseFlowJSONContent(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowJSONContent(ind *indentation, ctx context) ast.Node {
 	switch p.tok.Type {
 	case token.SequenceStartType:
 		return p.parseFlowSequence(ind, ctx)
@@ -132,7 +133,7 @@ func (p *parser) parseFlowJSONContent(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [109] c-double-quoted
-func (p *parser) parseDoubleQuoted(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseDoubleQuoted(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() || p.tok.Type != token.DoubleQuoteType {
 		return ast.NewInvalidNode()
 	}
@@ -150,11 +151,11 @@ func (p *parser) parseDoubleQuoted(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [121] nb-double-text
-func (p *parser) parseDoubleText(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseDoubleText(ind *indentation, ctx context) ast.Node {
 	switch ctx {
-	case FlowInContext, FlowOutContext:
+	case flowInContext, flowOutContext:
 		return p.parseDoubleMultiLine(ind)
-	case BlockKeyContext, FlowKeyContext:
+	case blockKeyContext, flowKeyContext:
 		return p.parseDoubleOneLine()
 	default:
 		return ast.NewInvalidNode()
@@ -167,7 +168,7 @@ func (p *parser) parseDoubleOneLine() ast.Node {
 		return ast.NewInvalidNode()
 	}
 	buf := bufsPool.Get().(*bytes.Buffer)
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.DoubleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -184,7 +185,7 @@ func (p *parser) parseDoubleMultiLine(ind *indentation) ast.Node {
 		return ast.NewInvalidNode()
 	}
 	buf := bufsPool.Get().(*bytes.Buffer)
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.DoubleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -221,7 +222,7 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 
 	p.setCheckpoint()
 
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.DoubleQuotedCharSetType) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType) {
 		p.rollback()
 		return ast.NewBasicNode(ast.TextType)
 	}
@@ -229,7 +230,7 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	buf.WriteString(p.tok.Origin)
 	p.next()
 
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.DoubleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -293,7 +294,7 @@ func (p *parser) parseDoubleEscaped(ind *indentation, buf *bytes.Buffer) ast.Nod
 	for {
 		p.setCheckpoint()
 		savedLen := buf.Len()
-		if !ast.ValidNode(p.parseEmpty(ind, FlowInContext, buf)) {
+		if !ast.ValidNode(p.parseEmpty(ind, flowInContext, buf)) {
 			buf.Truncate(savedLen)
 			break
 		}
@@ -307,7 +308,7 @@ func (p *parser) parseDoubleEscaped(ind *indentation, buf *bytes.Buffer) ast.Nod
 }
 
 // YAML specification: [140] c-single-quoted
-func (p *parser) parseSingleQuoted(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseSingleQuoted(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() || p.tok.Type != token.SingleQuoteType {
 		return ast.NewInvalidNode()
 	}
@@ -325,11 +326,11 @@ func (p *parser) parseSingleQuoted(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [121] nb-single-text
-func (p *parser) parseSingleText(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseSingleText(ind *indentation, ctx context) ast.Node {
 	switch ctx {
-	case FlowInContext, FlowOutContext:
+	case flowInContext, flowOutContext:
 		return p.parseSingleMultiLine(ind)
-	case BlockKeyContext, FlowKeyContext:
+	case blockKeyContext, flowKeyContext:
 		return p.parseSingleOneLine()
 	default:
 		return ast.NewInvalidNode()
@@ -342,7 +343,7 @@ func (p *parser) parseSingleOneLine() ast.Node {
 		return ast.NewInvalidNode()
 	}
 	buf := bufsPool.Get().(*bytes.Buffer)
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.SingleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -359,7 +360,7 @@ func (p *parser) parseSingleMultiLine(ind *indentation) ast.Node {
 		return ast.NewInvalidNode()
 	}
 	buf := bufsPool.Get().(*bytes.Buffer)
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.SingleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -394,7 +395,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	}
 	p.setCheckpoint()
 
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(token.SingleQuotedCharSetType) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(chars.SingleQuotedCharSetType) {
 		p.rollback()
 		return ast.NewBasicNode(ast.TextType)
 	}
@@ -402,7 +403,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	buf.WriteString(p.tok.Origin)
 	p.next()
 
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(token.SingleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -425,7 +426,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 }
 
 // YAML specification: [140] c-flow-mapping
-func (p *parser) parseFlowMapping(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMapping(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() || p.tok.Type != token.MappingStartType {
 		return ast.NewInvalidNode()
 	}
@@ -455,7 +456,7 @@ func (p *parser) parseFlowMapping(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [141] ns-s-flow-map-entries
-func (p *parser) parseFlowMappingEntries(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingEntries(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -499,7 +500,7 @@ func (p *parser) parseFlowMappingEntries(ind *indentation, ctx Context) ast.Node
 }
 
 // YAML specification: [142] ns-flow-map-entry
-func (p *parser) parseFlowMappingEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -523,7 +524,7 @@ func (p *parser) parseFlowMappingEntry(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [137] c-flow-sequence
-func (p *parser) parseFlowSequence(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowSequence(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() || p.tok.Type != token.SequenceStartType {
 		return ast.NewInvalidNode()
 	}
@@ -553,12 +554,12 @@ func (p *parser) parseFlowSequence(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [136] in-flow
-func (p *parser) parseInFlow(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseInFlow(ind *indentation, ctx context) ast.Node {
 	switch ctx {
-	case FlowInContext, FlowOutContext:
-		ctx = FlowInContext
-	case BlockKeyContext, FlowKeyContext:
-		ctx = FlowKeyContext
+	case flowInContext, flowOutContext:
+		ctx = flowInContext
+	case blockKeyContext, flowKeyContext:
+		ctx = flowKeyContext
 	default:
 		return ast.NewInvalidNode()
 	}
@@ -566,7 +567,7 @@ func (p *parser) parseInFlow(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [138] ns-s-flow-seq-entries
-func (p *parser) parseFlowSequenceEntries(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowSequenceEntries(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -610,7 +611,7 @@ func (p *parser) parseFlowSequenceEntries(ind *indentation, ctx Context) ast.Nod
 }
 
 // YAML specification: [139] ns-flow-seq-entry
-func (p *parser) parseFlowSequenceEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowSequenceEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -625,7 +626,7 @@ func (p *parser) parseFlowSequenceEntry(ind *indentation, ctx Context) ast.Node 
 }
 
 // YAML specification: [150] ns-flow-pair
-func (p *parser) parseFlowPair(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowPair(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -654,7 +655,7 @@ func (p *parser) parseFlowPair(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [151] ns-flow-pair-entry
-func (p *parser) parseFlowPairEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowPairEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -679,11 +680,11 @@ func (p *parser) parseFlowPairEntry(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [153] c-ns-flow-pair-json-key-entry
-func (p *parser) parseFlowPairJSONKeyEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowPairJSONKeyEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	key := p.parseImplicitJSONKey(FlowKeyContext)
+	key := p.parseImplicitJSONKey(flowKeyContext)
 	if !ast.ValidNode(key) {
 		return ast.NewInvalidNode()
 	}
@@ -695,13 +696,13 @@ func (p *parser) parseFlowPairJSONKeyEntry(ind *indentation, ctx Context) ast.No
 }
 
 // YAML specification: [155] c-s-implicit-json-key
-func (p *parser) parseImplicitJSONKey(ctx Context) ast.Node {
+func (p *parser) parseImplicitJSONKey(ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
 	localInd := indentation{
 		value: 0,
-		mode:  StrictEquality,
+		mode:  strictEqualityIndentationMode,
 	}
 	node := p.parseFlowJSONNode(&localInd, ctx)
 	if !ast.ValidNode(node) {
@@ -718,11 +719,11 @@ func (p *parser) parseImplicitJSONKey(ctx Context) ast.Node {
 }
 
 // YAML specification: [152] ns-flow-pair-yaml-key-entry
-func (p *parser) parseFlowPairYAMLKeyEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowPairYAMLKeyEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	key := p.parseImplicitYAMLKey(FlowKeyContext)
+	key := p.parseImplicitYAMLKey(flowKeyContext)
 	if !ast.ValidNode(key) {
 		return ast.NewInvalidNode()
 	}
@@ -734,13 +735,13 @@ func (p *parser) parseFlowPairYAMLKeyEntry(ind *indentation, ctx Context) ast.No
 }
 
 // YAML specification: [154] ns-s-implicit-yaml-key
-func (p *parser) parseImplicitYAMLKey(ctx Context) ast.Node {
+func (p *parser) parseImplicitYAMLKey(ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
 	localInd := indentation{
 		value: 0,
-		mode:  StrictEquality,
+		mode:  strictEqualityIndentationMode,
 	}
 	node := p.parseFlowYAMLNode(&localInd, ctx)
 	if !ast.ValidNode(node) {
@@ -757,7 +758,7 @@ func (p *parser) parseImplicitYAMLKey(ctx Context) ast.Node {
 }
 
 // YAML specification: [143] ns-flow-map-explicit-entry
-func (p *parser) parseFlowMappingExplicitEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingExplicitEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -772,7 +773,7 @@ func (p *parser) parseFlowMappingExplicitEntry(ind *indentation, ctx Context) as
 }
 
 // YAML specification: [144] ns-flow-map-implicit-entry
-func (p *parser) parseFlowMappingImplicitEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingImplicitEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -796,7 +797,7 @@ func (p *parser) parseFlowMappingImplicitEntry(ind *indentation, ctx Context) as
 }
 
 // YAML specification: [146] c-ns-flow-map-empty-key-entry
-func (p *parser) parseFlowMappingEmptyKeyEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingEmptyKeyEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -808,7 +809,7 @@ func (p *parser) parseFlowMappingEmptyKeyEntry(ind *indentation, ctx Context) as
 }
 
 // YAML specification: [148] c-ns-flow-map-json-key-entry
-func (p *parser) parseFlowMappingJSONKeyEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingJSONKeyEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -838,7 +839,7 @@ func (p *parser) parseFlowMappingJSONKeyEntry(ind *indentation, ctx Context) ast
 }
 
 // YAML specification: [149] c-ns-flow-map-adjacent-value
-func (p *parser) parseFlowMappingAdjacentValue(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingAdjacentValue(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() || p.tok.Type != token.MappingValueType {
 		return ast.NewInvalidNode()
 	}
@@ -863,7 +864,7 @@ func (p *parser) parseFlowMappingAdjacentValue(ind *indentation, ctx Context) as
 }
 
 // YAML specification: [145] ns-flow-map-yaml-key-entry
-func (p *parser) parseFlowMappingYAMLKeyEntry(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingYAMLKeyEntry(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -892,7 +893,7 @@ func (p *parser) parseFlowMappingYAMLKeyEntry(ind *indentation, ctx Context) ast
 }
 
 // YAML specification: [147] c-ns-flow-map-separate-value
-func (p *parser) parseFlowMappingSeparateValue(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parseFlowMappingSeparateValue(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() || p.tok.Type != token.MappingValueType {
 		return ast.NewInvalidNode()
 	}
@@ -916,11 +917,11 @@ func (p *parser) parseFlowMappingSeparateValue(ind *indentation, ctx Context) as
 }
 
 // YAML specification: [131] ns-plain
-func (p *parser) parsePlain(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parsePlain(ind *indentation, ctx context) ast.Node {
 	switch ctx {
-	case FlowInContext, FlowOutContext:
+	case flowInContext, flowOutContext:
 		return p.parsePlainMultiLine(ind, ctx)
-	case BlockKeyContext, FlowKeyContext:
+	case blockKeyContext, flowKeyContext:
 		return p.parsePlainOneLine(ctx)
 	default:
 		return ast.NewInvalidNode()
@@ -928,7 +929,7 @@ func (p *parser) parsePlain(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [135] ns-plain-multi-line
-func (p *parser) parsePlainMultiLine(ind *indentation, ctx Context) ast.Node {
+func (p *parser) parsePlainMultiLine(ind *indentation, ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -955,7 +956,7 @@ func (p *parser) parsePlainMultiLine(ind *indentation, ctx Context) ast.Node {
 }
 
 // YAML specification: [134] s-ns-plain-next-line
-func (p *parser) parsePlainNextLine(ind *indentation, ctx Context, buf *bytes.Buffer) ast.Node {
+func (p *parser) parsePlainNextLine(ind *indentation, ctx context, buf *bytes.Buffer) ast.Node {
 	savedLen := buf.Len()
 	if p.hasErrors() || !ast.ValidNode(p.parseFlowFolded(ind, buf)) {
 		buf.Truncate(savedLen)
@@ -986,7 +987,7 @@ func (p *parser) parseFlowFolded(ind *indentation, buf *bytes.Buffer) ast.Node {
 	}
 
 	savedLen := buf.Len()
-	if !ast.ValidNode(p.parseFoldedLineBreak(ind, FlowInContext, buf)) ||
+	if !ast.ValidNode(p.parseFoldedLineBreak(ind, flowInContext, buf)) ||
 		!ast.ValidNode(p.parseFlowLinePrefix(ind)) {
 		buf.Truncate(savedLen)
 		return ast.NewInvalidNode()
@@ -995,7 +996,7 @@ func (p *parser) parseFlowFolded(ind *indentation, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [133] ns-plain-one-line
-func (p *parser) parsePlainOneLine(ctx Context) ast.Node {
+func (p *parser) parsePlainOneLine(ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -1018,7 +1019,7 @@ func (p *parser) parsePlainOneLine(ctx Context) ast.Node {
 }
 
 // YAML specification: [132] nb-ns-plain-in-line
-func (p *parser) parsePlainInLine(ctx Context, buf *bytes.Buffer) ast.Node {
+func (p *parser) parsePlainInLine(ctx context, buf *bytes.Buffer) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -1050,7 +1051,7 @@ func (p *parser) parsePlainInLine(ctx Context, buf *bytes.Buffer) ast.Node {
 }
 
 // YAML specification: [126] ns-plain-first
-func (p *parser) parsePlainFirst(ctx Context, buf *bytes.Buffer) ast.Node {
+func (p *parser) parsePlainFirst(ctx context, buf *bytes.Buffer) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
@@ -1078,12 +1079,12 @@ func (p *parser) parsePlainFirst(ctx Context, buf *bytes.Buffer) ast.Node {
 	}
 }
 
-func isPlainSafeToken(tok token.Token, ctx Context) bool {
+func isPlainSafeToken(tok token.Token, ctx context) bool {
 	switch ctx {
-	case FlowInContext, FlowOutContext:
+	case flowInContext, flowOutContext:
 		return tok.Type == token.StringType
-	case BlockKeyContext, FlowKeyContext:
-		return tok.Type == token.StringType && tok.ConformsCharSet(token.PlainSafeCharSetType)
+	case blockKeyContext, flowKeyContext:
+		return tok.Type == token.StringType && tok.ConformsCharSet(chars.PlainSafeCharSetType)
 	default:
 		return false
 	}

@@ -1,19 +1,21 @@
 package balancecheck
 
-type BalanceChecker[T comparable] struct {
-	openers          map[T]T
-	closers          map[T]struct{}
-	stack            []T
+import "github.com/KSpaceer/yayamls/token"
+
+type BalanceChecker struct {
+	openers          map[token.Type]token.Type
+	closers          map[token.Type]struct{}
+	stack            []token.Type
 	cannotBeBalanced bool
 }
 
 const preallocationSize = 8
 
-func NewBalanceChecker[T comparable](pairs [][2]T) BalanceChecker[T] {
-	b := BalanceChecker[T]{
-		openers: make(map[T]T, len(pairs)),
-		closers: make(map[T]struct{}, len(pairs)),
-		stack:   make([]T, 0, preallocationSize),
+func NewBalanceChecker(pairs [][2]token.Type) BalanceChecker {
+	b := BalanceChecker{
+		openers: make(map[token.Type]token.Type, len(pairs)),
+		closers: make(map[token.Type]struct{}, len(pairs)),
+		stack:   make([]token.Type, 0, preallocationSize),
 	}
 	for _, pair := range pairs {
 		b.openers[pair[0]] = pair[1]
@@ -22,7 +24,7 @@ func NewBalanceChecker[T comparable](pairs [][2]T) BalanceChecker[T] {
 	return b
 }
 
-func (b *BalanceChecker[T]) Add(r T) bool {
+func (b *BalanceChecker) Add(r token.Type) bool {
 	if b.cannotBeBalanced {
 		return false
 	}
@@ -41,12 +43,12 @@ func (b *BalanceChecker[T]) Add(r T) bool {
 	return true
 }
 
-func (b *BalanceChecker[T]) IsBalanced() bool {
+func (b *BalanceChecker) IsBalanced() bool {
 	return !b.cannotBeBalanced && len(b.stack) == 0
 }
 
-func (b *BalanceChecker[T]) PeekLastUnbalanced() (T, bool) {
-	var peeked T
+func (b *BalanceChecker) PeekLastUnbalanced() (token.Type, bool) {
+	var peeked token.Type
 	if len(b.stack) == 0 {
 		return peeked, false
 	}
@@ -59,14 +61,14 @@ type BalanceCheckerMemento struct {
 	cannotBeBalanced bool
 }
 
-func (b *BalanceChecker[T]) Memento() BalanceCheckerMemento {
+func (b *BalanceChecker) Memento() BalanceCheckerMemento {
 	return BalanceCheckerMemento{
 		stackSize:        len(b.stack),
 		cannotBeBalanced: b.cannotBeBalanced,
 	}
 }
 
-func (b *BalanceChecker[T]) SetMemento(m BalanceCheckerMemento) {
+func (b *BalanceChecker) SetMemento(m BalanceCheckerMemento) {
 	stackSize := m.stackSize
 	if cap(b.stack) < stackSize {
 		stackSize = cap(b.stack)

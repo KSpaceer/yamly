@@ -1,7 +1,7 @@
 package balancecheck_test
 
 import (
-	"github.com/KSpaceer/yayamls/pkg/balancecheck"
+	"github.com/KSpaceer/yayamls/parser/internal/balancecheck"
 	"testing"
 )
 
