@@ -2770,10 +2770,6 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 	}
 }
 
-func TestAboba(t *testing.T) {
-	parser.ParseString("[[[[[[[[[[[[[[[[[[[[[[[[[O[[[[\xff\x7f")
-}
-
 func FuzzParseString(f *testing.F) {
 	seeds := []string{
 		"key:key",
@@ -2784,6 +2780,7 @@ func FuzzParseString(f *testing.F) {
 		"key: >\n  value\n  value",
 		"{\"key\":'value'}",
 		"[value,value,value]",
+		"[[[[[[[[[[[[[[[[[[[[[\"a\\8",
 		func() string {
 			data, err := os.ReadFile("testdata/learnyaml.yaml")
 			if err != nil {

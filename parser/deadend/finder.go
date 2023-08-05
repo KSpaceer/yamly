@@ -2,7 +2,7 @@ package deadend
 
 import "github.com/KSpaceer/yayamls/token"
 
-const deadEndTriggerThreshold = 10
+const deadEndTriggerThreshold = 64
 
 type Finder struct {
 	m map[token.Position]int8

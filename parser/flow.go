@@ -175,7 +175,7 @@ func (p *parser) parseDoubleOneLine() ast.Node {
 	text := buf.String()
 	buf.Reset()
 	bufsPool.Put(buf)
-	return ast.NewTextNode(text)
+	return ast.NewTextNode(text, ast.WithQuotingType(ast.DoubleQuotingType))
 }
 
 // YAML specification: [116] nb-double-multi-line
@@ -207,7 +207,7 @@ func (p *parser) parseDoubleMultiLine(ind *indentation) ast.Node {
 	text := buf.String()
 	buf.Reset()
 	bufsPool.Put(buf)
-	return ast.NewTextNode(text)
+	return ast.NewTextNode(text, ast.WithQuotingType(ast.DoubleQuotingType))
 }
 
 // YAML specification: [115] s-double-next-line
@@ -350,7 +350,7 @@ func (p *parser) parseSingleOneLine() ast.Node {
 	text := buf.String()
 	buf.Reset()
 	bufsPool.Put(buf)
-	return ast.NewTextNode(text)
+	return ast.NewTextNode(text, ast.WithQuotingType(ast.SingleQuotingType))
 }
 
 // YAML specification: [125] nb-single-multi-line
@@ -382,7 +382,7 @@ func (p *parser) parseSingleMultiLine(ind *indentation) ast.Node {
 	text := buf.String()
 	buf.Reset()
 	bufsPool.Put(buf)
-	return ast.NewTextNode(text)
+	return ast.NewTextNode(text, ast.WithQuotingType(ast.SingleQuotingType))
 }
 
 // YAML specification: [124] s-single-next-line

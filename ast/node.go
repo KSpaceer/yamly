@@ -91,6 +91,15 @@ func TokenChompingType(tok token.Token) ChompingType {
 	return UnknownChompingType
 }
 
+type QuotingType int8
+
+const (
+	UnknownQuotingType QuotingType = iota
+	AbsentQuotingType
+	SingleQuotingType
+	DoubleQuotingType
+)
+
 type Node interface {
 	Type() NodeType
 	Accept(v Visitor)
@@ -268,8 +277,25 @@ func NewBlockHeaderNode(chomping ChompingType, indentation int) Node {
 	}
 }
 
+type TextNodeOption interface {
+	apply(*TextNode)
+}
+
+type textNodeOptionFunc func(*TextNode)
+
+func (f textNodeOptionFunc) apply(o *TextNode) {
+	f(o)
+}
+
+func WithQuotingType(t QuotingType) TextNodeOption {
+	return textNodeOptionFunc(func(node *TextNode) {
+		node.quotingType = t
+	})
+}
+
 type TextNode struct {
-	text string
+	quotingType QuotingType
+	text        string
 }
 
 func (*TextNode) Type() NodeType {
@@ -284,10 +310,15 @@ func (t *TextNode) Text() string {
 	return t.text
 }
 
-func NewTextNode(text string) Node {
-	return &TextNode{
-		text: text,
+func NewTextNode(text string, opts ...TextNodeOption) Node {
+	node := TextNode{
+		quotingType: AbsentQuotingType,
+		text:        text,
 	}
+	for _, opt := range opts {
+		opt.apply(&node)
+	}
+	return &node
 }
 
 type ContentNode struct {
