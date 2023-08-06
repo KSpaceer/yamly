@@ -7,6 +7,41 @@ import (
 	"unicode/utf8"
 )
 
+func ConvertFromYAMLSingleQuotedString(s string) (string, error) {
+	var sb strings.Builder
+	sb.Grow(len(s))
+	var hasPrecedingQuote bool
+
+	for _, r := range s {
+		switch r {
+		case '\'':
+			if hasPrecedingQuote {
+				hasPrecedingQuote = false
+				sb.WriteByte('\'')
+			} else {
+				hasPrecedingQuote = true
+			}
+		default:
+			if hasPrecedingQuote {
+				return "", fmt.Errorf("string contains unquoted single quote")
+			}
+			if !IsJSONChar(r) {
+				return "", fmt.Errorf("expected to have JSON char (see YAML spec [2] nb-json), but got %c",
+					r)
+			}
+			sb.WriteRune(r)
+		}
+	}
+	if hasPrecedingQuote {
+		return "", fmt.Errorf("string contains unquoted single quote")
+	}
+	return sb.String(), nil
+}
+
+func ConvertToYAMLSingleQuotedString(s string) (string, error) {
+	return strings.ReplaceAll(s, "'", "''"), nil
+}
+
 func ConvertFromYAMLDoubleQuotedString(s string) (string, error) {
 	var sb strings.Builder
 	sb.Grow(len(s))
