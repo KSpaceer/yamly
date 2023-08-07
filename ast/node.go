@@ -316,8 +316,7 @@ func (t *TextNode) Text() string {
 
 func NewTextNode(text string, opts ...TextNodeOption) Node {
 	node := TextNode{
-		quotingType: AbsentQuotingType,
-		text:        text,
+		text: text,
 	}
 	for _, opt := range opts {
 		opt.apply(&node)

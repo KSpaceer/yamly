@@ -124,6 +124,59 @@ func TestWriteString(t *testing.T) {
 					},
 				)),
 			}),
+			expected: "---\nmapping: !!map &ref\n  innerkey: innervalue\naliased: *ref\n...\n",
+		},
+		{
+			name: "multiline quote absent string",
+			ast: ast.NewStreamNode([]ast.Node{
+				ast.NewContentNode(nil, ast.NewSequenceNode(
+					[]ast.Node{
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								nil,
+								ast.NewAnchorNode("lit"),
+							),
+							ast.NewTextNode("firstrow\nsecondrow\n\n", ast.WithQuotingType(ast.AbsentQuotingType)),
+						),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("dq"),
+								nil,
+							),
+							ast.NewTextNode("firstrow\nsecondrow\n\n", ast.WithQuotingType(ast.DoubleQuotingType)),
+						),
+					},
+				)),
+			}),
+			expected: "---\n- &lit |+\n  firstrow\n  secondrow\n\n- !!dq \"firstrow\\nsecondrow\\n\\n\"\n...\n",
+		},
+		{
+			name: "complex key",
+			ast: ast.NewStreamNode([]ast.Node{
+				ast.NewMappingNode([]ast.Node{
+					ast.NewMappingEntryNode(
+						ast.NewSequenceNode([]ast.Node{
+							ast.NewTextNode("a"),
+							ast.NewTextNode("b"),
+						}),
+						ast.NewSequenceNode([]ast.Node{
+							ast.NewTextNode("c"),
+							ast.NewTextNode("d"),
+						}),
+					),
+				}),
+			}),
+			expected: "---\n? - a\n  - b\n:\n  - c\n  - d\n...\n",
+		},
+		{
+			name: "null mapping",
+			ast: ast.NewMappingNode([]ast.Node{
+				ast.NewMappingEntryNode(
+					ast.NewNullNode(),
+					ast.NewNullNode(),
+				),
+			}),
+			expected: "null: null\n",
 		},
 	}
 

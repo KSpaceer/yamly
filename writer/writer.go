@@ -17,11 +17,13 @@ const (
 const nullValue = "null"
 
 type Writer struct {
-	buf                     *bytes.Buffer
-	errors                  []error
-	indentation             int
-	indentationDelta        int
-	preparedForComplexNodes bool
+	buf              *bytes.Buffer
+	errors           []error
+	indentation      int
+	indentationDelta int
+
+	beforeComplex string
+	beforeSimple  string
 }
 
 func NewWriter() *Writer {
@@ -75,52 +77,51 @@ func (w *Writer) VisitStreamNode(n *ast.StreamNode) {
 }
 
 func (w *Writer) VisitTagNode(n *ast.TagNode) {
-	w.buf.WriteString(" !!")
+	w.buf.WriteString("!!")
 	w.buf.WriteString(n.Text())
-	w.buf.WriteByte(' ')
 }
 
 func (w *Writer) VisitAnchorNode(n *ast.AnchorNode) {
-	w.buf.WriteString(" &")
+	w.buf.WriteString("&")
 	w.buf.WriteString(n.Text())
-	w.buf.WriteByte(' ')
 }
 
 func (w *Writer) VisitAliasNode(n *ast.AliasNode) {
-	w.buf.WriteString(" *")
+	w.writePreparedData(n)
+	w.buf.WriteString("*")
 	w.buf.WriteString(n.Text())
 }
 
 func (w *Writer) VisitTextNode(n *ast.TextNode) {
-	switch n.QuotingType() {
+	w.writePreparedData(n)
+	switch txt := n.Text(); n.QuotingType() {
 	case ast.AbsentQuotingType:
-		w.buf.WriteString(n.Text())
+		if isMultiline(txt) {
+			w.writeMultilineLiteralText(txt)
+		} else {
+			w.buf.WriteString(txt)
+		}
 	case ast.SingleQuotingType:
-		txt, err := chars.ConvertToYAMLSingleQuotedString(n.Text())
-		if err != nil {
-			w.appendError(err)
-		}
-		w.buf.WriteByte('\'')
-		w.buf.WriteString(txt)
-		w.buf.WriteByte('\'')
+		w.writeSingleQuotedText(txt)
 	case ast.DoubleQuotingType:
-		txt, err := chars.ConvertToYAMLDoubleQuotedString(n.Text())
-		if err != nil {
-			w.appendError(err)
+		w.writeDoubleQuotedText(txt)
+	default:
+		if isMultiline(txt) {
+			w.writeDoubleQuotedText(txt)
+		} else {
+			w.buf.WriteString(txt)
 		}
-		w.buf.WriteByte('"')
-		w.buf.WriteString(txt)
-		w.buf.WriteByte('"')
 	}
 }
 
 func (w *Writer) VisitSequenceNode(n *ast.SequenceNode) {
-	w.maybeExecutePreparedLogic(n)
+	w.writePreparedData(n)
 	for _, entry := range n.Entries() {
 		w.maybeWriteIndentation()
 		w.buf.WriteByte('-')
-		w.buf.WriteByte(' ')
 		w.increaseIndentation()
+		w.writeBeforeComplexElements(" ")
+		w.writeBeforeSimpleElements(" ")
 		entry.Accept(w)
 		w.decreaseIndentation()
 		w.maybeWriteLineBreak()
@@ -128,7 +129,7 @@ func (w *Writer) VisitSequenceNode(n *ast.SequenceNode) {
 }
 
 func (w *Writer) VisitMappingNode(n *ast.MappingNode) {
-	w.maybeExecutePreparedLogic(n)
+	w.writePreparedData(n)
 	for _, entry := range n.Entries() {
 		w.maybeWriteIndentation()
 		entry.Accept(w)
@@ -152,16 +153,17 @@ func (w *Writer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 		w.decreaseIndentation()
 	}
 	w.buf.WriteByte(':')
+	w.writeBeforeComplexElements("\n")
+	w.writeBeforeSimpleElements(" ")
 
 	w.increaseIndentation()
-
-	w.prepareForComplexNodes()
 
 	value.Accept(w)
 	w.decreaseIndentation()
 }
 
 func (w *Writer) VisitNullNode(n *ast.NullNode) {
+	w.writePreparedData(n)
 	w.buf.WriteString(nullValue)
 }
 
@@ -180,31 +182,34 @@ func (w *Writer) VisitPropertiesNode(n *ast.PropertiesNode) {
 }
 
 func (w *Writer) VisitContentNode(n *ast.ContentNode) {
-	w.maybeExecutePreparedLogic(n)
+	w.writePreparedData(n)
 	properties, content := n.Properties(), n.Content()
 	if ast.ValidNode(properties) {
-		properties.Accept(w)
 		w.buf.WriteByte(' ')
+		properties.Accept(w)
 	}
 	content.Accept(w)
 }
 
-func (w *Writer) prepareForComplexNodes() {
-	w.preparedForComplexNodes = true
+func (w *Writer) writeBeforeComplexElements(s string) {
+	w.beforeComplex = s
 }
 
-func (w *Writer) maybeExecutePreparedLogic(n ast.Node) {
+func (w *Writer) writeBeforeSimpleElements(s string) {
+	w.beforeSimple = s
+}
+
+func (w *Writer) writePreparedData(n ast.Node) {
 	switch n.Type() {
 	case ast.SequenceType, ast.MappingType:
-		w.maybeWriteLineBreak()
-		w.preparedForComplexNodes = false
+		w.buf.WriteString(w.beforeComplex)
 	case ast.ContentType:
-		if ast.ValidNode(n.(*ast.ContentNode).Properties()) {
-			w.buf.WriteByte(' ')
-		}
+		return
 	default:
-		w.preparedForComplexNodes = false
+		w.buf.WriteString(w.beforeSimple)
 	}
+	w.beforeComplex = ""
+	w.beforeSimple = ""
 }
 
 func (w *Writer) increaseIndentation() {
@@ -237,4 +242,45 @@ func (w *Writer) maybeWriteLineBreak() {
 	if !w.hasWriteLineBreak() {
 		w.buf.WriteByte('\n')
 	}
+}
+
+func (w *Writer) writeMultilineLiteralText(txt string) {
+	lines := strings.Split(txt, "\n")
+	chompingIndicator := chars.StripChompingCharacter
+	if lines[len(lines)-1] == "" {
+		chompingIndicator = chars.KeepChompingCharacter
+	}
+	w.buf.WriteByte('|')
+	w.buf.WriteRune(chompingIndicator)
+	for i := range lines {
+		w.buf.WriteByte('\n')
+		if lines[i] != "" {
+			w.writeIndentation()
+			w.buf.WriteString(lines[i])
+		}
+	}
+}
+
+func (w *Writer) writeSingleQuotedText(txt string) {
+	txt, err := chars.ConvertToYAMLSingleQuotedString(txt)
+	if err != nil {
+		w.appendError(err)
+	}
+	w.buf.WriteByte('\'')
+	w.buf.WriteString(txt)
+	w.buf.WriteByte('\'')
+}
+
+func (w *Writer) writeDoubleQuotedText(txt string) {
+	txt, err := chars.ConvertToYAMLDoubleQuotedString(txt)
+	if err != nil {
+		w.appendError(err)
+	}
+	w.buf.WriteByte('"')
+	w.buf.WriteString(txt)
+	w.buf.WriteByte('"')
+}
+
+func isMultiline(s string) bool {
+	return strings.ContainsRune(s, '\n')
 }
