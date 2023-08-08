@@ -51,9 +51,9 @@ func (p *parser) parseIndentationIndicator() (int, error) {
 	switch {
 	case err != nil:
 		return 0, fmt.Errorf("failed to parse indentation indicator node: %w", err)
-	case ind <= 0:
+	case ind <= 0 || ind > 9:
 		return 0, fmt.Errorf("failed to parse indentation indicator node: " +
-			"indentation must be omitted or greater than 0")
+			"indentation must be omitted or be between 1 and 9")
 	default:
 		p.next()
 		return ind, nil

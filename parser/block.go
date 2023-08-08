@@ -464,13 +464,15 @@ func (p *parser) parseFolded(ind *indentation) ast.Node {
 	if !ok {
 		ast.NewInvalidNode()
 	}
-	content := p.parseFoldedContent(
-		&indentation{
-			value: ind.value + castedHeader.IndentationIndicator(),
-			mode:  withLowerBoundIndentationMode,
-		},
-		castedHeader.ChompingIndicator(),
-	)
+	foldedInd := indentation{
+		value: ind.value,
+		mode:  withLowerBoundIndentationMode,
+	}
+	if indVal := castedHeader.IndentationIndicator(); indVal != 0 {
+		foldedInd.value = ind.value + indVal
+		foldedInd.mode = strictEqualityIndentationMode
+	}
+	content := p.parseFoldedContent(&foldedInd, castedHeader.ChompingIndicator())
 	return content
 }
 
@@ -741,13 +743,15 @@ func (p *parser) parseLiteral(ind *indentation) ast.Node {
 	if !ok {
 		return ast.NewInvalidNode()
 	}
-	content := p.parseLiteralContent(
-		&indentation{
-			value: ind.value + castedHeader.IndentationIndicator(),
-			mode:  withLowerBoundIndentationMode,
-		},
-		castedHeader.ChompingIndicator(),
-	)
+	literalInd := indentation{
+		value: ind.value,
+		mode:  withLowerBoundIndentationMode,
+	}
+	if indVal := castedHeader.IndentationIndicator(); indVal != 0 {
+		literalInd.value = ind.value + indVal
+		literalInd.mode = strictEqualityIndentationMode
+	}
+	content := p.parseLiteralContent(&literalInd, castedHeader.ChompingIndicator())
 	return content
 }
 

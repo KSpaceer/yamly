@@ -490,7 +490,7 @@ func TestParseTokens(t *testing.T) {
 				  firstrow
 				  secondrow
 
-				- !primary >1
+				- !primary >3
 
 				   folded
 			*/
@@ -605,7 +605,7 @@ func TestParseTokens(t *testing.T) {
 				},
 				{
 					Type:   token.StringType,
-					Origin: "1",
+					Origin: "3",
 				},
 				{
 					Type:   token.LineBreakType,
