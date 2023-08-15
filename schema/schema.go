@@ -4,6 +4,7 @@ import (
 	"github.com/KSpaceer/yayamls/ast"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -102,4 +103,46 @@ func IsMergeKey(n ast.Node) bool {
 	txtNode := n.(*ast.TextNode)
 	txt := txtNode.Text()
 	return txt == MergeKey
+}
+
+var (
+	timestampRegex = regexp.MustCompile(`^` +
+		`[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]` + // ymd
+		`[0-9][0-9][0-9][0-9]` + // year
+		`-[0-9][0-9]?` + // month
+		`-[0-9][0-9]?` + // day
+		`([Tt]|[ \t]+)[0-9][0-9]?` + // hour
+		`:[0-9][0-9]` + // minute
+		`:[0-9][0-9]` + // second
+		`(\.[0-9]*)?` + // fraction
+		`(([ \t]*)Z|[-+][0-9][0-9]?(:[0-9][0-9])?)?` + // time zone
+		`$`)
+
+	timestampLayouts = []string{
+		time.RFC3339,
+		time.RFC3339Nano,
+		time.DateOnly,
+		"2006-1-2T15:4:5.999999999Z07:00", // short RFC339Nano
+		"2001-1-2t15:4:5.999999999-07:00", // lower t + time zone without 'Z'
+		"2001-1-2 15:4:5.999999999",       // space separated
+		"2001-1-2",                        // date only short form
+	}
+)
+
+func IsTimestamp(n ast.Node) bool {
+	if n.Type() != ast.TextType {
+		return false
+	}
+	txtNode := n.(*ast.TextNode)
+	txt := txtNode.Text()
+	if !timestampRegex.MatchString(txt) {
+		return false
+	}
+	for i := range timestampLayouts {
+		_, err := time.Parse(timestampLayouts[i], txt)
+		if err == nil {
+			return true
+		}
+	}
+	return false
 }
