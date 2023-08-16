@@ -2,27 +2,48 @@ package reader
 
 import "github.com/KSpaceer/yayamls/ast"
 
-type streamIterator struct {
-	i    int
-	docs []ast.Node
+type nodeIteratorImpl struct {
+	i     int
+	nodes []ast.Node
+}
+
+func (s *nodeIteratorImpl) next() bool {
+	s.i++
+	return s.i < len(s.nodes)
+}
+
+func (s *nodeIteratorImpl) node() ast.Node {
+	return s.nodes[s.i]
+}
+
+func (s *nodeIteratorImpl) empty() bool {
+	return s.i >= len(s.nodes)
 }
 
 func newStreamIterator(s *ast.StreamNode) nodeIterator {
-	return &streamIterator{
-		i:    -1,
-		docs: s.Documents(),
+	return &nodeIteratorImpl{
+		i:     -1,
+		nodes: s.Documents(),
 	}
 }
 
-func (s *streamIterator) next() bool {
-	s.i++
-	return s.i < len(s.docs)
+func newSequenceIterator(s *ast.SequenceNode) nodeIterator {
+	return &nodeIteratorImpl{
+		i:     -1,
+		nodes: s.Entries(),
+	}
 }
 
-func (s *streamIterator) node() ast.Node {
-	return s.docs[s.i]
+func newMappingIterator(m *ast.MappingNode) nodeIterator {
+	return &nodeIteratorImpl{
+		i:     -1,
+		nodes: m.Entries(),
+	}
 }
 
-func (s *streamIterator) empty() bool {
-	return s.i >= len(s.docs)
+func newMappingEntryIterator(m *ast.MappingEntryNode) nodeIterator {
+	return &nodeIteratorImpl{
+		i:     -1,
+		nodes: []ast.Node{m.Key(), m.Value()},
+	}
 }

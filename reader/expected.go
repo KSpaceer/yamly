@@ -25,6 +25,10 @@ func (e expectNullable) process(n ast.Node) expectancyResult {
 	return e.underlying.process(n)
 }
 
+func (e expectNullable) name() string {
+	return e.underlying.name() + "Nullable"
+}
+
 type expectInteger struct{}
 
 func (e expectInteger) process(n ast.Node) expectancyResult {
@@ -40,4 +44,8 @@ func (e expectInteger) process(n ast.Node) expectancyResult {
 	default:
 		return expectancyResultDeny
 	}
+}
+
+func (e expectInteger) name() string {
+	return "ExpectInteger"
 }
