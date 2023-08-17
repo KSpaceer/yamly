@@ -47,3 +47,17 @@ func newMappingEntryIterator(m *ast.MappingEntryNode) nodeIterator {
 		nodes: []ast.Node{m.Key(), m.Value()},
 	}
 }
+
+func newPropertiesIterator(p *ast.PropertiesNode) nodeIterator {
+	return &nodeIteratorImpl{
+		i:     -1,
+		nodes: []ast.Node{p.Anchor(), p.Tag()},
+	}
+}
+
+func newContentIterator(c *ast.ContentNode) nodeIterator {
+	return &nodeIteratorImpl{
+		i:     -1,
+		nodes: []ast.Node{c.Properties(), c.Content()},
+	}
+}

@@ -1,16 +1,16 @@
 package schema
 
 import (
+	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	NullValue        = "null"
-	MergeKey         = "<<"
-	PositiveInfinity = ""
+	MergeKey = "<<"
 )
 
 var yamlNullRegex = regexp.MustCompile(`^null|Null|NULL|~$`)
@@ -43,6 +43,14 @@ func IsBoolean(n ast.Node) bool {
 	return yamlTrueRegex.MatchString(txt) || yamlFalseRegex.MatchString(txt)
 }
 
+func ToBoolean(src string) (bool, error) {
+	isTrue, isFalse := yamlTrueRegex.MatchString(src), yamlFalseRegex.MatchString(src)
+	if !isTrue && !isFalse {
+		return false, fmt.Errorf("value %q is not boolean", src)
+	}
+	return isTrue, nil
+}
+
 var (
 	yamlDecimalIntegerRegex     = regexp.MustCompile(`^[-+]?[0-9]+$`)
 	yamlOctalIntegerRegex       = regexp.MustCompile(`^0o[0-7]+$`)
@@ -58,6 +66,10 @@ func IsInteger(n ast.Node) bool {
 	return yamlDecimalIntegerRegex.MatchString(txt) ||
 		yamlOctalIntegerRegex.MatchString(txt) ||
 		yamlHexadecimalIntegerRegex.MatchString(txt)
+}
+
+func ToInteger(src string) (int64, error) {
+	return strconv.ParseInt(src, 0, 64)
 }
 
 var (

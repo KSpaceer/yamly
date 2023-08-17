@@ -109,6 +109,11 @@ type Texter interface {
 	Text() string
 }
 
+type TexterNode interface {
+	Texter
+	Node
+}
+
 func ValidNode(n Node) bool {
 	return n != nil && n.Type() != InvalidType
 }
