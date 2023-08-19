@@ -3,6 +3,7 @@ package schema
 import (
 	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,7 +14,7 @@ const (
 	MergeKey = "<<"
 )
 
-var yamlNullRegex = regexp.MustCompile(`^null|Null|NULL|~$`)
+var yamlNullRegex = regexp.MustCompile(`^(?:null|Null|NULL|~|)$`)
 
 func IsNull(n ast.Node) bool {
 	switch n.Type() {
@@ -22,9 +23,9 @@ func IsNull(n ast.Node) bool {
 	case ast.TextType:
 		txtNode := n.(*ast.TextNode)
 		txt := txtNode.Text()
-		return yamlNullRegex.MatchString(txt) ||
+		return yamlNullRegex.MatchString(txt) &&
 			(txtNode.QuotingType() == ast.UnknownQuotingType ||
-				txtNode.QuotingType() == ast.AbsentQuotingType && txt == "")
+				txtNode.QuotingType() == ast.AbsentQuotingType)
 	}
 	return false
 }
@@ -72,6 +73,10 @@ func ToInteger(src string) (int64, error) {
 	return strconv.ParseInt(src, 0, 64)
 }
 
+func ToUnsignedInteger(src string) (uint64, error) {
+	return strconv.ParseUint(src, 0, 64)
+}
+
 var (
 	yamlFloatRegex         = regexp.MustCompile(`^[+-]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)(?:[eE][-+]?[0-9]+)?$`)
 	yamlFloatInfinityRegex = regexp.MustCompile(`^[-+]?\.(?:inf|Inf|INF)$`)
@@ -87,6 +92,21 @@ func IsFloat(n ast.Node) bool {
 	return yamlFloatRegex.MatchString(txt) ||
 		yamlFloatInfinityRegex.MatchString(txt) ||
 		yamlNotANumberRegex.MatchString(txt)
+}
+
+func ToFloat(src string) (float64, error) {
+	switch {
+	case yamlFloatInfinityRegex.MatchString(src):
+		sign := 1
+		if src[0] == '-' {
+			sign = -1
+		}
+		return math.Inf(sign), nil
+	case yamlNotANumberRegex.MatchString(src):
+		return math.NaN(), nil
+	default:
+		return strconv.ParseFloat(src, 64)
+	}
 }
 
 var (

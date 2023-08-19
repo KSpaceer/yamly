@@ -11,11 +11,16 @@ type expectNullable struct {
 
 func (e expectNullable) process(n ast.Node, prev visitingResult) visitingResult {
 	if schema.IsNull(n) {
-		switch prev {
-		case visitingResultUnknown, visitingResultContinue, visitingResultDeny:
-			return visitingResultMatch
+		switch prev.conclusion {
+		case visitingConclusionUnknown, visitingConclusionContinue, visitingConclusionDeny:
+			return visitingResult{
+				conclusion: visitingConclusionMatch,
+				action:     visitingActionSetNull,
+			}
 		default:
-			return visitingResultContinue
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
 		}
 	}
 	return e.underlying.process(n, prev)
@@ -27,47 +32,135 @@ func (e expectNullable) name() string {
 
 type expectInteger struct{}
 
-func (e expectInteger) process(n ast.Node, prev visitingResult) visitingResult {
+func (expectInteger) process(n ast.Node, prev visitingResult) visitingResult {
 	return processTerminalNode(n, prev, schema.IsInteger)
 }
 
-func (e expectInteger) name() string {
+func (expectInteger) name() string {
 	return "ExpectInteger"
 }
 
 type expectBoolean struct{}
 
-func (e expectBoolean) name() string {
+func (expectBoolean) name() string {
 	return "ExpectBoolean"
 }
 
-func (e expectBoolean) process(n ast.Node, prev visitingResult) visitingResult {
+func (expectBoolean) process(n ast.Node, prev visitingResult) visitingResult {
 	return processTerminalNode(n, prev, schema.IsBoolean)
+}
+
+type expectFloat struct{}
+
+func (expectFloat) name() string {
+	return "ExpectFloat"
+}
+
+func (expectFloat) process(n ast.Node, prev visitingResult) visitingResult {
+	return processTerminalNode(n, prev, schema.IsFloat)
+}
+
+type expectString struct {
+	checkForNull bool
+}
+
+func (expectString) name() string {
+	return "ExpectString"
+}
+
+func (e expectString) process(n ast.Node, prev visitingResult) visitingResult {
+	return processTerminalNode(n, prev, e.isString)
+}
+
+func (e expectString) isString(n ast.Node) bool {
+	if e.checkForNull {
+		if schema.IsNull(n) {
+			return false
+		}
+	}
+	return n.Type() == ast.TextType
 }
 
 func processTerminalNode(n ast.Node, prev visitingResult, predicate func(ast.Node) bool) visitingResult {
 	switch n.Type() {
 	case ast.TextType:
 		if predicate(n) {
-			switch prev {
-			case visitingResultUnknown, visitingResultContinue, visitingResultDeny:
-				return visitingResultMatch
+			switch prev.conclusion {
+			case visitingConclusionUnknown, visitingConclusionContinue, visitingConclusionDeny:
+				return visitingResult{
+					conclusion: visitingConclusionMatch,
+					action:     visitingActionExtract,
+				}
 			default:
-				return visitingResultContinue
+				return visitingResult{
+					conclusion: visitingConclusionContinue,
+				}
 			}
 		}
-		return visitingResultDeny
+		return visitingResult{
+			conclusion: visitingConclusionDeny,
+		}
 	case ast.MappingType, ast.SequenceType:
-		switch prev {
-		case visitingResultMatch, visitingResultContinue:
-			return visitingResultContinue
+		switch prev.conclusion {
+		case visitingConclusionMatch, visitingConclusionContinue:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
 		default:
-			return visitingResultDeny
+			return visitingResult{
+				conclusion: visitingConclusionDeny,
+			}
 		}
 	case ast.ContentType, ast.PropertiesType, ast.AnchorType, ast.TagType, ast.StreamType, ast.MappingEntryType:
-		return visitingResultContinue
+		return visitingResult{
+			conclusion: visitingConclusionContinue,
+		}
 	default:
-		return visitingResultDeny
+		return visitingResult{
+			conclusion: visitingConclusionDeny,
+		}
+	}
+}
+
+type expectSequence struct{}
+
+func (e expectSequence) name() string {
+	return "ExpectSequence"
+}
+
+func (e expectSequence) process(n ast.Node, prev visitingResult) visitingResult {
+	switch n.Type() {
+	case ast.SequenceType:
+		switch prev.conclusion {
+		case visitingConclusionUnknown, visitingConclusionDeny:
+			return visitingResult{
+				conclusion: visitingConclusionMatch,
+				action:     visitingActionExtract,
+			}
+		case visitingConclusionContinue, visitingConclusionMatch:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
+		}
+	case ast.MappingType, ast.TextType:
+		switch prev.conclusion {
+		case visitingConclusionMatch, visitingConclusionContinue:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
+		default:
+			return visitingResult{
+				conclusion: visitingConclusionDeny,
+			}
+		}
+	case ast.ContentType, ast.PropertiesType, ast.AnchorType,
+		ast.TagType, ast.StreamType, ast.MappingEntryType:
+		return visitingResult{
+			conclusion: visitingConclusionContinue,
+		}
+	}
+	return visitingResult{
+		conclusion: visitingConclusionDeny,
 	}
 }
 
@@ -80,22 +173,35 @@ func (e expectMapping) name() string {
 func (e expectMapping) process(n ast.Node, prev visitingResult) visitingResult {
 	switch n.Type() {
 	case ast.MappingType:
-		switch prev {
-		case visitingResultUnknown, visitingResultDeny:
-			return visitingResultMatch
-		case visitingResultContinue, visitingResultMatch:
-			return visitingResultContinue
+		switch prev.conclusion {
+		case visitingConclusionUnknown, visitingConclusionDeny:
+			return visitingResult{
+				conclusion: visitingConclusionMatch,
+				action:     visitingActionExtract,
+			}
+		case visitingConclusionContinue, visitingConclusionMatch:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
 		}
-	case ast.SequenceType:
-		switch prev {
-		case visitingResultMatch, visitingResultContinue:
-			return visitingResultContinue
+	case ast.SequenceType, ast.TextType:
+		switch prev.conclusion {
+		case visitingConclusionMatch, visitingConclusionContinue:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
 		default:
-			return visitingResultDeny
+			return visitingResult{
+				conclusion: visitingConclusionDeny,
+			}
 		}
-	case ast.ContentType, ast.PropertiesType, ast.AnchorType, ast.TagType, ast.StreamType, ast.MappingEntryType:
-		return visitingResultContinue
-	default:
-		return visitingResultDeny
+	case ast.ContentType, ast.PropertiesType, ast.AnchorType,
+		ast.TagType, ast.StreamType, ast.MappingEntryType:
+		return visitingResult{
+			conclusion: visitingConclusionContinue,
+		}
+	}
+	return visitingResult{
+		conclusion: visitingConclusionDeny,
 	}
 }
