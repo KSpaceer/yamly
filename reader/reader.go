@@ -36,6 +36,8 @@ type Reader interface {
 
 	ExpectMapping() (CollectionState, error)
 	ExpectNullableMapping() (CollectionState, bool, error)
+
+	//	ExpectAny() (any, error)
 }
 
 type reader struct {
@@ -60,6 +62,7 @@ type visitingConclusion int8
 const (
 	visitingConclusionUnknown visitingConclusion = iota
 	visitingConclusionMatch
+	visitingConclusionConsume
 	visitingConclusionDeny
 	visitingConclusionContinue
 )
@@ -70,6 +73,8 @@ func (v visitingConclusion) String() string {
 		return "unknown"
 	case visitingConclusionMatch:
 		return "match"
+	case visitingConclusionConsume:
+		return "consume"
 	case visitingConclusionDeny:
 		return "deny"
 	case visitingConclusionContinue:
@@ -303,6 +308,15 @@ func (r *reader) ExpectNullableTimestamp() (time.Time, bool, error) {
 	return v, true, nil
 }
 
+//func (r *reader) ExpectAny() (any, error) {
+//	r.currentExpecter = expectAny{}
+//	r.visitCurrentNode()
+//	if r.hasErrors() {
+//		return nil, r.error()
+//	}
+//
+//}
+
 func (r *reader) ExpectSequence() (CollectionState, error) {
 	r.currentExpecter = expectSequence{}
 	r.visitCurrentNode()
@@ -414,8 +428,9 @@ func (r *reader) VisitNullNode(n *ast.NullNode) {
 	point.visitingResult = r.currentExpecter.process(n, point.visitingResult)
 	r.lastVisitingResult = point.visitingResult
 	switch point.visitingResult.conclusion {
-	case visitingConclusionMatch:
+	case visitingConclusionConsume:
 		r.popRoutePoint()
+	case visitingConclusionMatch:
 	case visitingConclusionContinue:
 		r.popRoutePoint()
 	case visitingConclusionDeny:
@@ -467,8 +482,9 @@ func (r *reader) visitTexterNode(n ast.TexterNode) {
 	point.visitingResult = r.currentExpecter.process(n, point.visitingResult)
 	r.lastVisitingResult = point.visitingResult
 	switch point.visitingResult.conclusion {
-	case visitingConclusionMatch:
+	case visitingConclusionConsume:
 		r.popRoutePoint()
+	case visitingConclusionMatch:
 	case visitingConclusionDeny:
 		r.swapRoutePoint(point)
 		r.appendError(&DenyError{
@@ -513,6 +529,8 @@ func (r *reader) processComplexPoint(point routePoint, childrenSize int, opts ..
 	r.lastVisitingResult = point.visitingResult
 	r.swapRoutePoint(point)
 	switch point.visitingResult.conclusion {
+	case visitingConclusionConsume:
+		r.popRoutePoint()
 	case visitingConclusionMatch:
 	case visitingConclusionDeny:
 		r.appendError(&DenyError{

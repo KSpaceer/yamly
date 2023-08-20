@@ -14,7 +14,7 @@ func (e expectNullable) process(n ast.Node, prev visitingResult) visitingResult 
 		switch prev.conclusion {
 		case visitingConclusionUnknown, visitingConclusionContinue, visitingConclusionDeny:
 			return visitingResult{
-				conclusion: visitingConclusionMatch,
+				conclusion: visitingConclusionConsume,
 				action:     visitingActionSetNull,
 			}
 		default:
@@ -98,7 +98,7 @@ func processTerminalNode(n ast.Node, prev visitingResult, predicate func(ast.Nod
 			switch prev.conclusion {
 			case visitingConclusionUnknown, visitingConclusionContinue, visitingConclusionDeny:
 				return visitingResult{
-					conclusion: visitingConclusionMatch,
+					conclusion: visitingConclusionConsume,
 					action:     visitingActionExtract,
 				}
 			default:
@@ -112,7 +112,7 @@ func processTerminalNode(n ast.Node, prev visitingResult, predicate func(ast.Nod
 		}
 	case ast.MappingType, ast.SequenceType:
 		switch prev.conclusion {
-		case visitingConclusionMatch, visitingConclusionContinue:
+		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
 			return visitingResult{
 				conclusion: visitingConclusionContinue,
 			}
@@ -147,14 +147,14 @@ func (e expectSequence) process(n ast.Node, prev visitingResult) visitingResult 
 				conclusion: visitingConclusionMatch,
 				action:     visitingActionExtract,
 			}
-		case visitingConclusionContinue, visitingConclusionMatch:
+		default:
 			return visitingResult{
 				conclusion: visitingConclusionContinue,
 			}
 		}
 	case ast.MappingType, ast.TextType:
 		switch prev.conclusion {
-		case visitingConclusionMatch, visitingConclusionContinue:
+		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
 			return visitingResult{
 				conclusion: visitingConclusionContinue,
 			}
@@ -189,14 +189,14 @@ func (e expectMapping) process(n ast.Node, prev visitingResult) visitingResult {
 				conclusion: visitingConclusionMatch,
 				action:     visitingActionExtract,
 			}
-		case visitingConclusionContinue, visitingConclusionMatch:
+		default:
 			return visitingResult{
 				conclusion: visitingConclusionContinue,
 			}
 		}
 	case ast.SequenceType, ast.TextType:
 		switch prev.conclusion {
-		case visitingConclusionMatch, visitingConclusionContinue:
+		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
 			return visitingResult{
 				conclusion: visitingConclusionContinue,
 			}
@@ -214,4 +214,31 @@ func (e expectMapping) process(n ast.Node, prev visitingResult) visitingResult {
 	return visitingResult{
 		conclusion: visitingConclusionDeny,
 	}
+}
+
+type expectAny struct{}
+
+func (expectAny) name() string {
+	return "ExpectAny"
+}
+
+func (expectAny) process(n ast.Node, prev visitingResult) visitingResult {
+	switch n.Type() {
+	case ast.MappingType, ast.SequenceType, ast.TextType, ast.NullType:
+		switch prev.conclusion {
+		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
+		default:
+			return visitingResult{
+				conclusion: visitingConclusionMatch,
+			}
+		}
+	default:
+		return visitingResult{
+			conclusion: visitingConclusionContinue,
+		}
+	}
+
 }
