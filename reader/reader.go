@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/schema"
+	"time"
 )
 
 type CollectionState interface {
@@ -26,6 +27,9 @@ type Reader interface {
 
 	ExpectString() (string, error)
 	ExpectNullableString() (string, bool, error)
+
+	ExpectTimestamp() (time.Time, error)
+	ExpectNullableTimestamp() (time.Time, bool, error)
 
 	ExpectSequence() (CollectionState, error)
 	ExpectNullableSequence() (CollectionState, bool, error)
@@ -100,7 +104,6 @@ type expecter interface {
 }
 
 type nodeIterator interface {
-	//next() bool
 	node() ast.Node
 	empty() bool
 }
@@ -269,6 +272,35 @@ func (r *reader) ExpectNullableString() (string, bool, error) {
 		return "", false, nil
 	}
 	return r.extractedValue, true, nil
+}
+
+func (r *reader) ExpectTimestamp() (time.Time, error) {
+	r.currentExpecter = expectTimestamp{}
+	r.visitCurrentNode()
+	if r.hasErrors() {
+		return time.Time{}, r.error()
+	}
+	v, err := schema.ToTimestamp(r.extractedValue)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return v, nil
+}
+
+func (r *reader) ExpectNullableTimestamp() (time.Time, bool, error) {
+	r.currentExpecter = expectNullable{underlying: expectTimestamp{}}
+	r.visitCurrentNode()
+	if r.hasErrors() {
+		return time.Time{}, false, r.error()
+	}
+	if r.isExtractedNull {
+		return time.Time{}, false, nil
+	}
+	v, err := schema.ToTimestamp(r.extractedValue)
+	if err != nil {
+		return time.Time{}, false, err
+	}
+	return v, true, nil
 }
 
 func (r *reader) ExpectSequence() (CollectionState, error) {

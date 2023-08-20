@@ -81,6 +81,16 @@ func (e expectString) isString(n ast.Node) bool {
 	return n.Type() == ast.TextType
 }
 
+type expectTimestamp struct{}
+
+func (expectTimestamp) name() string {
+	return "ExpectTimestamp"
+}
+
+func (expectTimestamp) process(n ast.Node, prev visitingResult) visitingResult {
+	return processTerminalNode(n, prev, schema.IsTimestamp)
+}
+
 func processTerminalNode(n ast.Node, prev visitingResult, predicate func(ast.Node) bool) visitingResult {
 	switch n.Type() {
 	case ast.TextType:

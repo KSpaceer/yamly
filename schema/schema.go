@@ -138,18 +138,6 @@ func IsMergeKey(n ast.Node) bool {
 }
 
 var (
-	timestampRegex = regexp.MustCompile(`^` +
-		`[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]` + // ymd
-		`[0-9][0-9][0-9][0-9]` + // year
-		`-[0-9][0-9]?` + // month
-		`-[0-9][0-9]?` + // day
-		`([Tt]|[ \t]+)[0-9][0-9]?` + // hour
-		`:[0-9][0-9]` + // minute
-		`:[0-9][0-9]` + // second
-		`(\.[0-9]*)?` + // fraction
-		`(([ \t]*)Z|[-+][0-9][0-9]?(:[0-9][0-9])?)?` + // time zone
-		`$`)
-
 	timestampLayouts = []string{
 		time.RFC3339,
 		time.RFC3339Nano,
@@ -167,9 +155,6 @@ func IsTimestamp(n ast.Node) bool {
 	}
 	txtNode := n.(*ast.TextNode)
 	txt := txtNode.Text()
-	if !timestampRegex.MatchString(txt) {
-		return false
-	}
 	for i := range timestampLayouts {
 		_, err := time.Parse(timestampLayouts[i], txt)
 		if err == nil {
@@ -177,4 +162,14 @@ func IsTimestamp(n ast.Node) bool {
 		}
 	}
 	return false
+}
+
+func ToTimestamp(src string) (t time.Time, err error) {
+	for i := range timestampLayouts {
+		t, err = time.Parse(timestampLayouts[i], src)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return t, err
 }

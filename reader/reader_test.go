@@ -9,6 +9,7 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestReader_Simple(t *testing.T) {
@@ -370,6 +371,42 @@ func TestReader_Simple(t *testing.T) {
 				} else {
 					vs.Add(nil)
 				}
+				return nil
+			},
+			expectDeny: true,
+		},
+		{
+			name: "simple timestamp",
+			ast: ast.NewStreamNode(
+				[]ast.Node{
+					ast.NewTextNode("2023-08-23"),
+				},
+			),
+			calls: func(r reader.Reader, vs *valueStore) error {
+				v, err := r.ExpectTimestamp()
+				if err != nil {
+					return err
+				}
+				vs.Add(v)
+				return nil
+			},
+			expected: []any{
+				time.Date(2023, 8, 23, 0, 0, 0, 0, time.UTC),
+			},
+		},
+		{
+			name: "simple timestamp denied",
+			ast: ast.NewStreamNode(
+				[]ast.Node{
+					ast.NewTextNode("sss"),
+				},
+			),
+			calls: func(r reader.Reader, vs *valueStore) error {
+				v, err := r.ExpectTimestamp()
+				if err != nil {
+					return err
+				}
+				vs.Add(v)
 				return nil
 			},
 			expectDeny: true,
@@ -779,6 +816,16 @@ func TestReader_SequencesOfNullables(t *testing.T) {
 			src:        "[-.INF, 3e18, .223, 25, NULL, Null]",
 			methodName: "ExpectNullableFloat",
 			expected:   []any{math.Inf(-1), 3e18, .223, float64(25), nil, nil},
+		},
+		{
+			name:       "timestamp nullables",
+			src:        `["2023-08-20T08:24:02Z", "2008-01-02", null]`,
+			methodName: "ExpectNullableTimestamp",
+			expected: []any{
+				time.Date(2023, 8, 20, 8, 24, 2, 0, time.UTC),
+				time.Date(2008, 1, 2, 0, 0, 0, 0, time.UTC),
+				nil,
+			},
 		},
 	}
 
