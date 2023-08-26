@@ -54,6 +54,7 @@ func ToBoolean(src string) (bool, error) {
 
 var (
 	yamlDecimalIntegerRegex     = regexp.MustCompile(`^[-+]?[0-9]+$`)
+	yamlDecimalUnsignedRegex    = regexp.MustCompile(`^\+?[0-9]+$`)
 	yamlOctalIntegerRegex       = regexp.MustCompile(`^0o[0-7]+$`)
 	yamlHexadecimalIntegerRegex = regexp.MustCompile(`^0x[0-9a-fA-F]+$`)
 )
@@ -65,6 +66,17 @@ func IsInteger(n ast.Node) bool {
 	txtNode := n.(*ast.TextNode)
 	txt := txtNode.Text()
 	return yamlDecimalIntegerRegex.MatchString(txt) ||
+		yamlOctalIntegerRegex.MatchString(txt) ||
+		yamlHexadecimalIntegerRegex.MatchString(txt)
+}
+
+func IsUnsignedInteger(n ast.Node) bool {
+	if n.Type() != ast.TextType {
+		return false
+	}
+	txtNode := n.(*ast.TextNode)
+	txt := txtNode.Text()
+	return yamlDecimalUnsignedRegex.MatchString(txt) ||
 		yamlOctalIntegerRegex.MatchString(txt) ||
 		yamlHexadecimalIntegerRegex.MatchString(txt)
 }

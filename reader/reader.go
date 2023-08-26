@@ -37,7 +37,7 @@ type Reader interface {
 	ExpectMapping() (CollectionState, error)
 	ExpectNullableMapping() (CollectionState, bool, error)
 
-	//	ExpectAny() (any, error)
+	ExpectAny() (any, error)
 }
 
 type reader struct {
@@ -50,9 +50,7 @@ type reader struct {
 	extractedValue           string
 	isExtractedNull          bool
 
-	anchors    map[string]ast.Node
-	metAnchor  bool
-	anchorName string
+	anchors anchorsKeeper
 
 	errors []error
 }
@@ -130,7 +128,7 @@ func newCollectionState(iter nodeIterator, size int) CollectionState {
 }
 
 func NewReader(tree ast.Node) Reader {
-	r := reader{anchors: map[string]ast.Node{}}
+	r := reader{anchors: newAnchorsKeeper()}
 	r.setAST(tree)
 	return &r
 }
@@ -308,14 +306,20 @@ func (r *reader) ExpectNullableTimestamp() (time.Time, bool, error) {
 	return v, true, nil
 }
 
-//func (r *reader) ExpectAny() (any, error) {
-//	r.currentExpecter = expectAny{}
-//	r.visitCurrentNode()
-//	if r.hasErrors() {
-//		return nil, r.error()
-//	}
-//
-//}
+func (r *reader) ExpectAny() (any, error) {
+	r.currentExpecter = expectAny{}
+	r.visitCurrentNode()
+	if r.hasErrors() {
+		return nil, r.error()
+	}
+	valueBuilder := newAnyBuilder(&r.anchors)
+	v, err := valueBuilder.extractAnyValue(r.currentNode())
+	if err != nil {
+		return nil, err
+	}
+	r.popRoutePoint()
+	return v, nil
+}
 
 func (r *reader) ExpectSequence() (CollectionState, error) {
 	r.currentExpecter = expectSequence{}
@@ -373,22 +377,21 @@ func (r *reader) VisitTagNode(n *ast.TagNode) {
 }
 
 func (r *reader) VisitAnchorNode(n *ast.AnchorNode) {
-	r.metAnchor = true
-	r.anchorName = n.Text()
+	r.anchors.markAsLatestVisited(n.Text())
 
 	r.visitTexterNode(n)
 }
 
 func (r *reader) VisitAliasNode(n *ast.AliasNode) {
-	alias := n.Text()
-	anchored, ok := r.anchors[alias]
-	if !ok {
-		r.appendError(AliasDereferenceError{name: alias})
+	anchored, err := r.anchors.dereferenceAlias(n.Text())
+	if err != nil {
+		r.appendError(err)
+	} else {
+		r.pushRoutePoint(routePoint{
+			node: anchored,
+		})
+		anchored.Accept(r)
 	}
-	r.pushRoutePoint(routePoint{
-		node: anchored,
-	})
-	anchored.Accept(r)
 }
 
 func (r *reader) VisitTextNode(n *ast.TextNode) {
@@ -468,12 +471,7 @@ func (r *reader) VisitContentNode(n *ast.ContentNode) {
 		point.iter = newContentIterator(n)
 	}
 
-	r.processComplexPoint(point, 2, beforeVisit(func(node ast.Node) {
-		if r.metAnchor {
-			r.anchors[r.anchorName] = node
-			r.metAnchor = false
-		}
-	}))
+	r.processComplexPoint(point, 2, beforeVisit(r.anchors.maybeBindToLatestVisited))
 }
 
 func (r *reader) visitTexterNode(n ast.TexterNode) {
@@ -586,9 +584,7 @@ func (r *reader) reset() {
 	r.extractedCollectionState = nil
 	r.extractedValue = ""
 	r.isExtractedNull = false
-	clear(r.anchors)
-	r.metAnchor = false
-	r.anchorName = ""
+	r.anchors.clear()
 	r.errors = r.errors[:0]
 }
 

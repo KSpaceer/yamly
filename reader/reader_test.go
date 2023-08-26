@@ -752,6 +752,79 @@ func TestReader_Complex(t *testing.T) {
 			},
 			expected: []any{"value", "value"},
 		},
+		{
+			name: "anchor and alias with any",
+			src:  "a: &anc value\nb: *anc",
+			calls: func(r reader.Reader, vs *valueStore) error {
+				mapState, err := r.ExpectMapping()
+				if err != nil {
+					return err
+				}
+				for mapState.HasUnprocessedItems() {
+					_, err := r.ExpectString()
+					if err != nil {
+						return err
+					}
+					value, err := r.ExpectAny()
+					if err != nil {
+						return err
+					}
+					vs.Add(value)
+				}
+				return nil
+			},
+			expected: []any{"value", "value"},
+		},
+		{
+			name: "struct-like mapping with any",
+			src:  "name: 'name'\nscore: 100\nunique: {key: value}\nenable: true",
+			calls: func(r reader.Reader, vs *valueStore) error {
+				mapState, err := r.ExpectMapping()
+				if err != nil {
+					return err
+				}
+				for mapState.HasUnprocessedItems() {
+					key, err := r.ExpectString()
+					if err != nil {
+						return err
+					}
+					switch key {
+					case "name":
+						value, err := r.ExpectString()
+						if err != nil {
+							return err
+						}
+						vs.Add(value)
+					case "score":
+						value, notNull, err := r.ExpectNullableUnsigned()
+						if err != nil {
+							return err
+						}
+						if notNull {
+							vs.Add(value)
+						} else {
+							vs.Add(nil)
+						}
+					case "unique":
+						value, err := r.ExpectAny()
+						if err != nil {
+							return err
+						}
+						vs.Add(value)
+					case "enable":
+						value, err := r.ExpectBoolean()
+						if err != nil {
+							return err
+						}
+						vs.Add(value)
+					default:
+						return fmt.Errorf("unknown field %s", key)
+					}
+				}
+				return nil
+			},
+			expected: []any{"name", uint64(100), map[string]any{"key": "value"}, true},
+		},
 	}
 
 	for _, tc := range tcases {
@@ -882,6 +955,141 @@ func TestReader_SequencesOfNullables(t *testing.T) {
 					t.Errorf("values at index %d are not equal:\nexpected: %v\ngot: %v",
 						i, tc.expected[i], values[i])
 				}
+			}
+		})
+	}
+}
+
+func TestReader_ExpectAny(t *testing.T) {
+	type tcase struct {
+		name     string
+		src      string
+		expected any
+	}
+
+	tcases := []tcase{
+		{
+			name:     "string",
+			src:      "'null'",
+			expected: "null",
+		},
+		{
+			name:     "null",
+			src:      "null",
+			expected: nil,
+		},
+		{
+			name:     "unsigned",
+			src:      "255",
+			expected: uint64(255),
+		},
+		{
+			name:     "integer",
+			src:      "-255",
+			expected: int64(-255),
+		},
+		{
+			name:     "timestamp",
+			src:      "2023-08-26",
+			expected: time.Date(2023, 8, 26, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name:     "float",
+			src:      "2e-6",
+			expected: 2e-6,
+		},
+		{
+			name:     "boolean",
+			src:      "TRUE",
+			expected: true,
+		},
+		{
+			name: "map",
+			src: `
+                 string: 'null'
+                 null: null
+                 unsigned: 255
+                 integer: -255
+                 timestamp: 2023-08-26
+                 float: 2e-6
+                 boolean: true`,
+			expected: map[string]any{
+				"string":    "null",
+				"null":      nil,
+				"unsigned":  uint64(255),
+				"integer":   int64(-255),
+				"timestamp": time.Date(2023, 8, 26, 0, 0, 0, 0, time.UTC),
+				"float":     2e-6,
+				"boolean":   true,
+			},
+		},
+		{
+			name: "sequence",
+			src:  `['null', null, 255, -255, 2023-08-26, 2e-6, true]`,
+			expected: []any{
+				"null",
+				nil,
+				uint64(255),
+				int64(-255),
+				time.Date(2023, 8, 26, 0, 0, 0, 0, time.UTC),
+				2e-6,
+				true,
+			},
+		},
+		{
+			name: "anchor and alias",
+			src: `
+              anchored: &ref value
+              alias: *ref
+              *ref: "another value"`,
+			expected: map[string]any{
+				"anchored": "value",
+				"alias":    "value",
+				"value":    "another value",
+			},
+		},
+		{
+			name: "merge key",
+			src: `
+              default: &default
+                first: 15
+                second: false
+              first:
+                second: true
+                <<: *default
+              second:
+                first: 22
+                <<: *default`,
+			expected: map[string]any{
+				"default": map[string]any{
+					"first":  uint64(15),
+					"second": false,
+				},
+				"first": map[string]any{
+					"first":  uint64(15),
+					"second": true,
+				},
+				"second": map[string]any{
+					"first":  uint64(22),
+					"second": false,
+				},
+			},
+		},
+	}
+
+	for _, tc := range tcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tree, err := parser.ParseString(tc.src)
+			if err != nil {
+				t.Fatalf("parser failed: %v", err)
+			}
+			r := reader.NewReader(tree)
+			result, err := r.ExpectAny()
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(tc.expected, result) {
+				t.Errorf("values are not equal:\nexpected: %v\n\ngot: %v", tc.expected, result)
 			}
 		})
 	}
