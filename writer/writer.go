@@ -24,6 +24,10 @@ type Writer struct {
 
 	beforeComplex string
 	beforeSimple  string
+
+	metAnchors map[string]struct{}
+
+	opts writeOptions
 }
 
 func NewWriter() *Writer {
@@ -32,13 +36,31 @@ func NewWriter() *Writer {
 		errors:           nil,
 		indentation:      defaultBasicIndentation,
 		indentationDelta: defaultIndendationDelta,
+		metAnchors:       map[string]struct{}{},
 	}
 }
 
-func (w *Writer) WriteTo(dst io.Writer, ast ast.Node) error {
-	ast.Accept(w)
-	if w.hasErrors() {
-		return w.error()
+type AnchorsKeeper interface {
+	StoreAnchor(anchorName string)
+	BindToLatestAnchor(n ast.Node)
+	DereferenceAlias(alias string) (ast.Node, error)
+}
+
+type writeOptions struct {
+	anchorsKeeper AnchorsKeeper
+}
+
+type WriteOption func(*writeOptions)
+
+func WithAnchorsKeeper(ak AnchorsKeeper) WriteOption {
+	return func(options *writeOptions) {
+		options.anchorsKeeper = ak
+	}
+}
+
+func (w *Writer) WriteTo(dst io.Writer, ast ast.Node, opts ...WriteOption) error {
+	if err := w.write(ast, opts...); err != nil {
+		return err
 	}
 	_, err := io.Copy(dst, w.buf)
 	if err != nil {
@@ -48,12 +70,35 @@ func (w *Writer) WriteTo(dst io.Writer, ast ast.Node) error {
 	return nil
 }
 
-func (w *Writer) WriteString(ast ast.Node) (string, error) {
+func (w *Writer) WriteString(ast ast.Node, opts ...WriteOption) (string, error) {
 	var sb strings.Builder
-	if err := w.WriteTo(&sb, ast); err != nil {
+	if err := w.WriteTo(&sb, ast, opts...); err != nil {
 		return "", err
 	}
 	return sb.String(), nil
+}
+
+func (w *Writer) WriteBytes(ast ast.Node, opts ...WriteOption) ([]byte, error) {
+	if err := w.write(ast, opts...); err != nil {
+		return nil, err
+	}
+	data := w.buf.Bytes()
+	w.buf = bytes.NewBuffer(nil)
+	return data, nil
+}
+
+func (w *Writer) write(ast ast.Node, opts ...WriteOption) error {
+	w.reset()
+
+	for _, opt := range opts {
+		opt(&w.opts)
+	}
+
+	ast.Accept(w)
+	if w.hasErrors() {
+		return w.error()
+	}
+	return nil
 }
 
 func (w *Writer) appendError(err error) {
@@ -82,11 +127,29 @@ func (w *Writer) VisitTagNode(n *ast.TagNode) {
 }
 
 func (w *Writer) VisitAnchorNode(n *ast.AnchorNode) {
+	anchor := n.Text()
 	w.buf.WriteString("&")
-	w.buf.WriteString(n.Text())
+	w.buf.WriteString(anchor)
+
+	if w.opts.anchorsKeeper != nil {
+		w.metAnchors[anchor] = struct{}{}
+		w.opts.anchorsKeeper.StoreAnchor(anchor)
+	}
 }
 
 func (w *Writer) VisitAliasNode(n *ast.AliasNode) {
+	alias := n.Text()
+	_, hasWroteAnchor := w.metAnchors[alias]
+	if w.opts.anchorsKeeper != nil && !hasWroteAnchor {
+		anchored, err := w.opts.anchorsKeeper.DereferenceAlias(alias)
+		if err != nil {
+			w.appendError(err)
+		} else if ast.ValidNode(anchored) {
+			anchored.Accept(w)
+		}
+		return
+	}
+
 	w.writePreparedData(n)
 	w.buf.WriteString("*")
 	w.buf.WriteString(n.Text())
@@ -140,8 +203,7 @@ func (w *Writer) VisitMappingNode(n *ast.MappingNode) {
 func (w *Writer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	key, value := n.Key(), n.Value()
 
-	isComplexKey := key.Type() == ast.SequenceType || key.Type() == ast.MappingType
-
+	isComplexKey := isComplex(n.Key())
 	if isComplexKey {
 		w.buf.WriteString("? ")
 		w.increaseIndentation()
@@ -187,6 +249,10 @@ func (w *Writer) VisitContentNode(n *ast.ContentNode) {
 	if ast.ValidNode(properties) {
 		w.buf.WriteByte(' ')
 		properties.Accept(w)
+
+		if w.opts.anchorsKeeper != nil {
+			w.opts.anchorsKeeper.BindToLatestAnchor(n)
+		}
 	}
 	content.Accept(w)
 }
@@ -281,6 +347,27 @@ func (w *Writer) writeDoubleQuotedText(txt string) {
 	w.buf.WriteByte('"')
 }
 
+func (w *Writer) reset() {
+	w.buf.Reset()
+	w.errors = w.errors[:0]
+	w.indentation = defaultBasicIndentation
+	w.beforeSimple = ""
+	w.beforeComplex = ""
+	w.opts = writeOptions{}
+	clear(w.metAnchors)
+}
+
 func isMultiline(s string) bool {
 	return strings.ContainsRune(s, '\n')
+}
+
+func isComplex(n ast.Node) bool {
+	switch n.Type() {
+	case ast.SequenceType, ast.MappingType:
+		return true
+	case ast.ContentType:
+		return isComplex(n.(*ast.ContentNode).Content())
+	default:
+		return false
+	}
 }

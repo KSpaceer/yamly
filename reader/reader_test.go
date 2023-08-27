@@ -1,6 +1,7 @@
 package reader_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
@@ -825,6 +826,72 @@ func TestReader_Complex(t *testing.T) {
 			},
 			expected: []any{"name", uint64(100), map[string]any{"key": "value"}, true},
 		},
+		{
+			name: "anchor and alias with raw",
+			src:  "a: &anc value\nb: *anc",
+			calls: func(r reader.Reader, vs *valueStore) error {
+				mapState, err := r.ExpectMapping()
+				if err != nil {
+					return err
+				}
+				_, err = r.ExpectString()
+				if err != nil {
+					return err
+				}
+				value, err := r.ExpectString()
+				if err != nil {
+					return err
+				}
+				vs.Add(value)
+				_, err = r.ExpectString()
+				if err != nil {
+					return err
+				}
+				value2, err := r.ExpectRaw()
+				if err != nil {
+					return err
+				}
+				vs.Add(value2)
+				if mapState.HasUnprocessedItems() {
+					return fmt.Errorf("map still has unprocessed items")
+				}
+				return nil
+			},
+			expected: []any{"value", []byte("value")},
+		},
+		{
+			name: "anchor and alias with raw (reversed)",
+			src:  "a: &anc value\nb: *anc",
+			calls: func(r reader.Reader, vs *valueStore) error {
+				mapState, err := r.ExpectMapping()
+				if err != nil {
+					return err
+				}
+				_, err = r.ExpectString()
+				if err != nil {
+					return err
+				}
+				value, err := r.ExpectRaw()
+				if err != nil {
+					return err
+				}
+				vs.Add(value)
+				_, err = r.ExpectString()
+				if err != nil {
+					return err
+				}
+				value2, err := r.ExpectString()
+				if err != nil {
+					return err
+				}
+				vs.Add(value2)
+				if mapState.HasUnprocessedItems() {
+					return fmt.Errorf("map still has unprocessed items")
+				}
+				return nil
+			},
+			expected: []any{[]byte("value"), "value"},
+		},
 	}
 
 	for _, tc := range tcases {
@@ -1090,6 +1157,62 @@ func TestReader_ExpectAny(t *testing.T) {
 			}
 			if !reflect.DeepEqual(tc.expected, result) {
 				t.Errorf("values are not equal:\nexpected: %v\n\ngot: %v", tc.expected, result)
+			}
+		})
+	}
+}
+
+func TestReader_ExpectRaw(t *testing.T) {
+	type tcase struct {
+		name     string
+		src      string
+		expected []byte
+	}
+
+	tcases := []tcase{
+		{
+			name:     "simple value",
+			src:      "'22'",
+			expected: []byte("'22'"),
+		},
+		{
+			name:     "simple mapping",
+			src:      "key: value",
+			expected: []byte("key: value\n"),
+		},
+		{
+			name:     "simple sequence",
+			src:      "[1, 2, 3]",
+			expected: []byte("- 1\n- 2\n- 3\n"),
+		},
+		{
+			name:     "sequence of mappings",
+			src:      "[{1: 2}, {3: 4}, {5: 6}]",
+			expected: []byte("- 1: 2\n- 3: 4\n- 5: 6\n"),
+		},
+		{
+			name:     "mapping of sequences",
+			src:      "[1, 2, 3]: [4, 5, 6]",
+			expected: []byte("? - 1\n  - 2\n  - 3\n:\n  - 4\n  - 5\n  - 6\n"),
+		},
+	}
+
+	for _, tc := range tcases {
+		t.Run(tc.name, func(t *testing.T) {
+			tree, err := parser.ParseString(tc.src)
+			if err != nil {
+				t.Fatalf("parser failed: %v", err)
+			}
+			if stream, ok := tree.(*ast.StreamNode); ok && len(stream.Documents()) == 1 {
+				tree = stream.Documents()[0]
+			}
+			r := reader.NewReader(tree)
+			result, err := r.ExpectRaw()
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if !bytes.Equal(tc.expected, result) {
+				t.Errorf("values are not equal:\nexpected: %s\n\ngot: %s", tc.expected, result)
 			}
 		})
 	}

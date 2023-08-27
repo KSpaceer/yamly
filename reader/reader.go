@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/schema"
+	"github.com/KSpaceer/yayamls/writer"
 	"time"
 )
 
@@ -16,6 +17,7 @@ type CollectionState interface {
 type Reader interface {
 	ExpectInteger() (int64, error)
 	ExpectNullableInteger() (int64, bool, error)
+
 	ExpectUnsigned() (uint64, error)
 	ExpectNullableUnsigned() (uint64, bool, error)
 
@@ -38,6 +40,8 @@ type Reader interface {
 	ExpectNullableMapping() (CollectionState, bool, error)
 
 	ExpectAny() (any, error)
+
+	ExpectRaw() ([]byte, error)
 }
 
 type reader struct {
@@ -306,21 +310,6 @@ func (r *reader) ExpectNullableTimestamp() (time.Time, bool, error) {
 	return v, true, nil
 }
 
-func (r *reader) ExpectAny() (any, error) {
-	r.currentExpecter = expectAny{}
-	r.visitCurrentNode()
-	if r.hasErrors() {
-		return nil, r.error()
-	}
-	valueBuilder := newAnyBuilder(&r.anchors)
-	v, err := valueBuilder.extractAnyValue(r.currentNode())
-	if err != nil {
-		return nil, err
-	}
-	r.popRoutePoint()
-	return v, nil
-}
-
 func (r *reader) ExpectSequence() (CollectionState, error) {
 	r.currentExpecter = expectSequence{}
 	r.visitCurrentNode()
@@ -363,6 +352,36 @@ func (r *reader) ExpectNullableMapping() (CollectionState, bool, error) {
 	return r.extractedCollectionState, true, nil
 }
 
+func (r *reader) ExpectAny() (any, error) {
+	r.currentExpecter = expectAny{}
+	r.visitCurrentNode()
+	if r.hasErrors() {
+		return nil, r.error()
+	}
+	valueBuilder := newAnyBuilder(&r.anchors)
+	v, err := valueBuilder.extractAnyValue(r.currentNode())
+	if err != nil {
+		return nil, err
+	}
+	r.popRoutePoint()
+	return v, nil
+}
+
+func (r *reader) ExpectRaw() ([]byte, error) {
+	r.currentExpecter = expectRaw{}
+	r.visitCurrentNode()
+	if r.hasErrors() {
+		return nil, r.error()
+	}
+	w := writer.NewWriter()
+	v, err := w.WriteBytes(r.currentNode(), writer.WithAnchorsKeeper(&r.anchors))
+	if err != nil {
+		return nil, err
+	}
+	r.popRoutePoint()
+	return v, nil
+}
+
 func (r *reader) VisitStreamNode(n *ast.StreamNode) {
 	point := r.peekRoutePoint()
 	if point.visitingResult.conclusion == visitingConclusionUnknown {
@@ -377,13 +396,13 @@ func (r *reader) VisitTagNode(n *ast.TagNode) {
 }
 
 func (r *reader) VisitAnchorNode(n *ast.AnchorNode) {
-	r.anchors.markAsLatestVisited(n.Text())
+	r.anchors.StoreAnchor(n.Text())
 
 	r.visitTexterNode(n)
 }
 
 func (r *reader) VisitAliasNode(n *ast.AliasNode) {
-	anchored, err := r.anchors.dereferenceAlias(n.Text())
+	anchored, err := r.anchors.DereferenceAlias(n.Text())
 	if err != nil {
 		r.appendError(err)
 	} else {
@@ -471,7 +490,7 @@ func (r *reader) VisitContentNode(n *ast.ContentNode) {
 		point.iter = newContentIterator(n)
 	}
 
-	r.processComplexPoint(point, 2, beforeVisit(r.anchors.maybeBindToLatestVisited))
+	r.processComplexPoint(point, 2, beforeVisit(r.anchors.BindToLatestAnchor))
 }
 
 func (r *reader) visitTexterNode(n ast.TexterNode) {

@@ -41,11 +41,11 @@ func (a *anyBuilder) VisitStreamNode(*ast.StreamNode) {
 func (*anyBuilder) VisitTagNode(*ast.TagNode) {}
 
 func (a *anyBuilder) VisitAnchorNode(n *ast.AnchorNode) {
-	a.anchors.markAsLatestVisited(n.Text())
+	a.anchors.StoreAnchor(n.Text())
 }
 
 func (a *anyBuilder) VisitAliasNode(n *ast.AliasNode) {
-	anchored, err := a.anchors.dereferenceAlias(n.Text())
+	anchored, err := a.anchors.DereferenceAlias(n.Text())
 	if err != nil {
 		a.appendError(err)
 	} else {
@@ -145,7 +145,7 @@ func (a *anyBuilder) VisitPropertiesNode(n *ast.PropertiesNode) {
 func (a *anyBuilder) VisitContentNode(n *ast.ContentNode) {
 	a.visitNode(n.Properties())
 	content := n.Content()
-	a.anchors.maybeBindToLatestVisited(content)
+	a.anchors.BindToLatestAnchor(content)
 	a.visitNode(content)
 }
 

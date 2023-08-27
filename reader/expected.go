@@ -240,5 +240,31 @@ func (expectAny) process(n ast.Node, prev visitingResult) visitingResult {
 			conclusion: visitingConclusionContinue,
 		}
 	}
+}
+
+type expectRaw struct{}
+
+func (expectRaw) name() string {
+	return "ExpectRaw"
+}
+
+func (expectRaw) process(n ast.Node, prev visitingResult) visitingResult {
+	switch n.Type() {
+	case ast.ContentType, ast.PropertiesType, ast.TagType, ast.AnchorType:
+		return visitingResult{
+			conclusion: visitingConclusionContinue,
+		}
+	default:
+		switch prev.conclusion {
+		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
+		default:
+			return visitingResult{
+				conclusion: visitingConclusionMatch,
+			}
+		}
+	}
 
 }

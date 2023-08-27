@@ -14,19 +14,19 @@ func newAnchorsKeeper() anchorsKeeper {
 	}
 }
 
-func (ak *anchorsKeeper) markAsLatestVisited(anchorName string) {
+func (ak *anchorsKeeper) StoreAnchor(anchorName string) {
 	ak.metAnchor = true
 	ak.anchorName = anchorName
 }
 
-func (ak *anchorsKeeper) maybeBindToLatestVisited(n ast.Node) {
+func (ak *anchorsKeeper) BindToLatestAnchor(n ast.Node) {
 	if ak.metAnchor {
 		ak.anchors[ak.anchorName] = n
 		ak.metAnchor = false
 	}
 }
 
-func (ak *anchorsKeeper) dereferenceAlias(alias string) (ast.Node, error) {
+func (ak *anchorsKeeper) DereferenceAlias(alias string) (ast.Node, error) {
 	anchored, ok := ak.anchors[alias]
 	if !ok {
 		return nil, AliasDereferenceError{name: alias}

@@ -1,6 +1,7 @@
 package writer_test
 
 import (
+	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/writer"
 	"testing"
@@ -12,6 +13,9 @@ func TestWriteString(t *testing.T) {
 		ast       ast.Node
 		expected  string
 		expectErr bool
+
+		anchors     mockAnchorsKeeper
+		withAnchors bool
 	}
 
 	tcases := []tcase{
@@ -178,12 +182,33 @@ func TestWriteString(t *testing.T) {
 			}),
 			expected: "null: null\n",
 		},
+		{
+			name: "preloaded anchor",
+			ast: ast.NewMappingNode([]ast.Node{
+				ast.NewMappingEntryNode(
+					ast.NewTextNode("key"),
+					ast.NewAliasNode("anc"),
+				),
+			}),
+			expected: "key: value\n",
+			anchors: mockAnchorsKeeper{
+				m: map[string]ast.Node{
+					"anc": ast.NewTextNode("value"),
+				},
+			},
+			withAnchors: true,
+		},
 	}
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
 			w := writer.NewWriter()
-			result, err := w.WriteString(tc.ast)
+			var opts []writer.WriteOption
+			if tc.withAnchors {
+				opts = append(opts, writer.WithAnchorsKeeper(&tc.anchors))
+			}
+
+			result, err := w.WriteString(tc.ast, opts...)
 			if err != nil {
 				if tc.expectErr {
 					return
@@ -195,4 +220,28 @@ func TestWriteString(t *testing.T) {
 			}
 		})
 	}
+}
+
+type mockAnchorsKeeper struct {
+	m      map[string]ast.Node
+	latest string
+}
+
+func (m *mockAnchorsKeeper) StoreAnchor(anchorName string) {
+	m.latest = anchorName
+}
+
+func (m *mockAnchorsKeeper) BindToLatestAnchor(n ast.Node) {
+	if m.latest != "" {
+		m.m[m.latest] = n
+		m.latest = ""
+	}
+}
+
+func (m *mockAnchorsKeeper) DereferenceAlias(alias string) (ast.Node, error) {
+	anchored, ok := m.m[alias]
+	if !ok {
+		return nil, fmt.Errorf("alias %q not found", alias)
+	}
+	return anchored, nil
 }
