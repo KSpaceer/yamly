@@ -88,7 +88,17 @@ func ParseString(src string, opts ...ParseOption) (ast.Node, error) {
 	} else {
 		cts = lexer.NewTokenizer(src)
 	}
-	return ParseTokenStream(cts)
+	tree, err := ParseTokenStream(cts)
+	if err != nil {
+		return nil, err
+	}
+	if o.omitStream && tree.Type() == ast.StreamType {
+		stream := tree.(*ast.StreamNode)
+		if len(stream.Documents()) == 1 {
+			tree = stream.Documents()[0]
+		}
+	}
+	return tree, nil
 }
 
 func ParseBytes(src []byte, opts ...ParseOption) (ast.Node, error) {

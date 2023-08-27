@@ -2,6 +2,7 @@ package parser
 
 type parseOptions struct {
 	tokenStreamConstructor func(string) ConfigurableTokenStream
+	omitStream             bool
 }
 
 type ParseOption interface {
@@ -17,6 +18,12 @@ func (f parseOptionsFunc) apply(options *parseOptions) {
 func WithTokenStreamConstructor(tsConstructor func(string) ConfigurableTokenStream) ParseOption {
 	return parseOptionsFunc(func(options *parseOptions) {
 		options.tokenStreamConstructor = tsConstructor
+	})
+}
+
+func WithOmitStream() ParseOption {
+	return parseOptionsFunc(func(options *parseOptions) {
+		options.omitStream = true
 	})
 }
 

@@ -1,9 +1,9 @@
-package writer_test
+package encode_test
 
 import (
 	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/writer"
+	"github.com/KSpaceer/yayamls/encode"
 	"testing"
 )
 
@@ -202,13 +202,13 @@ func TestWriteString(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			w := writer.NewWriter()
-			var opts []writer.WriteOption
+			w := encode.NewASTWriter()
+			var opts []encode.WriteOption
 			if tc.withAnchors {
-				opts = append(opts, writer.WithAnchorsKeeper(&tc.anchors))
+				opts = append(opts, encode.WithAnchorsKeeper(&tc.anchors))
 			}
 
-			result, err := w.WriteString(tc.ast, opts...)
+			result, err := w.WriteString(tc.ast)
 			if err != nil {
 				if tc.expectErr {
 					return

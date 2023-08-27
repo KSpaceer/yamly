@@ -1,11 +1,11 @@
-package reader
+package decode
 
 import (
 	"errors"
 	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yayamls/encode"
 	"github.com/KSpaceer/yayamls/schema"
-	"github.com/KSpaceer/yayamls/writer"
 	"time"
 )
 
@@ -373,8 +373,8 @@ func (r *reader) ExpectRaw() ([]byte, error) {
 	if r.hasErrors() {
 		return nil, r.error()
 	}
-	w := writer.NewWriter()
-	v, err := w.WriteBytes(r.currentNode(), writer.WithAnchorsKeeper(&r.anchors))
+	w := encode.NewASTWriter()
+	v, err := w.WriteBytes(r.currentNode())
 	if err != nil {
 		return nil, err
 	}

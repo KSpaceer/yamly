@@ -393,6 +393,10 @@ func (s *SequenceNode) Entries() []Node {
 	return s.entries
 }
 
+func (s *SequenceNode) AppendEntry(n Node) {
+	s.entries = append(s.entries, n)
+}
+
 func NewSequenceNode(entries []Node) Node {
 	return &SequenceNode{entries: entries}
 }
@@ -411,6 +415,10 @@ func (m *MappingNode) Accept(v Visitor) {
 
 func (m *MappingNode) Entries() []Node {
 	return m.entries
+}
+
+func (m *MappingNode) AppendEntry(n Node) {
+	m.entries = append(m.entries, n)
 }
 
 func NewMappingNode(entries []Node) Node {
@@ -435,6 +443,14 @@ func (m *MappingEntryNode) Key() Node {
 
 func (m *MappingEntryNode) Value() Node {
 	return m.value
+}
+
+func (m *MappingEntryNode) SetKey(n Node) {
+	m.key = n
+}
+
+func (m *MappingEntryNode) SetValue(n Node) {
+	m.value = n
 }
 
 func NewMappingEntryNode(key, value Node) Node {

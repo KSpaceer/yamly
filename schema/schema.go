@@ -44,6 +44,10 @@ func IsBoolean(n ast.Node) bool {
 	return yamlTrueRegex.MatchString(txt) || yamlFalseRegex.MatchString(txt)
 }
 
+func FromBoolean(val bool) string {
+	return strconv.FormatBool(val)
+}
+
 func ToBoolean(src string) (bool, error) {
 	isTrue, isFalse := yamlTrueRegex.MatchString(src), yamlFalseRegex.MatchString(src)
 	if !isTrue && !isFalse {
@@ -81,8 +85,16 @@ func IsUnsignedInteger(n ast.Node) bool {
 		yamlHexadecimalIntegerRegex.MatchString(txt)
 }
 
+func FromInteger(val int64) string {
+	return strconv.FormatInt(val, 10)
+}
+
 func ToInteger(src string) (int64, error) {
 	return strconv.ParseInt(src, 0, 64)
+}
+
+func FromUnsignedInteger(val uint64) string {
+	return strconv.FormatUint(val, 10)
 }
 
 func ToUnsignedInteger(src string) (uint64, error) {
@@ -104,6 +116,19 @@ func IsFloat(n ast.Node) bool {
 	return yamlFloatRegex.MatchString(txt) ||
 		yamlFloatInfinityRegex.MatchString(txt) ||
 		yamlNotANumberRegex.MatchString(txt)
+}
+
+func FromFloat(val float64) string {
+	switch {
+	case math.IsInf(val, 1):
+		return ".inf"
+	case math.IsInf(val, -1):
+		return "-.inf"
+	case math.IsNaN(val):
+		return ".nan"
+	default:
+		return strconv.FormatFloat(val, 'e', -1, 64)
+	}
 }
 
 func ToFloat(src string) (float64, error) {
@@ -174,6 +199,10 @@ func IsTimestamp(n ast.Node) bool {
 		}
 	}
 	return false
+}
+
+func FromTimestamp(val time.Time) string {
+	return val.Format(time.RFC3339)
 }
 
 func ToTimestamp(src string) (t time.Time, err error) {

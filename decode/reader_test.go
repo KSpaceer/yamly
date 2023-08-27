@@ -1,12 +1,12 @@
-package reader_test
+package decode_test
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
 	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yayamls/decode"
 	"github.com/KSpaceer/yayamls/parser"
-	"github.com/KSpaceer/yayamls/reader"
 	"math"
 	"reflect"
 	"testing"
@@ -17,19 +17,19 @@ func TestReader_Simple(t *testing.T) {
 	type tcase struct {
 		name       string
 		ast        ast.Node
-		calls      func(r reader.Reader, vs *valueStore) error
+		calls      func(r decode.Reader, vs *valueStore) error
 		expected   []any
 		expectDeny bool
 	}
 
 	tcases := []tcase{
 		{
-			name: "single integer",
+			name: "simple integer",
 			ast: ast.NewStreamNode(
 				[]ast.Node{
 					ast.NewTextNode("15"),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectInteger()
 				if err != nil {
 					return err
@@ -45,7 +45,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("true"),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectInteger()
 				if err != nil {
 					return err
@@ -61,7 +61,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("null"),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableInteger()
 				if err != nil {
 					return err
@@ -81,7 +81,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewMappingNode(nil),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableInteger()
 				if err != nil {
 					return err
@@ -101,7 +101,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("0xFF"),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectUnsigned()
 				if err != nil {
 					return err
@@ -117,7 +117,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("3.3"),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectUnsigned()
 				if err != nil {
 					return err
@@ -136,7 +136,7 @@ func TestReader_Simple(t *testing.T) {
 						ast.NewTextNode(""),
 					),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableUnsigned()
 				if err != nil {
 					return err
@@ -156,7 +156,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("lll"),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableUnsigned()
 				if err != nil {
 					return err
@@ -177,7 +177,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("true"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectBoolean()
 				if err != nil {
 					return err
@@ -194,7 +194,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("YES"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectBoolean()
 				if err != nil {
 					return err
@@ -210,7 +210,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("NULL"),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableBoolean()
 				if err != nil {
 					return err
@@ -230,7 +230,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("NULL", ast.WithQuotingType(ast.SingleQuotingType)),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableBoolean()
 				if err != nil {
 					return err
@@ -251,7 +251,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("33e6"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectFloat()
 				if err != nil {
 					return err
@@ -268,7 +268,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("33ee6"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectFloat()
 				if err != nil {
 					return err
@@ -284,7 +284,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("Null"),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableFloat()
 				if err != nil {
 					return err
@@ -304,7 +304,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewMappingNode(nil),
 				}),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableFloat()
 				if err != nil {
 					return err
@@ -325,7 +325,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("Null", ast.WithQuotingType(ast.DoubleQuotingType)),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectString()
 				if err != nil {
 					return err
@@ -344,7 +344,7 @@ func TestReader_Simple(t *testing.T) {
 					}),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectString()
 				if err != nil {
 					return err
@@ -362,7 +362,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("~"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, notNull, err := r.ExpectNullableString()
 				if err != nil {
 					return err
@@ -383,7 +383,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("2023-08-23"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectTimestamp()
 				if err != nil {
 					return err
@@ -402,7 +402,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("sss"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				v, err := r.ExpectTimestamp()
 				if err != nil {
 					return err
@@ -419,7 +419,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewSequenceNode(nil),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				state, err := r.ExpectSequence()
 				if err != nil {
 					return err
@@ -437,7 +437,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewMappingNode(nil),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				state, err := r.ExpectSequence()
 				if err != nil {
 					return err
@@ -455,7 +455,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewNullNode(),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				state, notNull, err := r.ExpectNullableSequence()
 				if err != nil {
 					return err
@@ -477,7 +477,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("a"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				state, notNull, err := r.ExpectNullableSequence()
 				if err != nil {
 					return err
@@ -499,7 +499,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewMappingNode(nil),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				state, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -517,7 +517,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewSequenceNode(nil),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				state, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -535,7 +535,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewNullNode(),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				state, notNull, err := r.ExpectNullableMapping()
 				if err != nil {
 					return err
@@ -557,7 +557,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("text"),
 				},
 			),
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				state, notNull, err := r.ExpectNullableMapping()
 				if err != nil {
 					return err
@@ -576,12 +576,12 @@ func TestReader_Simple(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := reader.NewReader(tc.ast)
+			r := decode.NewReader(tc.ast)
 			vs := valueStore{}
 			err := tc.calls(r, &vs)
 			if err != nil {
 				switch {
-				case tc.expectDeny && errors.Is(err, &reader.DenyError{}):
+				case tc.expectDeny && errors.Is(err, &decode.DenyError{}):
 					return
 				default:
 					t.Fatalf("unexpected error: %v", err)
@@ -600,7 +600,7 @@ func TestReader_Complex(t *testing.T) {
 	type tcase struct {
 		name       string
 		src        string
-		calls      func(r reader.Reader, vs *valueStore) error
+		calls      func(r decode.Reader, vs *valueStore) error
 		expected   []any
 		expectDeny bool
 		expectEOS  bool
@@ -610,7 +610,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "mapping with one pair",
 			src:  "key: value",
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				mapState, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -634,7 +634,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "sequence with two entries",
 			src:  "['val1', \"val2\"]",
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				seqState, err := r.ExpectSequence()
 				if err != nil {
 					return err
@@ -653,7 +653,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "struct-like mapping",
 			src:  "name: \"name\"\nscore: 250\nsubscription: true\nnested: {\"inner\": .inf, \"seq\": null}",
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				mapState, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -733,7 +733,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "anchor and alias",
 			src:  "a: &anc value\nb: *anc",
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				mapState, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -756,7 +756,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "anchor and alias with any",
 			src:  "a: &anc value\nb: *anc",
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				mapState, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -779,7 +779,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "struct-like mapping with any",
 			src:  "name: 'name'\nscore: 100\nunique: {key: value}\nenable: true",
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				mapState, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -829,7 +829,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "anchor and alias with raw",
 			src:  "a: &anc value\nb: *anc",
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				mapState, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -862,7 +862,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "anchor and alias with raw (reversed)",
 			src:  "a: &anc value\nb: *anc",
-			calls: func(r reader.Reader, vs *valueStore) error {
+			calls: func(r decode.Reader, vs *valueStore) error {
 				mapState, err := r.ExpectMapping()
 				if err != nil {
 					return err
@@ -900,11 +900,11 @@ func TestReader_Complex(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parsing failed: %v", err)
 			}
-			r := reader.NewReader(tree)
+			r := decode.NewReader(tree)
 			vs := valueStore{}
 			if err = tc.calls(r, &vs); err != nil {
 				switch {
-				case tc.expectDeny && errors.Is(err, &reader.DenyError{}):
+				case tc.expectDeny && errors.Is(err, &decode.DenyError{}):
 					return
 				default:
 					t.Fatalf("unexpected error: %v", err)
@@ -975,7 +975,7 @@ func TestReader_SequencesOfNullables(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parser failed: %v", err)
 			}
-			r := reader.NewReader(tree)
+			r := decode.NewReader(tree)
 			var values []any
 			methodVal := reflect.ValueOf(r).MethodByName(tc.methodName)
 			err = func() error {
@@ -1150,7 +1150,7 @@ func TestReader_ExpectAny(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parser failed: %v", err)
 			}
-			r := reader.NewReader(tree)
+			r := decode.NewReader(tree)
 			result, err := r.ExpectAny()
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -1206,7 +1206,7 @@ func TestReader_ExpectRaw(t *testing.T) {
 			if stream, ok := tree.(*ast.StreamNode); ok && len(stream.Documents()) == 1 {
 				tree = stream.Documents()[0]
 			}
-			r := reader.NewReader(tree)
+			r := decode.NewReader(tree)
 			result, err := r.ExpectRaw()
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -1221,7 +1221,7 @@ func TestReader_ExpectRaw(t *testing.T) {
 func TestReader_K8SManifest(t *testing.T) {
 	const pvcManifest = `
     apiVersion: v1
-    kind: Persistent
+    kind: PersistentVolumeClaim
     metadata:
       name: pvc-claim
     spec:
@@ -1262,7 +1262,7 @@ func TestReader_K8SManifest(t *testing.T) {
 
 	expected := manifest{
 		apiVersion: "v1",
-		kind:       "Persistent",
+		kind:       "PersistentVolumeClaim",
 		metadata: metadata{
 			name: "pvc-claim",
 		},
@@ -1283,9 +1283,9 @@ func TestReader_K8SManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parser error: %v", err)
 	}
-	r := reader.NewReader(tree)
-	var read func(r reader.Reader) error
-	read = func(r reader.Reader) error {
+	r := decode.NewReader(tree)
+	var read func(r decode.Reader) error
+	read = func(r decode.Reader) error {
 		manifestState, err := r.ExpectMapping()
 		if err != nil {
 			return err

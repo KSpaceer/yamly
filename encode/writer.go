@@ -1,4 +1,4 @@
-package writer
+package encode
 
 import (
 	"bytes"
@@ -16,7 +16,9 @@ const (
 
 const nullValue = "null"
 
-type Writer struct {
+var _ TreeWriter[ast.Node] = (*ASTWriter)(nil)
+
+type ASTWriter struct {
 	buf              *bytes.Buffer
 	errors           []error
 	indentation      int
@@ -30,14 +32,20 @@ type Writer struct {
 	opts writeOptions
 }
 
-func NewWriter() *Writer {
-	return &Writer{
+func NewASTWriter(opts ...WriteOption) *ASTWriter {
+	w := ASTWriter{
 		buf:              bytes.NewBuffer(nil),
 		errors:           nil,
 		indentation:      defaultBasicIndentation,
 		indentationDelta: defaultIndendationDelta,
 		metAnchors:       map[string]struct{}{},
 	}
+
+	for _, opt := range opts {
+		opt(&w.opts)
+	}
+
+	return &w
 }
 
 type AnchorsKeeper interface {
@@ -58,8 +66,8 @@ func WithAnchorsKeeper(ak AnchorsKeeper) WriteOption {
 	}
 }
 
-func (w *Writer) WriteTo(dst io.Writer, ast ast.Node, opts ...WriteOption) error {
-	if err := w.write(ast, opts...); err != nil {
+func (w *ASTWriter) WriteTo(dst io.Writer, ast ast.Node) error {
+	if err := w.write(ast); err != nil {
 		return err
 	}
 	_, err := io.Copy(dst, w.buf)
@@ -70,16 +78,16 @@ func (w *Writer) WriteTo(dst io.Writer, ast ast.Node, opts ...WriteOption) error
 	return nil
 }
 
-func (w *Writer) WriteString(ast ast.Node, opts ...WriteOption) (string, error) {
+func (w *ASTWriter) WriteString(ast ast.Node) (string, error) {
 	var sb strings.Builder
-	if err := w.WriteTo(&sb, ast, opts...); err != nil {
+	if err := w.WriteTo(&sb, ast); err != nil {
 		return "", err
 	}
 	return sb.String(), nil
 }
 
-func (w *Writer) WriteBytes(ast ast.Node, opts ...WriteOption) ([]byte, error) {
-	if err := w.write(ast, opts...); err != nil {
+func (w *ASTWriter) WriteBytes(ast ast.Node) ([]byte, error) {
+	if err := w.write(ast); err != nil {
 		return nil, err
 	}
 	data := w.buf.Bytes()
@@ -87,12 +95,8 @@ func (w *Writer) WriteBytes(ast ast.Node, opts ...WriteOption) ([]byte, error) {
 	return data, nil
 }
 
-func (w *Writer) write(ast ast.Node, opts ...WriteOption) error {
+func (w *ASTWriter) write(ast ast.Node) error {
 	w.reset()
-
-	for _, opt := range opts {
-		opt(&w.opts)
-	}
 
 	ast.Accept(w)
 	if w.hasErrors() {
@@ -101,19 +105,19 @@ func (w *Writer) write(ast ast.Node, opts ...WriteOption) error {
 	return nil
 }
 
-func (w *Writer) appendError(err error) {
+func (w *ASTWriter) appendError(err error) {
 	w.errors = append(w.errors, err)
 }
 
-func (w *Writer) hasErrors() bool {
+func (w *ASTWriter) hasErrors() bool {
 	return len(w.errors) > 0
 }
 
-func (w *Writer) error() error {
+func (w *ASTWriter) error() error {
 	return errors.Join(w.errors...)
 }
 
-func (w *Writer) VisitStreamNode(n *ast.StreamNode) {
+func (w *ASTWriter) VisitStreamNode(n *ast.StreamNode) {
 	for _, doc := range n.Documents() {
 		w.buf.WriteString("---\n")
 		doc.Accept(w)
@@ -121,12 +125,12 @@ func (w *Writer) VisitStreamNode(n *ast.StreamNode) {
 	}
 }
 
-func (w *Writer) VisitTagNode(n *ast.TagNode) {
+func (w *ASTWriter) VisitTagNode(n *ast.TagNode) {
 	w.buf.WriteString("!!")
 	w.buf.WriteString(n.Text())
 }
 
-func (w *Writer) VisitAnchorNode(n *ast.AnchorNode) {
+func (w *ASTWriter) VisitAnchorNode(n *ast.AnchorNode) {
 	anchor := n.Text()
 	w.buf.WriteString("&")
 	w.buf.WriteString(anchor)
@@ -137,7 +141,7 @@ func (w *Writer) VisitAnchorNode(n *ast.AnchorNode) {
 	}
 }
 
-func (w *Writer) VisitAliasNode(n *ast.AliasNode) {
+func (w *ASTWriter) VisitAliasNode(n *ast.AliasNode) {
 	alias := n.Text()
 	_, hasWroteAnchor := w.metAnchors[alias]
 	if w.opts.anchorsKeeper != nil && !hasWroteAnchor {
@@ -155,7 +159,7 @@ func (w *Writer) VisitAliasNode(n *ast.AliasNode) {
 	w.buf.WriteString(n.Text())
 }
 
-func (w *Writer) VisitTextNode(n *ast.TextNode) {
+func (w *ASTWriter) VisitTextNode(n *ast.TextNode) {
 	w.writePreparedData(n)
 	switch txt := n.Text(); n.QuotingType() {
 	case ast.AbsentQuotingType:
@@ -177,7 +181,7 @@ func (w *Writer) VisitTextNode(n *ast.TextNode) {
 	}
 }
 
-func (w *Writer) VisitSequenceNode(n *ast.SequenceNode) {
+func (w *ASTWriter) VisitSequenceNode(n *ast.SequenceNode) {
 	w.writePreparedData(n)
 	for _, entry := range n.Entries() {
 		w.maybeWriteIndentation()
@@ -191,7 +195,7 @@ func (w *Writer) VisitSequenceNode(n *ast.SequenceNode) {
 	}
 }
 
-func (w *Writer) VisitMappingNode(n *ast.MappingNode) {
+func (w *ASTWriter) VisitMappingNode(n *ast.MappingNode) {
 	w.writePreparedData(n)
 	for _, entry := range n.Entries() {
 		w.maybeWriteIndentation()
@@ -200,7 +204,7 @@ func (w *Writer) VisitMappingNode(n *ast.MappingNode) {
 	}
 }
 
-func (w *Writer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
+func (w *ASTWriter) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	key, value := n.Key(), n.Value()
 
 	isComplexKey := isComplex(n.Key())
@@ -224,12 +228,12 @@ func (w *Writer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	w.decreaseIndentation()
 }
 
-func (w *Writer) VisitNullNode(n *ast.NullNode) {
+func (w *ASTWriter) VisitNullNode(n *ast.NullNode) {
 	w.writePreparedData(n)
 	w.buf.WriteString(nullValue)
 }
 
-func (w *Writer) VisitPropertiesNode(n *ast.PropertiesNode) {
+func (w *ASTWriter) VisitPropertiesNode(n *ast.PropertiesNode) {
 	tag, anchor := n.Tag(), n.Anchor()
 	var tagValid bool
 	if tagValid = ast.ValidNode(tag); tagValid {
@@ -243,7 +247,7 @@ func (w *Writer) VisitPropertiesNode(n *ast.PropertiesNode) {
 	}
 }
 
-func (w *Writer) VisitContentNode(n *ast.ContentNode) {
+func (w *ASTWriter) VisitContentNode(n *ast.ContentNode) {
 	w.writePreparedData(n)
 	properties, content := n.Properties(), n.Content()
 	if ast.ValidNode(properties) {
@@ -257,15 +261,15 @@ func (w *Writer) VisitContentNode(n *ast.ContentNode) {
 	content.Accept(w)
 }
 
-func (w *Writer) writeBeforeComplexElements(s string) {
+func (w *ASTWriter) writeBeforeComplexElements(s string) {
 	w.beforeComplex = s
 }
 
-func (w *Writer) writeBeforeSimpleElements(s string) {
+func (w *ASTWriter) writeBeforeSimpleElements(s string) {
 	w.beforeSimple = s
 }
 
-func (w *Writer) writePreparedData(n ast.Node) {
+func (w *ASTWriter) writePreparedData(n ast.Node) {
 	switch n.Type() {
 	case ast.SequenceType, ast.MappingType:
 		w.buf.WriteString(w.beforeComplex)
@@ -278,39 +282,39 @@ func (w *Writer) writePreparedData(n ast.Node) {
 	w.beforeSimple = ""
 }
 
-func (w *Writer) increaseIndentation() {
+func (w *ASTWriter) increaseIndentation() {
 	w.indentation += w.indentationDelta
 }
 
-func (w *Writer) decreaseIndentation() {
+func (w *ASTWriter) decreaseIndentation() {
 	w.indentation -= w.indentationDelta
 }
 
-func (w *Writer) writeIndentation() {
+func (w *ASTWriter) writeIndentation() {
 	w.buf.Grow(w.indentation)
 	for i := 0; i < w.indentation; i++ {
 		w.buf.WriteByte(' ')
 	}
 }
 
-func (w *Writer) hasWriteLineBreak() bool {
+func (w *ASTWriter) hasWriteLineBreak() bool {
 	bufData := w.buf.Bytes()
 	return len(bufData) > 0 && bufData[len(bufData)-1] == '\n'
 }
 
-func (w *Writer) maybeWriteIndentation() {
+func (w *ASTWriter) maybeWriteIndentation() {
 	if w.hasWriteLineBreak() {
 		w.writeIndentation()
 	}
 }
 
-func (w *Writer) maybeWriteLineBreak() {
+func (w *ASTWriter) maybeWriteLineBreak() {
 	if !w.hasWriteLineBreak() {
 		w.buf.WriteByte('\n')
 	}
 }
 
-func (w *Writer) writeMultilineLiteralText(txt string) {
+func (w *ASTWriter) writeMultilineLiteralText(txt string) {
 	lines := strings.Split(txt, "\n")
 	chompingIndicator := chars.StripChompingCharacter
 	if lines[len(lines)-1] == "" {
@@ -327,7 +331,7 @@ func (w *Writer) writeMultilineLiteralText(txt string) {
 	}
 }
 
-func (w *Writer) writeSingleQuotedText(txt string) {
+func (w *ASTWriter) writeSingleQuotedText(txt string) {
 	txt, err := chars.ConvertToYAMLSingleQuotedString(txt)
 	if err != nil {
 		w.appendError(err)
@@ -337,7 +341,7 @@ func (w *Writer) writeSingleQuotedText(txt string) {
 	w.buf.WriteByte('\'')
 }
 
-func (w *Writer) writeDoubleQuotedText(txt string) {
+func (w *ASTWriter) writeDoubleQuotedText(txt string) {
 	txt, err := chars.ConvertToYAMLDoubleQuotedString(txt)
 	if err != nil {
 		w.appendError(err)
@@ -347,7 +351,7 @@ func (w *Writer) writeDoubleQuotedText(txt string) {
 	w.buf.WriteByte('"')
 }
 
-func (w *Writer) reset() {
+func (w *ASTWriter) reset() {
 	w.buf.Reset()
 	w.errors = w.errors[:0]
 	w.indentation = defaultBasicIndentation

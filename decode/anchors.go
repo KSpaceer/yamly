@@ -1,4 +1,4 @@
-package reader
+package decode
 
 import "github.com/KSpaceer/yayamls/ast"
 
