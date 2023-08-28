@@ -76,14 +76,14 @@ func (p *parser) parseBlockCollection(ind *indentation, ctx context) ast.Node {
 	collection := p.parseSeqSpace(ind, ctx)
 	if ast.ValidNode(collection) {
 		p.commit()
-		return ast.NewContentNode(properties, collection)
+		return newContentNode(properties, collection)
 	}
 	p.rollback()
 	collection = p.parseBlockMapping(ind)
 	if !ast.ValidNode(collection) {
 		return ast.NewInvalidNode()
 	}
-	return ast.NewContentNode(properties, collection)
+	return newContentNode(properties, collection)
 }
 
 // YAML specification: [187] l+block-mapping
@@ -447,7 +447,7 @@ func (p *parser) parseBlockScalar(ind *indentation, ctx context) ast.Node {
 	if !ast.ValidNode(content) {
 		return ast.NewInvalidNode()
 	}
-	return ast.NewContentNode(properties, content)
+	return newContentNode(properties, content)
 }
 
 // YAML specification: [182] c-l+folded

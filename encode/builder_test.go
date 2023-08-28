@@ -347,15 +347,12 @@ func TestBuilder_InsertRaw(t *testing.T) {
 		{
 			name: "simple mapping",
 			src:  []byte("key: value"),
-			expected: ast.NewContentNode(
-				nil,
-				ast.NewMappingNode([]ast.Node{
-					ast.NewMappingEntryNode(
-						ast.NewTextNode("key"),
-						ast.NewTextNode("value"),
-					),
-				}),
-			),
+			expected: ast.NewMappingNode([]ast.Node{
+				ast.NewMappingEntryNode(
+					ast.NewTextNode("key"),
+					ast.NewTextNode("value"),
+				),
+			}),
 		},
 		{
 			name: "simple sequence",
@@ -393,26 +390,20 @@ func TestBuilder_InsertRaw(t *testing.T) {
 		{
 			name: "mapping of sequences",
 			src:  []byte("[1, 2, 3]: [4, 5, 6]"),
-			expected: ast.NewContentNode(
-				nil,
-				ast.NewMappingNode([]ast.Node{
-					ast.NewMappingEntryNode(
-						ast.NewContentNode(
-							nil,
-							ast.NewSequenceNode([]ast.Node{
-								ast.NewTextNode("1"),
-								ast.NewTextNode("2"),
-								ast.NewTextNode("3"),
-							}),
-						),
-						ast.NewSequenceNode([]ast.Node{
-							ast.NewTextNode("4"),
-							ast.NewTextNode("5"),
-							ast.NewTextNode("6"),
-						}),
-					),
-				}),
-			),
+			expected: ast.NewMappingNode([]ast.Node{
+				ast.NewMappingEntryNode(
+					ast.NewSequenceNode([]ast.Node{
+						ast.NewTextNode("1"),
+						ast.NewTextNode("2"),
+						ast.NewTextNode("3"),
+					}),
+					ast.NewSequenceNode([]ast.Node{
+						ast.NewTextNode("4"),
+						ast.NewTextNode("5"),
+						ast.NewTextNode("6"),
+					}),
+				),
+			}),
 		},
 	}
 

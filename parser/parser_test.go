@@ -64,14 +64,14 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil, ast.NewMappingNode(
+				ast.NewMappingNode(
 					[]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("key"),
 							ast.NewTextNode("value"),
 						),
 					},
-				)),
+				),
 			}),
 		},
 		{
@@ -114,12 +114,12 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil, ast.NewSequenceNode(
+				ast.NewSequenceNode(
 					[]ast.Node{
 						ast.NewTextNode("value1"),
 						ast.NewTextNode("value2"),
 					},
-				)),
+				),
 			}),
 		},
 		{
@@ -212,18 +212,15 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil, ast.NewMappingNode(
+				ast.NewMappingNode(
 					[]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("sequence"),
-							ast.NewContentNode(
-								nil,
-								ast.NewSequenceNode(
-									[]ast.Node{
-										ast.NewTextNode("sequencevalue1"),
-										ast.NewTextNode("sequencevalue2"),
-									},
-								),
+							ast.NewSequenceNode(
+								[]ast.Node{
+									ast.NewTextNode("sequencevalue1"),
+									ast.NewTextNode("sequencevalue2"),
+								},
 							),
 						),
 						ast.NewMappingEntryNode(
@@ -231,7 +228,7 @@ func TestParseTokens(t *testing.T) {
 							ast.NewTextNode("value"),
 						),
 					},
-				)),
+				),
 			}),
 		},
 		{
@@ -323,7 +320,7 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil, ast.NewSequenceNode(
+				ast.NewSequenceNode(
 					[]ast.Node{
 						ast.NewMappingNode(
 							[]ast.Node{
@@ -339,7 +336,7 @@ func TestParseTokens(t *testing.T) {
 						),
 						ast.NewTextNode("quotedvalue"),
 					},
-				)),
+				),
 			}),
 		},
 		{
@@ -456,7 +453,7 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil, ast.NewMappingNode(
+				ast.NewMappingNode(
 					[]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("mapping"),
@@ -480,7 +477,7 @@ func TestParseTokens(t *testing.T) {
 							ast.NewAliasNode("ref"),
 						),
 					},
-				)),
+				),
 			}),
 		},
 		{
@@ -636,7 +633,7 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil, ast.NewSequenceNode(
+				ast.NewSequenceNode(
 					[]ast.Node{
 						ast.NewContentNode(
 							ast.NewPropertiesNode(
@@ -653,7 +650,7 @@ func TestParseTokens(t *testing.T) {
 							ast.NewTextNode("\nfolded"),
 						),
 					},
-				)),
+				),
 			}),
 		},
 		{
@@ -1081,45 +1078,38 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil, ast.NewMappingNode(
+				ast.NewMappingNode(
 					[]ast.Node{
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("mapping"),
-							ast.NewContentNode(
-								nil,
-								ast.NewMappingNode(
-									[]ast.Node{
-										ast.NewMappingEntryNode(
-											ast.NewContentNode(
-												ast.NewInvalidNode(),
-												ast.NewTextNode("quoted key"),
-											),
-											ast.NewNullNode(),
-										),
-										ast.NewMappingEntryNode(
-											ast.NewNullNode(),
-											ast.NewTextNode("value"),
-										),
-										ast.NewMappingEntryNode(
-											ast.NewNullNode(),
-											ast.NewNullNode(),
-										),
-									},
-								),
-							)),
+							ast.NewMappingNode(
+								[]ast.Node{
+									ast.NewMappingEntryNode(
+										ast.NewTextNode("quoted key"),
+										ast.NewNullNode(),
+									),
+									ast.NewMappingEntryNode(
+										ast.NewNullNode(),
+										ast.NewTextNode("value"),
+									),
+									ast.NewMappingEntryNode(
+										ast.NewNullNode(),
+										ast.NewNullNode(),
+									),
+								},
+							),
+						),
 						ast.NewMappingEntryNode(
 							ast.NewTextNode("sequence"),
-							ast.NewContentNode(
-								nil,
-								ast.NewSequenceNode(
-									[]ast.Node{
-										ast.NewNullNode(),
-										ast.NewTextNode("seqvalue"),
-									},
-								),
-							)),
+							ast.NewSequenceNode(
+								[]ast.Node{
+									ast.NewNullNode(),
+									ast.NewTextNode("seqvalue"),
+								},
+							),
+						),
 					},
-				)),
+				),
 			}),
 		},
 		{
@@ -1434,10 +1424,7 @@ func TestParseTokens(t *testing.T) {
 							),
 						),
 						ast.NewMappingEntryNode(
-							ast.NewContentNode(
-								ast.NewInvalidNode(),
-								ast.NewTextNode("explicit key"),
-							),
+							ast.NewTextNode("explicit key"),
 							ast.NewTextNode("adjacent"),
 						),
 						ast.NewMappingEntryNode(
@@ -1772,7 +1759,7 @@ func TestParseTokens(t *testing.T) {
 				},
 			},
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil, ast.NewSequenceNode(
+				ast.NewSequenceNode(
 					[]ast.Node{
 						ast.NewSequenceNode(
 							[]ast.Node{
@@ -1786,12 +1773,9 @@ func TestParseTokens(t *testing.T) {
 								ast.NewTextNode("plain\nmulti line"),
 							},
 						),
-						ast.NewContentNode(
-							nil,
-							ast.NewTextNode("\n\tspaced\n\n text"),
-						),
+						ast.NewTextNode("\n\tspaced\n\n text"),
 					},
-				)),
+				),
 			}),
 		},
 		{
@@ -2029,10 +2013,7 @@ func TestParseTokens(t *testing.T) {
 							ast.NewTextNode("emptyk"),
 						),
 						ast.NewMappingEntryNode(
-							ast.NewContentNode(
-								ast.NewInvalidNode(),
-								ast.NewTextNode("adjacent"),
-							),
+							ast.NewTextNode("adjacent"),
 							ast.NewTextNode("value"),
 						),
 					},
@@ -2113,47 +2094,37 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
                         - 10.10.10.2/24
 				`,
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil,
-					ast.NewMappingNode([]ast.Node{
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("network"),
-							ast.NewContentNode(nil,
+				ast.NewMappingNode([]ast.Node{
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("network"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("version"),
+								ast.NewTextNode("2"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("renderer"),
+								ast.NewTextNode("networkd"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("ethernets"),
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
-										ast.NewTextNode("version"),
-										ast.NewTextNode("2"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("renderer"),
-										ast.NewTextNode("networkd"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("ethernets"),
-										ast.NewContentNode(nil,
-											ast.NewMappingNode([]ast.Node{
-												ast.NewMappingEntryNode(
-													ast.NewTextNode("enp3s0"),
-													ast.NewContentNode(nil,
-														ast.NewMappingNode([]ast.Node{
-															ast.NewMappingEntryNode(
-																ast.NewTextNode("addresses"),
-																ast.NewContentNode(nil,
-																	ast.NewSequenceNode([]ast.Node{
-																		ast.NewTextNode("10.10.10.2/24"),
-																	}),
-																),
-															),
-														}),
-													),
-												),
-											}),
-										),
+										ast.NewTextNode("enp3s0"),
+										ast.NewMappingNode([]ast.Node{
+											ast.NewMappingEntryNode(
+												ast.NewTextNode("addresses"),
+												ast.NewSequenceNode([]ast.Node{
+													ast.NewTextNode("10.10.10.2/24"),
+												}),
+											),
+										}),
 									),
 								}),
 							),
-						),
-					}),
-				),
+						}),
+					),
+				}),
 			}),
 		},
 		{
@@ -2179,56 +2150,46 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
                   allow.textmode=true
             `,
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil,
-					ast.NewMappingNode([]ast.Node{
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("apiVersion"),
-							ast.NewTextNode("v1"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("kind"),
-							ast.NewTextNode("ConfigMap"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("metadata"),
-							ast.NewContentNode(nil,
-								ast.NewMappingNode([]ast.Node{
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("name"),
-										ast.NewTextNode("game-demo"),
-									),
-								}),
+				ast.NewMappingNode([]ast.Node{
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("apiVersion"),
+						ast.NewTextNode("v1"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("kind"),
+						ast.NewTextNode("ConfigMap"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("metadata"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("name"),
+								ast.NewTextNode("game-demo"),
 							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("data"),
-							ast.NewContentNode(nil,
-								ast.NewMappingNode([]ast.Node{
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("player_initial_lives"),
-										ast.NewTextNode("3"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("ui_properties_file_name"),
-										ast.NewTextNode("user-interface.properties"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("game.properties"),
-										ast.NewContentNode(nil,
-											ast.NewTextNode("enemy.types=aliens,monsters\nplayer.maximum-lives=5\n"),
-										),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("user-interface.properties"),
-										ast.NewContentNode(nil,
-											ast.NewTextNode("color.good=purple\ncolor.bad=yellow\nallow.textmode=true\n"),
-										),
-									),
-								}),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("data"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("player_initial_lives"),
+								ast.NewTextNode("3"),
 							),
-						),
-					}),
-				),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("ui_properties_file_name"),
+								ast.NewTextNode("user-interface.properties"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("game.properties"),
+								ast.NewTextNode("enemy.types=aliens,monsters\nplayer.maximum-lives=5\n"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("user-interface.properties"),
+								ast.NewTextNode("color.good=purple\ncolor.bad=yellow\nallow.textmode=true\n"),
+							),
+						}),
+					),
+				}),
 			}),
 		},
 		{
@@ -2264,496 +2225,460 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 				return string(data)
 			}(),
 			expectedAST: ast.NewStreamNode([]ast.Node{
-				ast.NewContentNode(nil,
-					ast.NewMappingNode([]ast.Node{
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("key"),
-							ast.NewTextNode("value"),
+				ast.NewMappingNode([]ast.Node{
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("key"),
+						ast.NewTextNode("value"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("another_key"),
+						ast.NewTextNode("Another value goes here."),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("a_number_value"),
+						ast.NewTextNode("100"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("scientific_notation"),
+						ast.NewTextNode("1e+12"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("hex_notation"),
+						ast.NewTextNode("0x123"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("octal_notation"),
+						ast.NewTextNode("0123"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("boolean"),
+						ast.NewTextNode("true"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("null_value"),
+						ast.NewTextNode("null"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("another_null_value"),
+						ast.NewTextNode("~"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("key with spaces"),
+						ast.NewTextNode("value"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("no"),
+						ast.NewTextNode("no"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("yes"),
+						ast.NewTextNode("No"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("not_enclosed"),
+						ast.NewTextNode("yes"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("enclosed"),
+						ast.NewTextNode("yes"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("however"),
+						ast.NewTextNode("A string, enclosed in quotes."),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("Keys can be quoted too."),
+						ast.NewTextNode("Useful if you want to put a ':' in your key."),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("single quotes"),
+						ast.NewTextNode("have ''one'' escape pattern"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("double quotes"),
+						ast.NewTextNode(`have many: \", \0, \t, \u263A, \x0d\x0a == \r\n, and more.`),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("Superscript two"),
+						ast.NewTextNode(`\u00B2`),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("special_characters"),
+						ast.NewTextNode("[ John ] & { Jane } - <Doe>"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("literal_block"),
+						ast.NewTextNode("This entire block of text will be the value of the "+
+							"'literal_block' key,\nwith line breaks being preserved.\n"+
+							"\nThe literal continues until de-dented, and the leading indentation "+
+							"is\nstripped.\n\n    Any lines that are 'more-indented' keep the rest "+
+							"of their indentation -\n    these lines will be indented by 4 spaces.\n",
 						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("another_key"),
-							ast.NewTextNode("Another value goes here."),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("folded_style"),
+						ast.NewTextNode("This entire block of text will be the value of "+
+							"'folded_style', but this time, all newlines will be replaced "+
+							"with a single space.\nBlank lines, like above, are converted to a newline "+
+							"character.\n\n    'More-indented' lines keep their newlines, too -\n\n"+
+							"    this text will appear over two lines.\n",
 						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("a_number_value"),
-							ast.NewTextNode("100"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("literal_strip"),
+						ast.NewTextNode("This entire block of text will be the value of the "+
+							"'literal_block' key,\nwith trailing blank line being stripped.",
 						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("scientific_notation"),
-							ast.NewTextNode("1e+12"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("block_strip"),
+						ast.NewTextNode("This entire block of text will be the value of "+
+							"'folded_style', but this time, all newlines will be replaced with a "+
+							"single space and trailing blank line being stripped.",
 						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("hex_notation"),
-							ast.NewTextNode("0x123"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("literal_keep"),
+						ast.NewTextNode("This entire block of text will be the value of the "+
+							"'literal_block' key,\nwith trailing blank line being kept.\n\n"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("block_keep"),
+						ast.NewTextNode("This entire block of text will be the value of "+
+							"'folded_style', but this time, all newlines will be replaced "+
+							"with a single space and trailing blank line being kept.\n\n",
 						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("octal_notation"),
-							ast.NewTextNode("0123"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("boolean"),
-							ast.NewTextNode("true"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("null_value"),
-							ast.NewTextNode("null"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("another_null_value"),
-							ast.NewTextNode("~"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("key with spaces"),
-							ast.NewTextNode("value"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("no"),
-							ast.NewTextNode("no"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("yes"),
-							ast.NewTextNode("No"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("not_enclosed"),
-							ast.NewTextNode("yes"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("enclosed"),
-							ast.NewTextNode("yes"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("however"),
-							ast.NewTextNode("A string, enclosed in quotes."),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewContentNode(
-								ast.NewInvalidNode(),
-								ast.NewTextNode("Keys can be quoted too."),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("a_nested_map"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("key"),
+								ast.NewTextNode("value"),
 							),
-							ast.NewTextNode("Useful if you want to put a ':' in your key."),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("single quotes"),
-							ast.NewTextNode("have ''one'' escape pattern"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("double quotes"),
-							ast.NewTextNode(`have many: \", \0, \t, \u263A, \x0d\x0a == \r\n, and more.`),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("Superscript two"),
-							ast.NewTextNode(`\u00B2`),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("special_characters"),
-							ast.NewTextNode("[ John ] & { Jane } - <Doe>"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("literal_block"),
-							ast.NewContentNode(nil,
-								ast.NewTextNode("This entire block of text will be the value of the "+
-									"'literal_block' key,\nwith line breaks being preserved.\n"+
-									"\nThe literal continues until de-dented, and the leading indentation "+
-									"is\nstripped.\n\n    Any lines that are 'more-indented' keep the rest "+
-									"of their indentation -\n    these lines will be indented by 4 spaces.\n",
-								),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("another_key"),
+								ast.NewTextNode("Another Value"),
 							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("folded_style"),
-							ast.NewContentNode(nil,
-								ast.NewTextNode("This entire block of text will be the value of "+
-									"'folded_style', but this time, all newlines will be replaced "+
-									"with a single space.\nBlank lines, like above, are converted to a newline "+
-									"character.\n\n    'More-indented' lines keep their newlines, too -\n\n"+
-									"    this text will appear over two lines.\n",
-								),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("literal_strip"),
-							ast.NewContentNode(nil,
-								ast.NewTextNode("This entire block of text will be the value of the "+
-									"'literal_block' key,\nwith trailing blank line being stripped.",
-								),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("block_strip"),
-							ast.NewContentNode(nil,
-								ast.NewTextNode("This entire block of text will be the value of "+
-									"'folded_style', but this time, all newlines will be replaced with a "+
-									"single space and trailing blank line being stripped.",
-								),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("literal_keep"),
-							ast.NewContentNode(nil,
-								ast.NewTextNode("This entire block of text will be the value of the "+
-									"'literal_block' key,\nwith trailing blank line being kept.\n\n"),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("block_keep"),
-							ast.NewContentNode(nil,
-								ast.NewTextNode("This entire block of text will be the value of "+
-									"'folded_style', but this time, all newlines will be replaced "+
-									"with a single space and trailing blank line being kept.\n\n",
-								),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("a_nested_map"),
-							ast.NewContentNode(nil,
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("another_nested_map"),
 								ast.NewMappingNode([]ast.Node{
 									ast.NewMappingEntryNode(
-										ast.NewTextNode("key"),
-										ast.NewTextNode("value"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("another_key"),
-										ast.NewTextNode("Another Value"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("another_nested_map"),
-										ast.NewContentNode(nil,
-											ast.NewMappingNode([]ast.Node{
-												ast.NewMappingEntryNode(
-													ast.NewTextNode("hello"),
-													ast.NewTextNode("hello"),
-												),
-											}),
-										),
+										ast.NewTextNode("hello"),
+										ast.NewTextNode("hello"),
 									),
 								}),
 							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("0.25"),
-							ast.NewTextNode("a float key"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewContentNode(nil,
-								ast.NewTextNode("This is a key\nthat has multiple lines\n"),
-							),
-							ast.NewTextNode("and this is its value"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewSequenceNode([]ast.Node{
-								ast.NewTextNode("Manchester United"),
-								ast.NewTextNode("Real Madrid"),
-							}),
-							ast.NewSequenceNode([]ast.Node{
-								ast.NewTextNode("2001-01-01"),
-								ast.NewTextNode("2002-02-02"),
-							}),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("a_sequence"),
-							ast.NewContentNode(nil,
-								ast.NewSequenceNode([]ast.Node{
-									ast.NewTextNode("Item 1"),
-									ast.NewTextNode("Item 2"),
-									ast.NewTextNode("0.5"),
-									ast.NewTextNode("Item 4"),
-									ast.NewMappingNode([]ast.Node{
-										ast.NewMappingEntryNode(
-											ast.NewTextNode("key"),
-											ast.NewTextNode("value"),
-										),
-										ast.NewMappingEntryNode(
-											ast.NewTextNode("another_key"),
-											ast.NewTextNode("another_value"),
-										),
-									}),
-									ast.NewSequenceNode([]ast.Node{
-										ast.NewTextNode("This is a sequence"),
-										ast.NewTextNode("inside another sequence"),
-									}),
-									ast.NewSequenceNode([]ast.Node{
-										ast.NewSequenceNode([]ast.Node{
-											ast.NewTextNode("Nested sequence indicators"),
-											ast.NewTextNode("can be collapsed"),
-										}),
-									}),
-								}),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("json_map"),
-							ast.NewMappingNode([]ast.Node{
-								ast.NewMappingEntryNode(
-									ast.NewContentNode(
-										ast.NewInvalidNode(),
-										ast.NewTextNode("key"),
-									),
-									ast.NewTextNode("value"),
-								),
-							}),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("json_seq"),
-							ast.NewSequenceNode([]ast.Node{
-								ast.NewTextNode("3"),
-								ast.NewTextNode("2"),
-								ast.NewTextNode("1"),
-								ast.NewTextNode("takeoff"),
-							}),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("and quotes are optional"),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("0.25"),
+						ast.NewTextNode("a float key"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("This is a key\nthat has multiple lines\n"),
+						ast.NewTextNode("and this is its value"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewSequenceNode([]ast.Node{
+							ast.NewTextNode("Manchester United"),
+							ast.NewTextNode("Real Madrid"),
+						}),
+						ast.NewSequenceNode([]ast.Node{
+							ast.NewTextNode("2001-01-01"),
+							ast.NewTextNode("2002-02-02"),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("a_sequence"),
+						ast.NewSequenceNode([]ast.Node{
+							ast.NewTextNode("Item 1"),
+							ast.NewTextNode("Item 2"),
+							ast.NewTextNode("0.5"),
+							ast.NewTextNode("Item 4"),
 							ast.NewMappingNode([]ast.Node{
 								ast.NewMappingEntryNode(
 									ast.NewTextNode("key"),
-									ast.NewSequenceNode([]ast.Node{
-										ast.NewTextNode("3"),
-										ast.NewTextNode("2"),
-										ast.NewTextNode("1"),
-										ast.NewTextNode("takeoff"),
-									}),
+									ast.NewTextNode("value"),
+								),
+								ast.NewMappingEntryNode(
+									ast.NewTextNode("another_key"),
+									ast.NewTextNode("another_value"),
 								),
 							}),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("anchored_content"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(nil,
-									ast.NewAnchorNode("anchor_name"),
-								),
-								ast.NewTextNode("This string will appear as the value of two keys."),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("other_anchor"),
-							ast.NewAliasNode("anchor_name"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("base"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewInvalidNode(),
-									ast.NewAnchorNode("base"),
-								),
-								ast.NewMappingNode([]ast.Node{
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("name"),
-										ast.NewTextNode("Everyone has same name"),
-									),
-								}),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("foo"),
-							ast.NewContentNode(nil,
-								ast.NewMappingNode([]ast.Node{
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("<<"),
-										ast.NewAliasNode("base"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("age"),
-										ast.NewTextNode("10"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("name"),
-										ast.NewTextNode("John"),
-									),
-								}),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("bar"),
-							ast.NewContentNode(nil,
-								ast.NewMappingNode([]ast.Node{
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("<<"),
-										ast.NewAliasNode("base"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("age"),
-										ast.NewTextNode("20"),
-									),
-								}),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("explicit_boolean"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("bool"),
-									ast.NewInvalidNode(),
-								),
-								ast.NewTextNode("true"),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("explicit_integer"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("int"),
-									ast.NewInvalidNode(),
-								),
-								ast.NewTextNode("42"),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("explicit_float"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("float"),
-									ast.NewInvalidNode(),
-								),
-								ast.NewTextNode("-42.24"),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("explicit_string"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("str"),
-									ast.NewInvalidNode(),
-								),
-								ast.NewTextNode("0.5"),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("explicit_datetime"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("timestamp"),
-									ast.NewInvalidNode(),
-								),
-								ast.NewTextNode("2022-11-17 12:34:56.78 +9"),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("explicit_null"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("null"),
-									nil,
-								),
-								ast.NewTextNode("null"),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("python_complex_number"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("python/complex"),
-									ast.NewInvalidNode(),
-								),
-								ast.NewTextNode("1+2j"),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("python/tuple"),
-									ast.NewInvalidNode(),
-								),
+							ast.NewSequenceNode([]ast.Node{
+								ast.NewTextNode("This is a sequence"),
+								ast.NewTextNode("inside another sequence"),
+							}),
+							ast.NewSequenceNode([]ast.Node{
 								ast.NewSequenceNode([]ast.Node{
-									ast.NewTextNode("5"),
-									ast.NewTextNode("7"),
+									ast.NewTextNode("Nested sequence indicators"),
+									ast.NewTextNode("can be collapsed"),
+								}),
+							}),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("json_map"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("key"),
+								ast.NewTextNode("value"),
+							),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("json_seq"),
+						ast.NewSequenceNode([]ast.Node{
+							ast.NewTextNode("3"),
+							ast.NewTextNode("2"),
+							ast.NewTextNode("1"),
+							ast.NewTextNode("takeoff"),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("and quotes are optional"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("key"),
+								ast.NewSequenceNode([]ast.Node{
+									ast.NewTextNode("3"),
+									ast.NewTextNode("2"),
+									ast.NewTextNode("1"),
+									ast.NewTextNode("takeoff"),
 								}),
 							),
-							ast.NewTextNode("Fifty Seven"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("datetime_canonical"),
-							ast.NewTextNode("2001-12-15T02:59:43.1Z"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("datetime_space_separated_with_time_zone"),
-							ast.NewTextNode("2001-12-14 21:59:43.10 -5"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("date_implicit"),
-							ast.NewTextNode("2002-12-14"),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("date_explicit"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("timestamp"),
-									nil,
-								),
-								ast.NewTextNode("2002-12-14"),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("anchored_content"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(nil,
+								ast.NewAnchorNode("anchor_name"),
 							),
+							ast.NewTextNode("This string will appear as the value of two keys."),
 						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("gif_file"),
-							ast.NewContentNode(
-								ast.NewPropertiesNode(
-									ast.NewTagNode("binary"),
-									ast.NewInvalidNode(),
-								),
-								ast.NewTextNode("R0lGODlhDAAMAIQAAP//9/X17unp5WZmZgAAAOfn515eXvPz7Y6OjuDg4J+fn5\n"+
-									"OTk6enp56enmlpaWNjY6Ojo4SEhP/++f/++f/++f/++f/++f/++f/++f/++f/+\n"+
-									"+f/++f/++f/++f/++f/++SH+Dk1hZGUgd2l0aCBHSU1QACwAAAAADAAMAAAFLC\n"+
-									"AgjoEwnuNAFOhpEMTRiggcz4BNJHrv/zCFcLiwMWYNG84BwwEeECcgggoBADs=\n",
-								),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("other_anchor"),
+						ast.NewAliasNode("anchor_name"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("base"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewInvalidNode(),
+								ast.NewAnchorNode("base"),
 							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("set"),
-							ast.NewContentNode(nil,
-								ast.NewMappingNode([]ast.Node{
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("item1"),
-										ast.NewNullNode(),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("item2"),
-										ast.NewNullNode(),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("item3"),
-										ast.NewNullNode(),
-									),
-								}),
-							),
-						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("or"),
 							ast.NewMappingNode([]ast.Node{
 								ast.NewMappingEntryNode(
-									ast.NewTextNode("item1"),
-									ast.NewNullNode(),
-								),
-								ast.NewMappingEntryNode(
-									ast.NewTextNode("item2"),
-									ast.NewNullNode(),
-								),
-								ast.NewMappingEntryNode(
-									ast.NewTextNode("item3"),
-									ast.NewNullNode(),
+									ast.NewTextNode("name"),
+									ast.NewTextNode("Everyone has same name"),
 								),
 							}),
 						),
-						ast.NewMappingEntryNode(
-							ast.NewTextNode("set2"),
-							ast.NewContentNode(nil,
-								ast.NewMappingNode([]ast.Node{
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("item1"),
-										ast.NewTextNode("null"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("item2"),
-										ast.NewTextNode("null"),
-									),
-									ast.NewMappingEntryNode(
-										ast.NewTextNode("item3"),
-										ast.NewTextNode("null"),
-									),
-								}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("foo"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("<<"),
+								ast.NewAliasNode("base"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("age"),
+								ast.NewTextNode("10"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("name"),
+								ast.NewTextNode("John"),
+							),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("bar"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("<<"),
+								ast.NewAliasNode("base"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("age"),
+								ast.NewTextNode("20"),
+							),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("explicit_boolean"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("bool"),
+								ast.NewInvalidNode(),
+							),
+							ast.NewTextNode("true"),
+						),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("explicit_integer"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("int"),
+								ast.NewInvalidNode(),
+							),
+							ast.NewTextNode("42"),
+						),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("explicit_float"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("float"),
+								ast.NewInvalidNode(),
+							),
+							ast.NewTextNode("-42.24"),
+						),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("explicit_string"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("str"),
+								ast.NewInvalidNode(),
+							),
+							ast.NewTextNode("0.5"),
+						),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("explicit_datetime"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("timestamp"),
+								ast.NewInvalidNode(),
+							),
+							ast.NewTextNode("2022-11-17 12:34:56.78 +9"),
+						),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("explicit_null"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("null"),
+								nil,
+							),
+							ast.NewTextNode("null"),
+						),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("python_complex_number"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("python/complex"),
+								ast.NewInvalidNode(),
+							),
+							ast.NewTextNode("1+2j"),
+						),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("python/tuple"),
+								ast.NewInvalidNode(),
+							),
+							ast.NewSequenceNode([]ast.Node{
+								ast.NewTextNode("5"),
+								ast.NewTextNode("7"),
+							}),
+						),
+						ast.NewTextNode("Fifty Seven"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("datetime_canonical"),
+						ast.NewTextNode("2001-12-15T02:59:43.1Z"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("datetime_space_separated_with_time_zone"),
+						ast.NewTextNode("2001-12-14 21:59:43.10 -5"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("date_implicit"),
+						ast.NewTextNode("2002-12-14"),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("date_explicit"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("timestamp"),
+								nil,
+							),
+							ast.NewTextNode("2002-12-14"),
+						),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("gif_file"),
+						ast.NewContentNode(
+							ast.NewPropertiesNode(
+								ast.NewTagNode("binary"),
+								ast.NewInvalidNode(),
+							),
+							ast.NewTextNode("R0lGODlhDAAMAIQAAP//9/X17unp5WZmZgAAAOfn515eXvPz7Y6OjuDg4J+fn5\n"+
+								"OTk6enp56enmlpaWNjY6Ojo4SEhP/++f/++f/++f/++f/++f/++f/++f/++f/+\n"+
+								"+f/++f/++f/++f/++f/++SH+Dk1hZGUgd2l0aCBHSU1QACwAAAAADAAMAAAFLC\n"+
+								"AgjoEwnuNAFOhpEMTRiggcz4BNJHrv/zCFcLiwMWYNG84BwwEeECcgggoBADs=\n",
 							),
 						),
-					}),
-				),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("set"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item1"),
+								ast.NewNullNode(),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item2"),
+								ast.NewNullNode(),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item3"),
+								ast.NewNullNode(),
+							),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("or"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item1"),
+								ast.NewNullNode(),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item2"),
+								ast.NewNullNode(),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item3"),
+								ast.NewNullNode(),
+							),
+						}),
+					),
+					ast.NewMappingEntryNode(
+						ast.NewTextNode("set2"),
+						ast.NewMappingNode([]ast.Node{
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item1"),
+								ast.NewTextNode("null"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item2"),
+								ast.NewTextNode("null"),
+							),
+							ast.NewMappingEntryNode(
+								ast.NewTextNode("item3"),
+								ast.NewTextNode("null"),
+							),
+						}),
+					),
+				}),
 			}),
 		},
 	}

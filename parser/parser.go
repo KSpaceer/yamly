@@ -184,3 +184,10 @@ func (p *parser) rollback() {
 		p.balanceChecker.SetMemento(p.state.balanceCheckMemento)
 	}
 }
+
+func newContentNode(properties ast.Node, content ast.Node) ast.Node {
+	if ast.ValidNode(properties) {
+		content = ast.NewContentNode(properties, content)
+	}
+	return content
+}
