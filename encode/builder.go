@@ -2,13 +2,14 @@ package encode
 
 import (
 	"fmt"
+	"github.com/KSpaceer/yayamls"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/parser"
 	"github.com/KSpaceer/yayamls/schema"
 	"time"
 )
 
-var _ TreeBuilder[ast.Node] = (*ASTBuilder)(nil)
+var _ yayamls.TreeBuilder[ast.Node] = (*ASTBuilder)(nil)
 
 type ASTBuilder struct {
 	root  ast.Node

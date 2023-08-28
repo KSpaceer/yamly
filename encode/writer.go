@@ -3,6 +3,7 @@ package encode
 import (
 	"bytes"
 	"errors"
+	"github.com/KSpaceer/yayamls"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/chars"
 	"io"
@@ -16,7 +17,7 @@ const (
 
 const nullValue = "null"
 
-var _ TreeWriter[ast.Node] = (*ASTWriter)(nil)
+var _ yayamls.TreeWriter[ast.Node] = (*ASTWriter)(nil)
 
 type ASTWriter struct {
 	buf              *bytes.Buffer

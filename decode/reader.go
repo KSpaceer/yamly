@@ -3,46 +3,12 @@ package decode
 import (
 	"errors"
 	"fmt"
+	"github.com/KSpaceer/yayamls"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/encode"
 	"github.com/KSpaceer/yayamls/schema"
 	"time"
 )
-
-type CollectionState interface {
-	Size() int
-	HasUnprocessedItems() bool
-}
-
-type Reader interface {
-	ExpectInteger() (int64, error)
-	ExpectNullableInteger() (int64, bool, error)
-
-	ExpectUnsigned() (uint64, error)
-	ExpectNullableUnsigned() (uint64, bool, error)
-
-	ExpectBoolean() (bool, error)
-	ExpectNullableBoolean() (bool, bool, error)
-
-	ExpectFloat() (float64, error)
-	ExpectNullableFloat() (float64, bool, error)
-
-	ExpectString() (string, error)
-	ExpectNullableString() (string, bool, error)
-
-	ExpectTimestamp() (time.Time, error)
-	ExpectNullableTimestamp() (time.Time, bool, error)
-
-	ExpectSequence() (CollectionState, error)
-	ExpectNullableSequence() (CollectionState, bool, error)
-
-	ExpectMapping() (CollectionState, error)
-	ExpectNullableMapping() (CollectionState, bool, error)
-
-	ExpectAny() (any, error)
-
-	ExpectRaw() ([]byte, error)
-}
 
 type reader struct {
 	route []routePoint
@@ -50,7 +16,7 @@ type reader struct {
 	currentExpecter    expecter
 	lastVisitingResult visitingResult
 
-	extractedCollectionState CollectionState
+	extractedCollectionState yayamls.CollectionState
 	extractedValue           string
 	isExtractedNull          bool
 
@@ -124,14 +90,14 @@ func (s *collectionState) Size() int { return s.size }
 
 func (s *collectionState) HasUnprocessedItems() bool { return !s.empty() }
 
-func newCollectionState(iter nodeIterator, size int) CollectionState {
+func newCollectionState(iter nodeIterator, size int) yayamls.CollectionState {
 	return &collectionState{
 		size:         size,
 		nodeIterator: iter,
 	}
 }
 
-func NewReader(tree ast.Node) Reader {
+func NewDecoder(tree ast.Node) yayamls.Decoder {
 	r := reader{anchors: newAnchorsKeeper()}
 	r.setAST(tree)
 	return &r
@@ -310,7 +276,7 @@ func (r *reader) ExpectNullableTimestamp() (time.Time, bool, error) {
 	return v, true, nil
 }
 
-func (r *reader) ExpectSequence() (CollectionState, error) {
+func (r *reader) ExpectSequence() (yayamls.CollectionState, error) {
 	r.currentExpecter = expectSequence{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -319,7 +285,7 @@ func (r *reader) ExpectSequence() (CollectionState, error) {
 	return r.extractedCollectionState, nil
 }
 
-func (r *reader) ExpectNullableSequence() (CollectionState, bool, error) {
+func (r *reader) ExpectNullableSequence() (yayamls.CollectionState, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectSequence{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -331,7 +297,7 @@ func (r *reader) ExpectNullableSequence() (CollectionState, bool, error) {
 	return r.extractedCollectionState, true, nil
 }
 
-func (r *reader) ExpectMapping() (CollectionState, error) {
+func (r *reader) ExpectMapping() (yayamls.CollectionState, error) {
 	r.currentExpecter = expectMapping{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -340,7 +306,7 @@ func (r *reader) ExpectMapping() (CollectionState, error) {
 	return r.extractedCollectionState, nil
 }
 
-func (r *reader) ExpectNullableMapping() (CollectionState, bool, error) {
+func (r *reader) ExpectNullableMapping() (yayamls.CollectionState, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectMapping{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -457,10 +423,10 @@ func (r *reader) VisitNullNode(n *ast.NullNode) {
 		r.popRoutePoint()
 	case visitingConclusionDeny:
 		r.swapRoutePoint(point)
-		r.appendError(&DenyError{
+		r.appendError(yayamls.DenyError(&denyError{
 			expecter: r.currentExpecter,
 			nt:       n.Type(),
-		})
+		}))
 	default:
 		r.appendError(fmt.Errorf("unexpected conclusion: %s", point.visitingResult.conclusion))
 	}
@@ -504,10 +470,10 @@ func (r *reader) visitTexterNode(n ast.TexterNode) {
 	case visitingConclusionMatch:
 	case visitingConclusionDeny:
 		r.swapRoutePoint(point)
-		r.appendError(&DenyError{
+		r.appendError(yayamls.DenyError(&denyError{
 			expecter: r.currentExpecter,
 			nt:       n.Type(),
-		})
+		}))
 	case visitingConclusionContinue:
 		r.popRoutePoint()
 	default:
@@ -550,10 +516,10 @@ func (r *reader) processComplexPoint(point routePoint, childrenSize int, opts ..
 		r.popRoutePoint()
 	case visitingConclusionMatch:
 	case visitingConclusionDeny:
-		r.appendError(&DenyError{
+		r.appendError(yayamls.DenyError(&denyError{
 			expecter: r.currentExpecter,
 			nt:       point.node.Type(),
-		})
+		}))
 	case visitingConclusionContinue:
 		for r.lastVisitingResult.conclusion == visitingConclusionContinue && !point.iter.empty() {
 			node := point.iter.node()
@@ -590,7 +556,7 @@ func (r *reader) processComplexPoint(point routePoint, childrenSize int, opts ..
 func (r *reader) visitCurrentNode() {
 	n := r.currentNode()
 	if n == nil {
-		r.appendError(EndOfStream)
+		r.appendError(yayamls.EndOfStream)
 	} else {
 		n.Accept(r)
 	}

@@ -1,6 +1,7 @@
 package encode_test
 
 import (
+	"github.com/KSpaceer/yayamls"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/ast/astutils"
 	"github.com/KSpaceer/yayamls/encode"
@@ -13,7 +14,7 @@ import (
 func TestBuilder_Simple(t *testing.T) {
 	type tcase struct {
 		name      string
-		calls     func(b encode.TreeBuilder[ast.Node]) error
+		calls     func(b yayamls.TreeBuilder[ast.Node]) error
 		expected  ast.Node
 		expectErr bool
 	}
@@ -21,70 +22,70 @@ func TestBuilder_Simple(t *testing.T) {
 	tcases := []tcase{
 		{
 			name: "simple integer",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertInteger(15)
 			},
 			expected: ast.NewTextNode("15"),
 		},
 		{
 			name: "simple nullable integer",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertNullableInteger(nil)
 			},
 			expected: ast.NewNullNode(),
 		},
 		{
 			name: "simple unsigned",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertUnsigned(0xFF)
 			},
 			expected: ast.NewTextNode("255"),
 		},
 		{
 			name: "simple nullable unsigned",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertNullableUnsigned(nil)
 			},
 			expected: ast.NewNullNode(),
 		},
 		{
 			name: "simple boolean",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertBoolean(true)
 			},
 			expected: ast.NewTextNode("true"),
 		},
 		{
 			name: "simple nullable boolean",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertNullableBoolean(nil)
 			},
 			expected: ast.NewNullNode(),
 		},
 		{
 			name: "simple float",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertFloat(33e6)
 			},
 			expected: ast.NewTextNode("3.3e+07"),
 		},
 		{
 			name: "simple nullable float",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertNullableFloat(nil)
 			},
 			expected: ast.NewNullNode(),
 		},
 		{
 			name: "simple string",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertString("Null")
 			},
 			expected: ast.NewTextNode("Null", ast.WithQuotingType(ast.DoubleQuotingType)),
 		},
 		{
 			name: "simple timestamp",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.InsertTimestamp(
 					time.Date(2023, 8, 27, 21, 42, 0, 0, time.UTC),
 				)
@@ -96,7 +97,7 @@ func TestBuilder_Simple(t *testing.T) {
 		},
 		{
 			name: "simple sequence",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				if err := b.StartSequence(); err != nil {
 					return err
 				}
@@ -106,7 +107,7 @@ func TestBuilder_Simple(t *testing.T) {
 		},
 		{
 			name: "simple mapping",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				if err := b.StartMapping(); err != nil {
 					return err
 				}
@@ -116,7 +117,7 @@ func TestBuilder_Simple(t *testing.T) {
 		},
 		{
 			name: "ending complex node without starting",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				return b.EndSequence()
 			},
 			expectErr: true,
@@ -147,7 +148,7 @@ func TestBuilder_Simple(t *testing.T) {
 func TestBuilder_Complex(t *testing.T) {
 	type tcase struct {
 		name      string
-		calls     func(b encode.TreeBuilder[ast.Node]) error
+		calls     func(b yayamls.TreeBuilder[ast.Node]) error
 		expected  ast.Node
 		expectErr bool
 	}
@@ -155,7 +156,7 @@ func TestBuilder_Complex(t *testing.T) {
 	tcases := []tcase{
 		{
 			name: "mapping with one pair",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				if err := b.StartMapping(); err != nil {
 					return err
 				}
@@ -176,7 +177,7 @@ func TestBuilder_Complex(t *testing.T) {
 		},
 		{
 			name: "sequence with two entries",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				if err := b.StartSequence(); err != nil {
 					return err
 				}
@@ -195,7 +196,7 @@ func TestBuilder_Complex(t *testing.T) {
 		},
 		{
 			name: "struct-like mapping",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				if err := b.StartMapping(); err != nil {
 					return err
 				}
@@ -275,7 +276,7 @@ func TestBuilder_Complex(t *testing.T) {
 		},
 		{
 			name: "raw insertion",
-			calls: func(b encode.TreeBuilder[ast.Node]) error {
+			calls: func(b yayamls.TreeBuilder[ast.Node]) error {
 				if err := b.StartMapping(); err != nil {
 					return err
 				}
@@ -501,8 +502,8 @@ func TestBuilder_K8SManifest(t *testing.T) {
 	})
 
 	b := encode.NewASTBuilder(encode.WithUnquotedOneLineStrings())
-	var build func(b encode.TreeBuilder[ast.Node]) error
-	build = func(b encode.TreeBuilder[ast.Node]) error {
+	var build func(b yayamls.TreeBuilder[ast.Node]) error
+	build = func(b yayamls.TreeBuilder[ast.Node]) error {
 		if err := b.StartMapping(); err != nil {
 			return err
 		}

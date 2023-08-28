@@ -1,9 +1,13 @@
-package encode
+package yayamls
 
 import (
 	"io"
 	"time"
 )
+
+type Marshaler interface {
+	MarshalYAML() ([]byte, error)
+}
 
 type TreeBuilder[T any] interface {
 	InsertInteger(int64) error
