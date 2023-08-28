@@ -357,7 +357,6 @@ func (w *ASTWriter) reset() {
 	w.indentation = defaultBasicIndentation
 	w.beforeSimple = ""
 	w.beforeComplex = ""
-	w.opts = writeOptions{}
 	clear(w.metAnchors)
 }
 

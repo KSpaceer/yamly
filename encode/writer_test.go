@@ -202,11 +202,12 @@ func TestWriteString(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			w := encode.NewASTWriter()
 			var opts []encode.WriteOption
 			if tc.withAnchors {
 				opts = append(opts, encode.WithAnchorsKeeper(&tc.anchors))
 			}
+
+			w := encode.NewASTWriter(opts...)
 
 			result, err := w.WriteString(tc.ast)
 			if err != nil {
