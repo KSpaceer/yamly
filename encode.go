@@ -9,7 +9,11 @@ type Marshaler interface {
 	MarshalYAML() ([]byte, error)
 }
 
-type TreeBuilder[T any] interface {
+type MarshalerYAYAMLS interface {
+	MarshalYAYAMLS(Inserter) error
+}
+
+type Inserter interface {
 	InsertInteger(int64) error
 	InsertNullableInteger(*int64) error
 
@@ -37,7 +41,17 @@ type TreeBuilder[T any] interface {
 	EndMapping() error
 
 	InsertRaw([]byte) error
+}
 
+type Encoder interface {
+	Inserter
+	EncodeToString() (string, error)
+	EncodeToBytes() ([]byte, error)
+	EncodeTo(dst io.Writer) error
+}
+
+type TreeBuilder[T any] interface {
+	Inserter
 	Result() (T, error)
 }
 
@@ -47,87 +61,91 @@ type TreeWriter[T any] interface {
 	WriteBytes(tree T) ([]byte, error)
 }
 
-type Encoder[T any] struct {
+type encoder[T any] struct {
 	builder TreeBuilder[T]
 	writer  TreeWriter[T]
 }
 
-func NewEncoder[T any](builder TreeBuilder[T], writer TreeWriter[T]) *Encoder[T] {
-	return &Encoder[T]{
+func NewEncoder[T any](builder TreeBuilder[T], writer TreeWriter[T]) Encoder {
+	return &encoder[T]{
 		builder: builder,
 		writer:  writer,
 	}
 }
 
-func (e *Encoder[T]) InsertInteger(val int64) error {
+func (e *encoder[T]) InsertInteger(val int64) error {
 	return e.builder.InsertInteger(val)
 }
 
-func (e *Encoder[T]) InsertNullableInteger(val *int64) error {
+func (e *encoder[T]) InsertNullableInteger(val *int64) error {
 	return e.builder.InsertNullableInteger(val)
 }
 
-func (e *Encoder[T]) InsertUnsigned(val uint64) error {
+func (e *encoder[T]) InsertUnsigned(val uint64) error {
 	return e.builder.InsertUnsigned(val)
 }
 
-func (e *Encoder[T]) InsertNullableUnsigned(val *uint64) error {
+func (e *encoder[T]) InsertNullableUnsigned(val *uint64) error {
 	return e.builder.InsertNullableUnsigned(val)
 }
 
-func (e *Encoder[T]) InsertBoolean(val bool) error {
+func (e *encoder[T]) InsertBoolean(val bool) error {
 	return e.builder.InsertBoolean(val)
 }
 
-func (e *Encoder[T]) InsertNullableBoolean(val *bool) error {
+func (e *encoder[T]) InsertNullableBoolean(val *bool) error {
 	return e.builder.InsertNullableBoolean(val)
 }
 
-func (e *Encoder[T]) InsertFloat(val float64) error {
+func (e *encoder[T]) InsertFloat(val float64) error {
 	return e.builder.InsertFloat(val)
 }
 
-func (e *Encoder[T]) InsertNullableFloat(val *float64) error {
+func (e *encoder[T]) InsertNullableFloat(val *float64) error {
 	return e.builder.InsertNullableFloat(val)
 }
 
-func (e *Encoder[T]) InsertString(val string) error {
+func (e *encoder[T]) InsertString(val string) error {
 	return e.builder.InsertString(val)
 }
 
-func (e *Encoder[T]) InsertNullableString(val *string) error {
+func (e *encoder[T]) InsertNullableString(val *string) error {
 	return e.builder.InsertNullableString(val)
 }
 
-func (e *Encoder[T]) InsertTimestamp(val time.Time) error {
+func (e *encoder[T]) InsertTimestamp(val time.Time) error {
 	return e.builder.InsertTimestamp(val)
 }
 
-func (e *Encoder[T]) InsertNullableTimestamp(val *time.Time) error {
+func (e *encoder[T]) InsertNullableTimestamp(val *time.Time) error {
 	return e.builder.InsertNullableTimestamp(val)
 }
 
-func (e *Encoder[T]) StartSequence() error {
+func (e *encoder[T]) InsertNull() error {
+	return e.builder.InsertNull()
+}
+
+func (e *encoder[T]) StartSequence() error {
 	return e.builder.StartSequence()
 }
 
-func (e *Encoder[T]) EndSequence() error {
+func (e *encoder[T]) EndSequence() error {
 	return e.builder.EndSequence()
 }
 
-func (e *Encoder[T]) StartMapping() error {
+func (e *encoder[T]) StartMapping() error {
 	return e.builder.StartMapping()
 }
 
-func (e *Encoder[T]) EndMapping() error {
+func (e *encoder[T]) EndMapping() error {
 	return e.builder.EndMapping()
 }
 
-func (e *Encoder[T]) InsertRaw(data []byte) error {
+func (e *encoder[T]) InsertRaw(data []byte) error {
 	return e.builder.InsertRaw(data)
 }
 
-func (e *Encoder[T]) EncodeAsString() (string, error) {
+func (e *encoder[T]) EncodeToString() (string, error) {
 	tree, err := e.builder.Result()
 	if err != nil {
 		return "", err
@@ -135,7 +153,7 @@ func (e *Encoder[T]) EncodeAsString() (string, error) {
 	return e.writer.WriteString(tree)
 }
 
-func (e *Encoder[T]) EncodeAsBytes() ([]byte, error) {
+func (e *encoder[T]) EncodeToBytes() ([]byte, error) {
 	tree, err := e.builder.Result()
 	if err != nil {
 		return nil, err
@@ -143,7 +161,7 @@ func (e *Encoder[T]) EncodeAsBytes() ([]byte, error) {
 	return e.writer.WriteBytes(tree)
 }
 
-func (e *Encoder[T]) Encode(dst io.Writer) error {
+func (e *encoder[T]) EncodeTo(dst io.Writer) error {
 	tree, err := e.builder.Result()
 	if err != nil {
 		return err

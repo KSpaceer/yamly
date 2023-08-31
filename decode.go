@@ -14,6 +14,10 @@ type Unmarshaler interface {
 	UnmarshalYAML([]byte) error
 }
 
+type UnmarshalerYAYAMLS interface {
+	UnmarshalYAYAMLS(Decoder) error
+}
+
 type CollectionState interface {
 	Size() int
 	HasUnprocessedItems() bool
