@@ -85,11 +85,19 @@ func generate(path string) error {
 		return fmt.Errorf("Error parsing %v: %v", path, err)
 	}
 
+	if err := os.Chdir(path); err != nil {
+		return err
+	}
+
 	var outputName string
 	if *output != "" {
 		outputName = *output
 	} else {
 		outputName = toSnakeCase(*generatedType) + "_yayamls.go"
+	}
+
+	if filepath.Base(outputName) != outputName {
+		return fmt.Errorf("output name should only contain the file name, not path")
 	}
 
 	var trimmedBuildTags string

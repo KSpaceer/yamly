@@ -73,7 +73,7 @@ func (g *Generator) generateMain() (string, error) {
 	fmt.Fprintln(f)
 	fmt.Fprintf(f, " generator %q\n", generatorPackage)
 	fmt.Fprintln(f)
-	fmt.Fprintf(f, "  pkg %q\n", g.PkgName)
+	fmt.Fprintf(f, "  pkg %q\n", g.PkgPath)
 	fmt.Fprintln(f, ")")
 
 	fmt.Fprintln(f, "func main() {")
@@ -86,7 +86,7 @@ func (g *Generator) generateMain() (string, error) {
 	fmt.Fprintf(f, "  g.SetOmitempty(%t)", g.Omitempty)
 	fmt.Fprintf(f, "  g.SetDisallowUnknownFields(%t)", g.DisallowUnknownFields)
 	fmt.Fprintf(f, "  g.SetMarshalPointerReceiver(%t)", g.MarshalPointerReceiver)
-	fmt.Fprintf(f, "  g.AddType(pkg.Exporter_yayamls_%s)", g.Type)
+	fmt.Fprintf(f, "  g.AddType(pkg.Exporter_yayamls_%s(nil))", g.Type)
 
 	fmt.Fprintln(f, "  if err := g.Generate(os.Stdout); err != nil {")
 	fmt.Fprintln(f, "    fmt.Fprintln(os.Stderr, err)")

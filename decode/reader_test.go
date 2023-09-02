@@ -577,7 +577,7 @@ func TestReader_Simple(t *testing.T) {
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := decode.NewDecoder(tc.ast)
+			r := decode.NewASTReader(tc.ast)
 			vs := valueStore{}
 			err := tc.calls(r, &vs)
 			if err != nil {
@@ -901,7 +901,7 @@ func TestReader_Complex(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parsing failed: %v", err)
 			}
-			r := decode.NewDecoder(tree)
+			r := decode.NewASTReader(tree)
 			vs := valueStore{}
 			if err = tc.calls(r, &vs); err != nil {
 				switch {
@@ -976,7 +976,7 @@ func TestReader_SequencesOfNullables(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parser failed: %v", err)
 			}
-			r := decode.NewDecoder(tree)
+			r := decode.NewASTReader(tree)
 			var values []any
 			methodVal := reflect.ValueOf(r).MethodByName(tc.methodName)
 			err = func() error {
@@ -1151,7 +1151,7 @@ func TestReader_ExpectAny(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parser failed: %v", err)
 			}
-			r := decode.NewDecoder(tree)
+			r := decode.NewASTReader(tree)
 			result, err := r.ExpectAny()
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -1207,7 +1207,7 @@ func TestReader_ExpectRaw(t *testing.T) {
 			if stream, ok := tree.(*ast.StreamNode); ok && len(stream.Documents()) == 1 {
 				tree = stream.Documents()[0]
 			}
-			r := decode.NewDecoder(tree)
+			r := decode.NewASTReader(tree)
 			result, err := r.ExpectRaw()
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -1284,7 +1284,7 @@ func TestReader_K8SManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parser error: %v", err)
 	}
-	r := decode.NewDecoder(tree)
+	r := decode.NewASTReader(tree)
 	var read func(r yayamls.Decoder) error
 	read = func(r yayamls.Decoder) error {
 		manifestState, err := r.ExpectMapping()

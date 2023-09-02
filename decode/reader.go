@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type reader struct {
+type ASTReader struct {
 	route []routePoint
 
 	currentExpecter    expecter
@@ -97,20 +97,20 @@ func newCollectionState(iter nodeIterator, size int) yayamls.CollectionState {
 	}
 }
 
-func NewDecoder(tree ast.Node) yayamls.Decoder {
-	r := reader{anchors: newAnchorsKeeper()}
+func NewASTReader(tree ast.Node) *ASTReader {
+	r := ASTReader{anchors: newAnchorsKeeper()}
 	r.setAST(tree)
 	return &r
 }
 
-func (r *reader) setAST(tree ast.Node) {
+func (r *ASTReader) setAST(tree ast.Node) {
 	r.reset()
 	r.pushRoutePoint(routePoint{
 		node: tree,
 	})
 }
 
-func (r *reader) ExpectInteger() (int64, error) {
+func (r *ASTReader) ExpectInteger() (int64, error) {
 	r.currentExpecter = expectInteger{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -123,7 +123,7 @@ func (r *reader) ExpectInteger() (int64, error) {
 	return v, nil
 }
 
-func (r *reader) ExpectNullableInteger() (int64, bool, error) {
+func (r *ASTReader) ExpectNullableInteger() (int64, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectInteger{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -139,7 +139,7 @@ func (r *reader) ExpectNullableInteger() (int64, bool, error) {
 	return v, true, nil
 }
 
-func (r *reader) ExpectUnsigned() (uint64, error) {
+func (r *ASTReader) ExpectUnsigned() (uint64, error) {
 	r.currentExpecter = expectInteger{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -152,7 +152,7 @@ func (r *reader) ExpectUnsigned() (uint64, error) {
 	return v, nil
 }
 
-func (r *reader) ExpectNullableUnsigned() (uint64, bool, error) {
+func (r *ASTReader) ExpectNullableUnsigned() (uint64, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectInteger{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -168,7 +168,7 @@ func (r *reader) ExpectNullableUnsigned() (uint64, bool, error) {
 	return v, true, nil
 }
 
-func (r *reader) ExpectBoolean() (bool, error) {
+func (r *ASTReader) ExpectBoolean() (bool, error) {
 	r.currentExpecter = expectBoolean{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -181,7 +181,7 @@ func (r *reader) ExpectBoolean() (bool, error) {
 	return v, nil
 }
 
-func (r *reader) ExpectNullableBoolean() (bool, bool, error) {
+func (r *ASTReader) ExpectNullableBoolean() (bool, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectBoolean{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -197,7 +197,7 @@ func (r *reader) ExpectNullableBoolean() (bool, bool, error) {
 	return v, true, nil
 }
 
-func (r *reader) ExpectFloat() (float64, error) {
+func (r *ASTReader) ExpectFloat() (float64, error) {
 	r.currentExpecter = expectFloat{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -210,7 +210,7 @@ func (r *reader) ExpectFloat() (float64, error) {
 	return v, nil
 }
 
-func (r *reader) ExpectNullableFloat() (float64, bool, error) {
+func (r *ASTReader) ExpectNullableFloat() (float64, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectFloat{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -226,7 +226,7 @@ func (r *reader) ExpectNullableFloat() (float64, bool, error) {
 	return v, true, nil
 }
 
-func (r *reader) ExpectString() (string, error) {
+func (r *ASTReader) ExpectString() (string, error) {
 	r.currentExpecter = expectString{checkForNull: true}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -235,7 +235,7 @@ func (r *reader) ExpectString() (string, error) {
 	return r.extractedValue, nil
 }
 
-func (r *reader) ExpectNullableString() (string, bool, error) {
+func (r *ASTReader) ExpectNullableString() (string, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectString{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -247,7 +247,7 @@ func (r *reader) ExpectNullableString() (string, bool, error) {
 	return r.extractedValue, true, nil
 }
 
-func (r *reader) ExpectTimestamp() (time.Time, error) {
+func (r *ASTReader) ExpectTimestamp() (time.Time, error) {
 	r.currentExpecter = expectTimestamp{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -260,7 +260,7 @@ func (r *reader) ExpectTimestamp() (time.Time, error) {
 	return v, nil
 }
 
-func (r *reader) ExpectNullableTimestamp() (time.Time, bool, error) {
+func (r *ASTReader) ExpectNullableTimestamp() (time.Time, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectTimestamp{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -276,7 +276,7 @@ func (r *reader) ExpectNullableTimestamp() (time.Time, bool, error) {
 	return v, true, nil
 }
 
-func (r *reader) ExpectSequence() (yayamls.CollectionState, error) {
+func (r *ASTReader) ExpectSequence() (yayamls.CollectionState, error) {
 	r.currentExpecter = expectSequence{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -285,7 +285,7 @@ func (r *reader) ExpectSequence() (yayamls.CollectionState, error) {
 	return r.extractedCollectionState, nil
 }
 
-func (r *reader) ExpectNullableSequence() (yayamls.CollectionState, bool, error) {
+func (r *ASTReader) ExpectNullableSequence() (yayamls.CollectionState, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectSequence{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -297,7 +297,7 @@ func (r *reader) ExpectNullableSequence() (yayamls.CollectionState, bool, error)
 	return r.extractedCollectionState, true, nil
 }
 
-func (r *reader) ExpectMapping() (yayamls.CollectionState, error) {
+func (r *ASTReader) ExpectMapping() (yayamls.CollectionState, error) {
 	r.currentExpecter = expectMapping{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -306,7 +306,7 @@ func (r *reader) ExpectMapping() (yayamls.CollectionState, error) {
 	return r.extractedCollectionState, nil
 }
 
-func (r *reader) ExpectNullableMapping() (yayamls.CollectionState, bool, error) {
+func (r *ASTReader) ExpectNullableMapping() (yayamls.CollectionState, bool, error) {
 	r.currentExpecter = expectNullable{underlying: expectMapping{}}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -318,7 +318,7 @@ func (r *reader) ExpectNullableMapping() (yayamls.CollectionState, bool, error) 
 	return r.extractedCollectionState, true, nil
 }
 
-func (r *reader) ExpectAny() (any, error) {
+func (r *ASTReader) ExpectAny() (any, error) {
 	r.currentExpecter = expectAny{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -333,7 +333,7 @@ func (r *reader) ExpectAny() (any, error) {
 	return v, nil
 }
 
-func (r *reader) ExpectRaw() ([]byte, error) {
+func (r *ASTReader) ExpectRaw() ([]byte, error) {
 	r.currentExpecter = expectRaw{}
 	r.visitCurrentNode()
 	if r.hasErrors() {
@@ -348,7 +348,7 @@ func (r *reader) ExpectRaw() ([]byte, error) {
 	return v, nil
 }
 
-func (r *reader) VisitStreamNode(n *ast.StreamNode) {
+func (r *ASTReader) VisitStreamNode(n *ast.StreamNode) {
 	point := r.peekRoutePoint()
 	if point.visitingResult.conclusion == visitingConclusionUnknown {
 		point.iter = newStreamIterator(n)
@@ -357,17 +357,17 @@ func (r *reader) VisitStreamNode(n *ast.StreamNode) {
 	r.processComplexPoint(point, len(n.Documents()))
 }
 
-func (r *reader) VisitTagNode(n *ast.TagNode) {
+func (r *ASTReader) VisitTagNode(n *ast.TagNode) {
 	r.visitTexterNode(n)
 }
 
-func (r *reader) VisitAnchorNode(n *ast.AnchorNode) {
+func (r *ASTReader) VisitAnchorNode(n *ast.AnchorNode) {
 	r.anchors.StoreAnchor(n.Text())
 
 	r.visitTexterNode(n)
 }
 
-func (r *reader) VisitAliasNode(n *ast.AliasNode) {
+func (r *ASTReader) VisitAliasNode(n *ast.AliasNode) {
 	anchored, err := r.anchors.DereferenceAlias(n.Text())
 	if err != nil {
 		r.appendError(err)
@@ -379,11 +379,11 @@ func (r *reader) VisitAliasNode(n *ast.AliasNode) {
 	}
 }
 
-func (r *reader) VisitTextNode(n *ast.TextNode) {
+func (r *ASTReader) VisitTextNode(n *ast.TextNode) {
 	r.visitTexterNode(n)
 }
 
-func (r *reader) VisitSequenceNode(n *ast.SequenceNode) {
+func (r *ASTReader) VisitSequenceNode(n *ast.SequenceNode) {
 	point := r.peekRoutePoint()
 	if point.visitingResult.conclusion == visitingConclusionUnknown {
 		point.iter = newSequenceIterator(n)
@@ -392,7 +392,7 @@ func (r *reader) VisitSequenceNode(n *ast.SequenceNode) {
 	r.processComplexPoint(point, len(n.Entries()))
 }
 
-func (r *reader) VisitMappingNode(n *ast.MappingNode) {
+func (r *ASTReader) VisitMappingNode(n *ast.MappingNode) {
 	point := r.peekRoutePoint()
 	if point.visitingResult.conclusion == visitingConclusionUnknown {
 		point.iter = newMappingIterator(n)
@@ -401,7 +401,7 @@ func (r *reader) VisitMappingNode(n *ast.MappingNode) {
 	r.processComplexPoint(point, len(n.Entries()))
 }
 
-func (r *reader) VisitMappingEntryNode(n *ast.MappingEntryNode) {
+func (r *ASTReader) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	point := r.peekRoutePoint()
 	if point.visitingResult.conclusion == visitingConclusionUnknown {
 		point.iter = newMappingEntryIterator(n)
@@ -410,7 +410,7 @@ func (r *reader) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	r.processComplexPoint(point, 2)
 }
 
-func (r *reader) VisitNullNode(n *ast.NullNode) {
+func (r *ASTReader) VisitNullNode(n *ast.NullNode) {
 	point := r.peekRoutePoint()
 
 	point.visitingResult = r.currentExpecter.process(n, point.visitingResult)
@@ -441,7 +441,7 @@ func (r *reader) VisitNullNode(n *ast.NullNode) {
 	}
 }
 
-func (r *reader) VisitPropertiesNode(n *ast.PropertiesNode) {
+func (r *ASTReader) VisitPropertiesNode(n *ast.PropertiesNode) {
 	point := r.peekRoutePoint()
 	if point.visitingResult.conclusion == visitingConclusionUnknown {
 		point.iter = newPropertiesIterator(n)
@@ -450,7 +450,7 @@ func (r *reader) VisitPropertiesNode(n *ast.PropertiesNode) {
 	r.processComplexPoint(point, 2)
 }
 
-func (r *reader) VisitContentNode(n *ast.ContentNode) {
+func (r *ASTReader) VisitContentNode(n *ast.ContentNode) {
 	point := r.peekRoutePoint()
 	if point.visitingResult.conclusion == visitingConclusionUnknown {
 		point.iter = newContentIterator(n)
@@ -459,7 +459,7 @@ func (r *reader) VisitContentNode(n *ast.ContentNode) {
 	r.processComplexPoint(point, 2, beforeVisit(r.anchors.BindToLatestAnchor))
 }
 
-func (r *reader) visitTexterNode(n ast.TexterNode) {
+func (r *ASTReader) visitTexterNode(n ast.TexterNode) {
 	point := r.peekRoutePoint()
 
 	point.visitingResult = r.currentExpecter.process(n, point.visitingResult)
@@ -502,7 +502,7 @@ func beforeVisit(f func(ast.Node)) complexPointOption {
 	})
 }
 
-func (r *reader) processComplexPoint(point routePoint, childrenSize int, opts ...complexPointOption) {
+func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts ...complexPointOption) {
 	var o complexPointOptions
 	for _, opt := range opts {
 		opt(&o)
@@ -553,7 +553,7 @@ func (r *reader) processComplexPoint(point routePoint, childrenSize int, opts ..
 	}
 }
 
-func (r *reader) visitCurrentNode() {
+func (r *ASTReader) visitCurrentNode() {
 	n := r.currentNode()
 	if n == nil {
 		r.appendError(yayamls.EndOfStream)
@@ -562,7 +562,7 @@ func (r *reader) visitCurrentNode() {
 	}
 }
 
-func (r *reader) reset() {
+func (r *ASTReader) reset() {
 	r.route = r.route[:0]
 	r.currentExpecter = nil
 	r.lastVisitingResult = visitingResult{}
@@ -573,18 +573,18 @@ func (r *reader) reset() {
 	r.errors = r.errors[:0]
 }
 
-func (r *reader) currentNode() ast.Node {
+func (r *ASTReader) currentNode() ast.Node {
 	if len(r.route) == 0 {
 		return nil
 	}
 	return r.route[len(r.route)-1].node
 }
 
-func (r *reader) pushRoutePoint(point routePoint) {
+func (r *ASTReader) pushRoutePoint(point routePoint) {
 	r.route = append(r.route, point)
 }
 
-func (r *reader) popRoutePoint() routePoint {
+func (r *ASTReader) popRoutePoint() routePoint {
 	if len(r.route) == 0 {
 		return routePoint{}
 	}
@@ -593,7 +593,7 @@ func (r *reader) popRoutePoint() routePoint {
 	return point
 }
 
-func (r *reader) peekRoutePoint() routePoint {
+func (r *ASTReader) peekRoutePoint() routePoint {
 	if len(r.route) == 0 {
 		return routePoint{}
 	}
@@ -601,22 +601,22 @@ func (r *reader) peekRoutePoint() routePoint {
 	return point
 }
 
-func (r *reader) swapRoutePoint(point routePoint) {
+func (r *ASTReader) swapRoutePoint(point routePoint) {
 	if len(r.route) == 0 {
 		return
 	}
 	r.route[len(r.route)-1] = point
 }
 
-func (r *reader) appendError(err error) {
+func (r *ASTReader) appendError(err error) {
 	r.errors = append(r.errors, err)
 }
 
-func (r *reader) hasErrors() bool {
+func (r *ASTReader) hasErrors() bool {
 	return len(r.errors) > 0
 }
 
-func (r *reader) error() error {
+func (r *ASTReader) error() error {
 	err := errors.Join(r.errors...)
 	r.errors = r.errors[:0]
 	return err
