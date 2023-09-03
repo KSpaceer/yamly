@@ -85,18 +85,18 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 	case reflect.Slice:
 		elem := t.Elem()
 		if elem.Kind() == reflect.Uint8 && elem.Name() == "uint8" {
-			resultVar, isNotNullVar := g.generateVarName(), g.generateVarName("IsNotNull")
-			fmt.Fprintln(g.out, whitespace+resultVar+", "+isNotNullVar+" := in.ExpectNullableString()")
-			fmt.Fprintln(g.out, whitespace+"if "+isNotNullVar+" {")
-			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = []byte("+resultVar+")")
-			fmt.Fprintln(g.out, whitespace+"} else {")
+			fmt.Fprintln(g.out, whitespace+"if in.TryNull() {")
 			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
+			fmt.Fprintln(g.out, whitespace+"} else {")
+			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = []byte(in.String())")
 			fmt.Fprintln(g.out, whitespace+"}")
 		} else {
-			sliceStateVar, isNotNullVar := g.generateVarName("SeqState"), g.generateVarName("IsNotNull")
+			sliceStateVar := g.generateVarName("SeqState")
 			sliceElemVar := g.generateVarName()
-			fmt.Fprintln(g.out, whitespace+sliceStateVar+", "+isNotNullVar+" := in.ExpectNullableSequence()")
-			fmt.Fprintln(g.out, whitespace+"if "+isNotNullVar+" {")
+			fmt.Fprintln(g.out, whitespace+"if in.TryNull() {")
+			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
+			fmt.Fprintln(g.out, whitespace+"} else {")
+			fmt.Fprintln(g.out, whitespace+"  "+sliceStateVar+" := in.Sequence()")
 			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = make("+g.extractTypeName(t)+", 0, "+sliceStateVar+".Size())")
 			fmt.Fprintln(g.out, whitespace+"  for "+sliceStateVar+".HasUnprocessedItems() {")
 			fmt.Fprintln(g.out, whitespace+"    var "+sliceElemVar+" "+g.extractTypeName(elem))
@@ -107,27 +107,21 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			}
 
 			fmt.Fprintln(g.out, whitespace+"  }")
-			fmt.Fprintln(g.out, whitespace+"} else {")
-			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
 			fmt.Fprintln(g.out, whitespace+"}")
 		}
 	case reflect.Array:
 		elem := t.Elem()
 
 		if elem.Kind() == reflect.Uint8 && elem.Name() == "uint8" {
-			resultVar, isNotNullVar := g.generateVarName(), g.generateVarName("IsNotNull")
-			fmt.Fprintln(g.out, whitespace+resultVar+", "+isNotNullVar+" := in.ExpectNullableString()")
-			fmt.Fprintln(g.out, whitespace+"if "+isNotNullVar+" {")
-			fmt.Fprintln(g.out, whitespace+"  copy("+outArg+", []byte("+resultVar+")[:])")
-			fmt.Fprintln(g.out, whitespace+"} else {")
-			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
+			fmt.Fprintln(g.out, whitespace+"if !in.TryNull() {")
+			fmt.Fprintln(g.out, whitespace+"  copy("+outArg+", []byte(in.String())[:])")
 			fmt.Fprintln(g.out, whitespace+"}")
 		} else {
-			arrayStateVar, isNotNullVar := g.generateVarName("SeqState"), g.generateVarName("IsNotNull")
+			arrayStateVar := g.generateVarName("SeqState")
 			iterVar := g.generateVarName()
-			fmt.Fprintln(g.out, whitespace+arrayStateVar+", "+isNotNullVar+" := in.ExpectNullableSequence()")
-			fmt.Fprintln(g.out, whitespace+"if "+isNotNullVar+" {")
+			fmt.Fprintln(g.out, whitespace+"if !in.TryNull() {")
 			fmt.Fprintln(g.out, whitespace+"  "+iterVar+" := 0")
+			fmt.Fprintln(g.out, whitespace+"  "+arrayStateVar+" := in.Sequence()")
 			fmt.Fprintln(g.out, whitespace+"  for "+arrayStateVar+".HasUnprocessedItems() && "+iterVar+" < "+strconv.Itoa(t.Len())+"{")
 
 			if err := g.generateDecoderBody(elem, "("+outArg+")["+iterVar+"]", tags, indent+4); err != nil {
@@ -135,8 +129,6 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			}
 			fmt.Fprintln(g.out, whitespace+"    "+iterVar+"++")
 			fmt.Fprintln(g.out, whitespace+"  }")
-			fmt.Fprintln(g.out, whitespace+"} else {")
-			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
 			fmt.Fprintln(g.out, whitespace+"}")
 		}
 	case reflect.Struct:
@@ -149,7 +141,55 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			fmt.Fprintln(g.out, whitespace+dec+"(in, &"+outArg+")")
 		}
 	case reflect.Pointer:
+		fmt.Fprintln(g.out, whitespace+"if in.TryNull() {")
+		fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
+		fmt.Fprintln(g.out, whitespace+"} else {")
+		fmt.Fprintln(g.out, whitespace+"  if "+outArg+" == nil {")
+		fmt.Fprintln(g.out, whitespace+"    "+outArg+" = new("+g.extractTypeName(t.Elem())+")")
+		fmt.Fprintln(g.out, whitespace+"  }")
 
+		if err := g.generateDecoderBody(t.Elem(), "*"+outArg, tags, indent+2); err != nil {
+			return err
+		}
+
+		fmt.Fprintln(g.out, whitespace+"}")
+	case reflect.Map:
+		mapStateVar := g.generateVarName("MapState")
+		key, elem := t.Key(), t.Elem()
+		keyVar, valueVar := g.generateVarName(), g.generateVarName()
+		fmt.Fprintln(g.out, whitespace+"if in.TryNull() {")
+		fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
+		fmt.Fprintln(g.out, whitespace+"} else {")
+		fmt.Fprintln(g.out, whitespace+"  "+mapStateVar+" := in.Mapping()")
+		if g.omitempty || tags.omitempty {
+			fmt.Fprintln(g.out, whitespace+"  if "+mapStateVar+".Size() == 0 {")
+			fmt.Fprintln(g.out, "    "+outArg+" = nil")
+			fmt.Fprintln(g.out, "  } else {")
+			fmt.Fprintln(g.out, whitespace+"    "+outArg+" = make(map["+g.extractTypeName(key)+"]"+g.extractTypeName(elem)+", "+
+				mapStateVar+".Size())")
+			fmt.Fprintln(g.out, whitespace+"  }")
+		} else {
+			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = make(map["+g.extractTypeName(key)+"]"+g.extractTypeName(elem)+", "+
+				mapStateVar+".Size())")
+		}
+		fmt.Fprintln(g.out, whitespace+"  var (")
+		fmt.Fprintln(g.out, whitespace+"    "+keyVar+" "+g.extractTypeName(key))
+		fmt.Fprintln(g.out, whitespace+"    "+valueVar+" "+g.extractTypeName(elem))
+		fmt.Fprintln(g.out, whitespace+"  )")
+		fmt.Fprintln(g.out)
+		fmt.Fprintln(g.out, whitespace+"  for "+mapStateVar+".HasUnprocessedItems() {")
+
+		if err := g.generateDecoderBody(key, keyVar, tags, indent+4); err != nil {
+			return err
+		}
+
+		if err := g.generateDecoderBody(elem, valueVar, tags, indent+4); err != nil {
+			return err
+		}
+
+		fmt.Fprintln(g.out, whitespace+"    "+outArg+"["+keyVar+"] = "+valueVar)
+		fmt.Fprintln(g.out, whitespace+"  }")
+		fmt.Fprintln(g.out, whitespace+"}")
 	}
 }
 
