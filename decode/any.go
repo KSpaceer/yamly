@@ -158,11 +158,11 @@ func (a *anyBuilder) extractAnyValueFromText(n *ast.TextNode) {
 	case schema.IsTimestamp(n):
 		a.value, err = schema.ToTimestamp(n.Text())
 	case schema.IsUnsignedInteger(n):
-		a.value, err = schema.ToUnsignedInteger(n.Text())
+		a.value, err = schema.ToUnsignedInteger(n.Text(), 64)
 	case schema.IsInteger(n):
-		a.value, err = schema.ToInteger(n.Text())
+		a.value, err = schema.ToInteger(n.Text(), 64)
 	case schema.IsFloat(n):
-		a.value, err = schema.ToFloat(n.Text())
+		a.value, err = schema.ToFloat(n.Text(), 64)
 	case schema.IsBoolean(n):
 		a.value, err = schema.ToBoolean(n.Text())
 	default:

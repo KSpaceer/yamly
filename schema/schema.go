@@ -89,7 +89,7 @@ func FromInteger(val int64) string {
 	return strconv.FormatInt(val, 10)
 }
 
-func ToInteger(src string) (int64, error) {
+func ToInteger(src string, bitSize int) (int64, error) {
 	return strconv.ParseInt(src, 0, 64)
 }
 
@@ -97,7 +97,7 @@ func FromUnsignedInteger(val uint64) string {
 	return strconv.FormatUint(val, 10)
 }
 
-func ToUnsignedInteger(src string) (uint64, error) {
+func ToUnsignedInteger(src string, bitSize int) (uint64, error) {
 	return strconv.ParseUint(src, 0, 64)
 }
 
@@ -131,7 +131,7 @@ func FromFloat(val float64) string {
 	}
 }
 
-func ToFloat(src string) (float64, error) {
+func ToFloat(src string, bitSize int) (float64, error) {
 	switch {
 	case yamlFloatInfinityRegex.MatchString(src):
 		sign := 1
@@ -142,7 +142,7 @@ func ToFloat(src string) (float64, error) {
 	case yamlNotANumberRegex.MatchString(src):
 		return math.NaN(), nil
 	default:
-		return strconv.ParseFloat(src, 64)
+		return strconv.ParseFloat(src, bitSize)
 	}
 }
 

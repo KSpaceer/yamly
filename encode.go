@@ -14,33 +14,33 @@ type MarshalerYAYAMLS interface {
 }
 
 type Inserter interface {
-	InsertInteger(int64) error
-	InsertNullableInteger(*int64) error
+	InsertInteger(int64)
+	InsertNullableInteger(*int64)
 
-	InsertUnsigned(uint64) error
-	InsertNullableUnsigned(*uint64) error
+	InsertUnsigned(uint64)
+	InsertNullableUnsigned(*uint64)
 
-	InsertBoolean(bool) error
-	InsertNullableBoolean(*bool) error
+	InsertBoolean(bool)
+	InsertNullableBoolean(*bool)
 
-	InsertFloat(float64) error
-	InsertNullableFloat(*float64) error
+	InsertFloat(float64)
+	InsertNullableFloat(*float64)
 
-	InsertString(string) error
-	InsertNullableString(*string) error
+	InsertString(string)
+	InsertNullableString(*string)
 
-	InsertTimestamp(time.Time) error
-	InsertNullableTimestamp(*time.Time) error
+	InsertTimestamp(time.Time)
+	InsertNullableTimestamp(*time.Time)
 
-	InsertNull() error
+	InsertNull()
 
-	StartSequence() error
-	EndSequence() error
+	StartSequence()
+	EndSequence()
 
-	StartMapping() error
-	EndMapping() error
+	StartMapping()
+	EndMapping()
 
-	InsertRaw([]byte) error
+	InsertRaw([]byte)
 }
 
 type Encoder interface {
@@ -73,76 +73,76 @@ func NewEncoder[T any](builder TreeBuilder[T], writer TreeWriter[T]) Encoder {
 	}
 }
 
-func (e *encoder[T]) InsertInteger(val int64) error {
-	return e.builder.InsertInteger(val)
+func (e *encoder[T]) InsertInteger(val int64) {
+	e.builder.InsertInteger(val)
 }
 
-func (e *encoder[T]) InsertNullableInteger(val *int64) error {
-	return e.builder.InsertNullableInteger(val)
+func (e *encoder[T]) InsertNullableInteger(val *int64) {
+	e.builder.InsertNullableInteger(val)
 }
 
-func (e *encoder[T]) InsertUnsigned(val uint64) error {
-	return e.builder.InsertUnsigned(val)
+func (e *encoder[T]) InsertUnsigned(val uint64) {
+	e.builder.InsertUnsigned(val)
 }
 
-func (e *encoder[T]) InsertNullableUnsigned(val *uint64) error {
-	return e.builder.InsertNullableUnsigned(val)
+func (e *encoder[T]) InsertNullableUnsigned(val *uint64) {
+	e.builder.InsertNullableUnsigned(val)
 }
 
-func (e *encoder[T]) InsertBoolean(val bool) error {
-	return e.builder.InsertBoolean(val)
+func (e *encoder[T]) InsertBoolean(val bool) {
+	e.builder.InsertBoolean(val)
 }
 
-func (e *encoder[T]) InsertNullableBoolean(val *bool) error {
-	return e.builder.InsertNullableBoolean(val)
+func (e *encoder[T]) InsertNullableBoolean(val *bool) {
+	e.builder.InsertNullableBoolean(val)
 }
 
-func (e *encoder[T]) InsertFloat(val float64) error {
-	return e.builder.InsertFloat(val)
+func (e *encoder[T]) InsertFloat(val float64) {
+	e.builder.InsertFloat(val)
 }
 
-func (e *encoder[T]) InsertNullableFloat(val *float64) error {
-	return e.builder.InsertNullableFloat(val)
+func (e *encoder[T]) InsertNullableFloat(val *float64) {
+	e.builder.InsertNullableFloat(val)
 }
 
-func (e *encoder[T]) InsertString(val string) error {
-	return e.builder.InsertString(val)
+func (e *encoder[T]) InsertString(val string) {
+	e.builder.InsertString(val)
 }
 
-func (e *encoder[T]) InsertNullableString(val *string) error {
-	return e.builder.InsertNullableString(val)
+func (e *encoder[T]) InsertNullableString(val *string) {
+	e.builder.InsertNullableString(val)
 }
 
-func (e *encoder[T]) InsertTimestamp(val time.Time) error {
-	return e.builder.InsertTimestamp(val)
+func (e *encoder[T]) InsertTimestamp(val time.Time) {
+	e.builder.InsertTimestamp(val)
 }
 
-func (e *encoder[T]) InsertNullableTimestamp(val *time.Time) error {
-	return e.builder.InsertNullableTimestamp(val)
+func (e *encoder[T]) InsertNullableTimestamp(val *time.Time) {
+	e.builder.InsertNullableTimestamp(val)
 }
 
-func (e *encoder[T]) InsertNull() error {
-	return e.builder.InsertNull()
+func (e *encoder[T]) InsertNull() {
+	e.builder.InsertNull()
 }
 
-func (e *encoder[T]) StartSequence() error {
-	return e.builder.StartSequence()
+func (e *encoder[T]) StartSequence() {
+	e.builder.StartSequence()
 }
 
-func (e *encoder[T]) EndSequence() error {
-	return e.builder.EndSequence()
+func (e *encoder[T]) EndSequence() {
+	e.builder.EndSequence()
 }
 
-func (e *encoder[T]) StartMapping() error {
-	return e.builder.StartMapping()
+func (e *encoder[T]) StartMapping() {
+	e.builder.StartMapping()
 }
 
-func (e *encoder[T]) EndMapping() error {
-	return e.builder.EndMapping()
+func (e *encoder[T]) EndMapping() {
+	e.builder.EndMapping()
 }
 
-func (e *encoder[T]) InsertRaw(data []byte) error {
-	return e.builder.InsertRaw(data)
+func (e *encoder[T]) InsertRaw(data []byte) {
+	e.builder.InsertRaw(data)
 }
 
 func (e *encoder[T]) EncodeToString() (string, error) {

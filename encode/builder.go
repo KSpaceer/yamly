@@ -16,6 +16,8 @@ type ASTBuilder struct {
 	route []ast.Node
 
 	opts builderOpts
+
+	fatalError error
 }
 
 type builderOpts struct {
@@ -39,122 +41,133 @@ func NewASTBuilder(opts ...ASTBuilderOption) *ASTBuilder {
 	return &b
 }
 
-func (t *ASTBuilder) InsertInteger(val int64) error {
-	return insertNonNullValue(t, val, schema.FromInteger, ast.AbsentQuotingType)
+func (t *ASTBuilder) InsertInteger(val int64) {
+	insertNonNullValue(t, val, schema.FromInteger, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertNullableInteger(val *int64) error {
-	return insertNullableValue(t, val, schema.FromInteger, ast.AbsentQuotingType)
+func (t *ASTBuilder) InsertNullableInteger(val *int64) {
+	insertNullableValue(t, val, schema.FromInteger, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertUnsigned(val uint64) error {
-	return insertNonNullValue(t, val, schema.FromUnsignedInteger, ast.AbsentQuotingType)
+func (t *ASTBuilder) InsertUnsigned(val uint64) {
+	insertNonNullValue(t, val, schema.FromUnsignedInteger, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertNullableUnsigned(val *uint64) error {
-	return insertNullableValue(t, val, schema.FromUnsignedInteger, ast.AbsentQuotingType)
+func (t *ASTBuilder) InsertNullableUnsigned(val *uint64) {
+	insertNullableValue(t, val, schema.FromUnsignedInteger, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertBoolean(val bool) error {
-	return insertNonNullValue(t, val, schema.FromBoolean, ast.AbsentQuotingType)
+func (t *ASTBuilder) InsertBoolean(val bool) {
+	insertNonNullValue(t, val, schema.FromBoolean, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertNullableBoolean(val *bool) error {
-	return insertNullableValue(t, val, schema.FromBoolean, ast.AbsentQuotingType)
+func (t *ASTBuilder) InsertNullableBoolean(val *bool) {
+	insertNullableValue(t, val, schema.FromBoolean, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertFloat(val float64) error {
-	return insertNonNullValue(t, val, schema.FromFloat, ast.AbsentQuotingType)
+func (t *ASTBuilder) InsertFloat(val float64) {
+	insertNonNullValue(t, val, schema.FromFloat, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertNullableFloat(val *float64) error {
-	return insertNullableValue(t, val, schema.FromFloat, ast.AbsentQuotingType)
+func (t *ASTBuilder) InsertNullableFloat(val *float64) {
+	insertNullableValue(t, val, schema.FromFloat, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertString(val string) error {
+func (t *ASTBuilder) InsertString(val string) {
 	quoting := ast.DoubleQuotingType
 	if t.opts.unquoteOneliners && !isMultiline(val) {
 		quoting = ast.AbsentQuotingType
 	}
-	return insertNonNullValue(t, val, func(t string) string { return t }, quoting)
+	insertNonNullValue(t, val, func(t string) string { return t }, quoting)
 }
 
-func (t *ASTBuilder) InsertNullableString(val *string) error {
+func (t *ASTBuilder) InsertNullableString(val *string) {
 	quoting := ast.DoubleQuotingType
 	if t.opts.unquoteOneliners && val != nil && !isMultiline(*val) {
 		quoting = ast.AbsentQuotingType
 	}
-	return insertNullableValue(t, val, func(t string) string { return t }, quoting)
+	insertNullableValue(t, val, func(t string) string { return t }, quoting)
 }
 
-func (t *ASTBuilder) InsertTimestamp(val time.Time) error {
-	return insertNonNullValue(t, val, schema.FromTimestamp, ast.DoubleQuotingType)
+func (t *ASTBuilder) InsertTimestamp(val time.Time) {
+	insertNonNullValue(t, val, schema.FromTimestamp, ast.DoubleQuotingType)
 }
 
-func (t *ASTBuilder) InsertNullableTimestamp(val *time.Time) error {
-	return insertNullableValue(t, val, schema.FromTimestamp, ast.DoubleQuotingType)
+func (t *ASTBuilder) InsertNullableTimestamp(val *time.Time) {
+	insertNullableValue(t, val, schema.FromTimestamp, ast.DoubleQuotingType)
 }
 
-func (t *ASTBuilder) InsertNull() error {
-	return t.insertNode(ast.NewNullNode(), false)
+func (t *ASTBuilder) InsertNull() {
+	t.insertNode(ast.NewNullNode(), false)
 }
 
-func (t *ASTBuilder) StartSequence() error {
+func (t *ASTBuilder) StartSequence() {
 	sequence := ast.NewSequenceNode(nil)
-	return t.insertNode(sequence, true)
+	t.insertNode(sequence, true)
 }
 
-func (t *ASTBuilder) EndSequence() error {
+func (t *ASTBuilder) EndSequence() {
+	if t.fatalError != nil {
+		return
+	}
 	currentNode := t.currentNode()
 	switch {
 	case !ast.ValidNode(currentNode):
-		return fmt.Errorf("failed to end sequence: got invalid node")
+		t.fatalError = fmt.Errorf("failed to end sequence: got invalid node")
 	case currentNode.Type() != ast.SequenceType:
-		return fmt.Errorf("failed to end sequence: expected sequence, but currenlty at %s", currentNode.Type())
+		t.fatalError = fmt.Errorf("failed to end sequence: expected sequence, but currenlty at %s", currentNode.Type())
 	default:
 		t.popNode()
-		return nil
 	}
 }
 
-func (t *ASTBuilder) StartMapping() error {
+func (t *ASTBuilder) StartMapping() {
 	mapping := ast.NewMappingNode(nil)
-	return t.insertNode(mapping, true)
+	t.insertNode(mapping, true)
 }
 
-func (t *ASTBuilder) EndMapping() error {
+func (t *ASTBuilder) EndMapping() {
+	if t.fatalError != nil {
+		return
+	}
 	currentNode := t.currentNode()
 	switch {
 	case !ast.ValidNode(currentNode):
-		return fmt.Errorf("failed to end mapping: got invalid node")
+		t.fatalError = fmt.Errorf("failed to end mapping: got invalid node")
 	case currentNode.Type() != ast.MappingType:
-		return fmt.Errorf("failed to end mapping: expected mapping, but currenlty at %s", currentNode.Type())
+		t.fatalError = fmt.Errorf("failed to end mapping: expected mapping, but currenlty at %s", currentNode.Type())
 	default:
 		t.popNode()
-		return nil
 	}
 }
 
-func (t *ASTBuilder) InsertRaw(data []byte) error {
+func (t *ASTBuilder) InsertRaw(data []byte) {
+	if t.fatalError != nil {
+		return
+	}
 	tree, err := parser.ParseBytes(data, parser.WithOmitStream())
 	if err != nil {
-		return err
+		t.fatalError = err
+		return
 	}
 	if tree.Type() == ast.StreamType {
-		return fmt.Errorf("failed to insert raw: expected single document, got stream of documents")
+		t.fatalError = fmt.Errorf("failed to insert raw: expected single document, got stream of documents")
+		return
 	}
-	return t.insertNode(tree, false)
+	t.insertNode(tree, false)
 }
 
 func (t *ASTBuilder) Result() (ast.Node, error) {
 	root := t.root
+	err := t.fatalError
 	t.route = t.route[:0]
 	t.root = nil
-	return root, nil
+	t.fatalError = nil
+	return root, err
 }
 
-func insertNonNullValue[T any](t *ASTBuilder, val T, converter func(T) string, quotingType ast.QuotingType) error {
-	return t.insertNode(
+func insertNonNullValue[T any](t *ASTBuilder, val T, converter func(T) string, quotingType ast.QuotingType) {
+	t.insertNode(
 		ast.NewTextNode(
 			converter(val),
 			ast.WithQuotingType(quotingType),
@@ -168,7 +181,7 @@ func insertNullableValue[T any](
 	val *T,
 	converter func(T) string,
 	quotingType ast.QuotingType,
-) error {
+) {
 	var newNode ast.Node
 
 	if val == nil {
@@ -180,15 +193,18 @@ func insertNullableValue[T any](
 		)
 	}
 
-	return t.insertNode(newNode, false)
+	t.insertNode(newNode, false)
 }
 
-func (t *ASTBuilder) insertNode(n ast.Node, pushToRoute bool) error {
+func (t *ASTBuilder) insertNode(n ast.Node, pushToRoute bool) {
+	if t.fatalError != nil {
+		return
+	}
 	currentNode := t.currentNode()
 	if !ast.ValidNode(currentNode) {
 		t.pushNode(n)
 		t.root = n
-		return nil
+		return
 	}
 
 	switch currentNode.Type() {
@@ -205,7 +221,7 @@ func (t *ASTBuilder) insertNode(n ast.Node, pushToRoute bool) error {
 		sequence := currentNode.(*ast.SequenceNode)
 		sequence.AppendEntry(n)
 	default:
-		return fmt.Errorf(
+		t.fatalError = fmt.Errorf(
 			"cannot insert new node to tree: currenlty at node with type %s",
 			currentNode.Type(),
 		)
@@ -213,7 +229,6 @@ func (t *ASTBuilder) insertNode(n ast.Node, pushToRoute bool) error {
 	if pushToRoute {
 		t.pushNode(n)
 	}
-	return nil
 }
 
 func (t *ASTBuilder) currentNode() ast.Node {

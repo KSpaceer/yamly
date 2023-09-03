@@ -24,33 +24,35 @@ type CollectionState interface {
 }
 
 type Decoder interface {
-	ExpectInteger() (int64, error)
-	ExpectNullableInteger() (int64, bool, error)
+	ExpectInteger(bitSize int) int64
+	ExpectNullableInteger(bitSize int) (int64, bool)
 
-	ExpectUnsigned() (uint64, error)
-	ExpectNullableUnsigned() (uint64, bool, error)
+	ExpectUnsigned(bitSize int) uint64
+	ExpectNullableUnsigned(bitSize int) (uint64, bool)
 
-	ExpectBoolean() (bool, error)
-	ExpectNullableBoolean() (bool, bool, error)
+	ExpectBoolean() bool
+	ExpectNullableBoolean() (bool, bool)
 
-	ExpectFloat() (float64, error)
-	ExpectNullableFloat() (float64, bool, error)
+	ExpectFloat(bitSize int) float64
+	ExpectNullableFloat(bitSize int) (float64, bool)
 
-	ExpectString() (string, error)
-	ExpectNullableString() (string, bool, error)
+	ExpectString() string
+	ExpectNullableString() (string, bool)
 
-	ExpectTimestamp() (time.Time, error)
-	ExpectNullableTimestamp() (time.Time, bool, error)
+	ExpectTimestamp() time.Time
+	ExpectNullableTimestamp() (time.Time, bool)
 
-	ExpectSequence() (CollectionState, error)
-	ExpectNullableSequence() (CollectionState, bool, error)
+	ExpectSequence() CollectionState
+	ExpectNullableSequence() (CollectionState, bool)
 
-	ExpectMapping() (CollectionState, error)
-	ExpectNullableMapping() (CollectionState, bool, error)
+	ExpectMapping() CollectionState
+	ExpectNullableMapping() (CollectionState, bool)
 
-	ExpectAny() (any, error)
+	ExpectAny() any
 
-	ExpectRaw() ([]byte, error)
+	ExpectRaw() []byte
+
+	Error() error
 }
 
 type denyError struct {

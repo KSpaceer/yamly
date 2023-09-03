@@ -31,12 +31,9 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("15"),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectInteger()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectInteger(64)
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expected: []any{int64(15)},
 		},
@@ -47,12 +44,9 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("true"),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectInteger()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectInteger(64)
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -63,16 +57,13 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("null"),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableInteger()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableInteger(64)
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{nil},
 		},
@@ -83,16 +74,13 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewMappingNode(nil),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableInteger()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableInteger(64)
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -103,12 +91,9 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("0xFF"),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectUnsigned()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectUnsigned(64)
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expected: []any{uint64(0xFF)},
 		},
@@ -119,12 +104,9 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("3.3"),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectUnsigned()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectUnsigned(64)
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -138,16 +120,13 @@ func TestReader_Simple(t *testing.T) {
 					),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableUnsigned()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableUnsigned(64)
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{nil},
 		},
@@ -158,16 +137,13 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("lll"),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableUnsigned()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableUnsigned(64)
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -179,12 +155,9 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectBoolean()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectBoolean()
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expected: []any{true},
 		},
@@ -196,12 +169,9 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectBoolean()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectBoolean()
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -212,16 +182,13 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("NULL"),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableBoolean()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableBoolean()
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{nil},
 		},
@@ -232,16 +199,13 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("NULL", ast.WithQuotingType(ast.SingleQuotingType)),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableBoolean()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableBoolean()
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -253,12 +217,9 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectFloat()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectFloat(64)
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expected: []any{33e6},
 		},
@@ -270,12 +231,9 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectFloat()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectFloat(64)
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -286,16 +244,13 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("Null"),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableFloat()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableFloat(64)
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{nil},
 		},
@@ -306,16 +261,13 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewMappingNode(nil),
 				}),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableFloat()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableFloat(64)
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -327,12 +279,9 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectString()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectString()
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expected: []any{"Null"},
 		},
@@ -346,12 +295,9 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectString()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectString()
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -364,16 +310,13 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, notNull, err := r.ExpectNullableString()
-				if err != nil {
-					return err
-				}
+				v, notNull := r.ExpectNullableString()
 				if notNull {
 					vs.Add(v)
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -385,12 +328,9 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectTimestamp()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectTimestamp()
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expected: []any{
 				time.Date(2023, 8, 23, 0, 0, 0, 0, time.UTC),
@@ -404,12 +344,9 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				v, err := r.ExpectTimestamp()
-				if err != nil {
-					return err
-				}
+				v := r.ExpectTimestamp()
 				vs.Add(v)
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -421,13 +358,10 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				state, err := r.ExpectSequence()
-				if err != nil {
-					return err
-				}
+				state := r.ExpectSequence()
 				vs.Add(state.HasUnprocessedItems())
 				vs.Add(state.Size())
-				return nil
+				return r.Error()
 			},
 			expected: []any{false, 0},
 		},
@@ -439,13 +373,10 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				state, err := r.ExpectSequence()
-				if err != nil {
-					return err
-				}
+				state := r.ExpectSequence()
 				vs.Add(state.HasUnprocessedItems())
 				vs.Add(state.Size())
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -457,17 +388,14 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				state, notNull, err := r.ExpectNullableSequence()
-				if err != nil {
-					return err
-				}
+				state, notNull := r.ExpectNullableSequence()
 				if notNull {
 					vs.Add(state.HasUnprocessedItems())
 					vs.Add(state.Size())
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{nil},
 		},
@@ -479,17 +407,14 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				state, notNull, err := r.ExpectNullableSequence()
-				if err != nil {
-					return err
-				}
+				state, notNull := r.ExpectNullableSequence()
 				if notNull {
 					vs.Add(state.HasUnprocessedItems())
 					vs.Add(state.Size())
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -501,13 +426,10 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				state, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				state := r.ExpectMapping()
 				vs.Add(state.HasUnprocessedItems())
 				vs.Add(state.Size())
-				return nil
+				return r.Error()
 			},
 			expected: []any{false, 0},
 		},
@@ -519,13 +441,10 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				state, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				state := r.ExpectMapping()
 				vs.Add(state.HasUnprocessedItems())
 				vs.Add(state.Size())
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -537,17 +456,14 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				state, notNull, err := r.ExpectNullableMapping()
-				if err != nil {
-					return err
-				}
+				state, notNull := r.ExpectNullableMapping()
 				if notNull {
 					vs.Add(state.HasUnprocessedItems())
 					vs.Add(state.Size())
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{nil},
 		},
@@ -559,17 +475,14 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				state, notNull, err := r.ExpectNullableMapping()
-				if err != nil {
-					return err
-				}
+				state, notNull := r.ExpectNullableMapping()
 				if notNull {
 					vs.Add(state.HasUnprocessedItems())
 					vs.Add(state.Size())
 				} else {
 					vs.Add(nil)
 				}
-				return nil
+				return r.Error()
 			},
 			expectDeny: true,
 		},
@@ -612,23 +525,14 @@ func TestReader_Complex(t *testing.T) {
 			name: "mapping with one pair",
 			src:  "key: value",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				mapState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				mapState := r.ExpectMapping()
 				for mapState.HasUnprocessedItems() {
-					key, err := r.ExpectString()
-					if err != nil {
-						return err
-					}
-					value, err := r.ExpectString()
-					if err != nil {
-						return err
-					}
+					key := r.ExpectString()
+					value := r.ExpectString()
 					vs.Add(key)
 					vs.Add(value)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{"key", "value"},
 		},
@@ -636,18 +540,12 @@ func TestReader_Complex(t *testing.T) {
 			name: "sequence with two entries",
 			src:  "['val1', \"val2\"]",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				seqState, err := r.ExpectSequence()
-				if err != nil {
-					return err
-				}
+				seqState := r.ExpectSequence()
 				for seqState.HasUnprocessedItems() {
-					val, err := r.ExpectString()
-					if err != nil {
-						return err
-					}
+					val := r.ExpectString()
 					vs.Add(val)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{"val1", "val2"},
 		},
@@ -655,65 +553,35 @@ func TestReader_Complex(t *testing.T) {
 			name: "struct-like mapping",
 			src:  "name: \"name\"\nscore: 250\nsubscription: true\nnested: {\"inner\": .inf, \"seq\": null}",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				mapState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				mapState := r.ExpectMapping()
 				for mapState.HasUnprocessedItems() {
-					key, err := r.ExpectString()
-					if err != nil {
-						return err
-					}
+					key := r.ExpectString()
 					switch key {
 					case "name":
-						value, err := r.ExpectString()
-						if err != nil {
-							return err
-						}
+						value := r.ExpectString()
 						vs.Add(value)
 					case "score":
-						value, notNull, err := r.ExpectNullableUnsigned()
-						if err != nil {
-							return err
-						}
+						value, notNull := r.ExpectNullableUnsigned(64)
 						if notNull {
 							vs.Add(value)
 						} else {
 							vs.Add(nil)
 						}
 					case "subscription":
-						value, err := r.ExpectBoolean()
-						if err != nil {
-							return err
-						}
+						value := r.ExpectBoolean()
 						vs.Add(value)
 					case "nested":
-						nestedMapState, err := r.ExpectMapping()
-						if err != nil {
-							return err
-						}
+						nestedMapState := r.ExpectMapping()
 						for nestedMapState.HasUnprocessedItems() {
-							key, err := r.ExpectString()
-							if err != nil {
-								return err
-							}
+							key := r.ExpectString()
 							switch key {
 							case "inner":
-								value, err := r.ExpectFloat()
-								if err != nil {
-									return err
-								}
+								value := r.ExpectFloat(64)
 								vs.Add(value)
 							case "seq":
-								nestedSeqState, notNull, err := r.ExpectNullableSequence()
-								if err != nil {
-									return err
-								}
+								nestedSeqState, notNull := r.ExpectNullableSequence()
 								for notNull && nestedSeqState.HasUnprocessedItems() {
-									value, err := r.ExpectString()
-									if err != nil {
-										return err
-									}
+									value := r.ExpectString()
 									vs.Add(value)
 								}
 								if !notNull {
@@ -727,7 +595,7 @@ func TestReader_Complex(t *testing.T) {
 						return fmt.Errorf("unknown field %s", key)
 					}
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{"name", uint64(250), true, math.Inf(1), nil},
 		},
@@ -735,22 +603,13 @@ func TestReader_Complex(t *testing.T) {
 			name: "anchor and alias",
 			src:  "a: &anc value\nb: *anc",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				mapState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				mapState := r.ExpectMapping()
 				for mapState.HasUnprocessedItems() {
-					_, err := r.ExpectString()
-					if err != nil {
-						return err
-					}
-					value, err := r.ExpectString()
-					if err != nil {
-						return err
-					}
+					_ = r.ExpectString()
+					value := r.ExpectString()
 					vs.Add(value)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{"value", "value"},
 		},
@@ -758,22 +617,13 @@ func TestReader_Complex(t *testing.T) {
 			name: "anchor and alias with any",
 			src:  "a: &anc value\nb: *anc",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				mapState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				mapState := r.ExpectMapping()
 				for mapState.HasUnprocessedItems() {
-					_, err := r.ExpectString()
-					if err != nil {
-						return err
-					}
-					value, err := r.ExpectAny()
-					if err != nil {
-						return err
-					}
+					_ = r.ExpectString()
+					value := r.ExpectAny()
 					vs.Add(value)
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{"value", "value"},
 		},
@@ -781,49 +631,31 @@ func TestReader_Complex(t *testing.T) {
 			name: "struct-like mapping with any",
 			src:  "name: 'name'\nscore: 100\nunique: {key: value}\nenable: true",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				mapState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				mapState := r.ExpectMapping()
 				for mapState.HasUnprocessedItems() {
-					key, err := r.ExpectString()
-					if err != nil {
-						return err
-					}
+					key := r.ExpectString()
 					switch key {
 					case "name":
-						value, err := r.ExpectString()
-						if err != nil {
-							return err
-						}
+						value := r.ExpectString()
 						vs.Add(value)
 					case "score":
-						value, notNull, err := r.ExpectNullableUnsigned()
-						if err != nil {
-							return err
-						}
+						value, notNull := r.ExpectNullableUnsigned(64)
 						if notNull {
 							vs.Add(value)
 						} else {
 							vs.Add(nil)
 						}
 					case "unique":
-						value, err := r.ExpectAny()
-						if err != nil {
-							return err
-						}
+						value := r.ExpectAny()
 						vs.Add(value)
 					case "enable":
-						value, err := r.ExpectBoolean()
-						if err != nil {
-							return err
-						}
+						value := r.ExpectBoolean()
 						vs.Add(value)
 					default:
 						return fmt.Errorf("unknown field %s", key)
 					}
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{"name", uint64(100), map[string]any{"key": "value"}, true},
 		},
@@ -831,32 +663,17 @@ func TestReader_Complex(t *testing.T) {
 			name: "anchor and alias with raw",
 			src:  "a: &anc value\nb: *anc",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				mapState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
-				_, err = r.ExpectString()
-				if err != nil {
-					return err
-				}
-				value, err := r.ExpectString()
-				if err != nil {
-					return err
-				}
+				mapState := r.ExpectMapping()
+				_ = r.ExpectString()
+				value := r.ExpectString()
 				vs.Add(value)
-				_, err = r.ExpectString()
-				if err != nil {
-					return err
-				}
-				value2, err := r.ExpectRaw()
-				if err != nil {
-					return err
-				}
+				_ = r.ExpectString()
+				value2 := r.ExpectRaw()
 				vs.Add(value2)
 				if mapState.HasUnprocessedItems() {
 					return fmt.Errorf("map still has unprocessed items")
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{"value", []byte("value")},
 		},
@@ -864,32 +681,17 @@ func TestReader_Complex(t *testing.T) {
 			name: "anchor and alias with raw (reversed)",
 			src:  "a: &anc value\nb: *anc",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
-				mapState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
-				_, err = r.ExpectString()
-				if err != nil {
-					return err
-				}
-				value, err := r.ExpectRaw()
-				if err != nil {
-					return err
-				}
+				mapState := r.ExpectMapping()
+				_ = r.ExpectString()
+				value := r.ExpectRaw()
 				vs.Add(value)
-				_, err = r.ExpectString()
-				if err != nil {
-					return err
-				}
-				value2, err := r.ExpectString()
-				if err != nil {
-					return err
-				}
+				_ = r.ExpectString()
+				value2 := r.ExpectString()
 				vs.Add(value2)
 				if mapState.HasUnprocessedItems() {
 					return fmt.Errorf("map still has unprocessed items")
 				}
-				return nil
+				return r.Error()
 			},
 			expected: []any{[]byte("value"), "value"},
 		},
@@ -924,6 +726,7 @@ func TestReader_SequencesOfNullables(t *testing.T) {
 		name       string
 		src        string
 		methodName string
+		args       []any
 		expected   []any
 	}
 
@@ -932,12 +735,14 @@ func TestReader_SequencesOfNullables(t *testing.T) {
 			name:       "integer nullables",
 			src:        "[1, -2, null, 3]",
 			methodName: "ExpectNullableInteger",
+			args:       []any{64},
 			expected:   []any{int64(1), int64(-2), nil, int64(3)},
 		},
 		{
 			name:       "unsigned nullables",
 			src:        "[0o777, 0xEEEE, 2, null]",
 			methodName: "ExpectNullableUnsigned",
+			args:       []any{64},
 			expected:   []any{uint64(0o777), uint64(0xEEEE), uint64(2), nil},
 		},
 		{
@@ -956,6 +761,7 @@ func TestReader_SequencesOfNullables(t *testing.T) {
 			name:       "float nullables",
 			src:        "[-.INF, 3e18, .223, 25, NULL, Null]",
 			methodName: "ExpectNullableFloat",
+			args:       []any{64},
 			expected:   []any{math.Inf(-1), 3e18, .223, float64(25), nil, nil},
 		},
 		{
@@ -979,24 +785,21 @@ func TestReader_SequencesOfNullables(t *testing.T) {
 			r := decode.NewASTReader(tree)
 			var values []any
 			methodVal := reflect.ValueOf(r).MethodByName(tc.methodName)
+			args := make([]reflect.Value, len(tc.args))
+			for i := range args {
+				args[i] = reflect.ValueOf(tc.args[i])
+			}
 			err = func() error {
-				seqState, err := r.ExpectSequence()
-				if err != nil {
-					return err
-				}
+				seqState := r.ExpectSequence()
 				for seqState.HasUnprocessedItems() {
-					results := methodVal.Call(nil)
-					err := results[2].Interface()
-					if err != nil {
-						return err.(error)
-					}
+					results := methodVal.Call(args)
 					if results[1].Interface().(bool) {
 						values = append(values, results[0].Interface())
 					} else {
 						values = append(values, nil)
 					}
 				}
-				return nil
+				return r.Error()
 			}()
 			if err != nil {
 				t.Fatalf("failed to read: %v", err)
@@ -1152,8 +955,8 @@ func TestReader_ExpectAny(t *testing.T) {
 				t.Fatalf("parser failed: %v", err)
 			}
 			r := decode.NewASTReader(tree)
-			result, err := r.ExpectAny()
-			if err != nil {
+			result := r.ExpectAny()
+			if err = r.Error(); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 			if !reflect.DeepEqual(tc.expected, result) {
@@ -1208,8 +1011,8 @@ func TestReader_ExpectRaw(t *testing.T) {
 				tree = stream.Documents()[0]
 			}
 			r := decode.NewASTReader(tree)
-			result, err := r.ExpectRaw()
-			if err != nil {
+			result := r.ExpectRaw()
+			if err = r.Error(); err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
 			if !bytes.Equal(tc.expected, result) {
@@ -1287,102 +1090,51 @@ func TestReader_K8SManifest(t *testing.T) {
 	r := decode.NewASTReader(tree)
 	var read func(r yayamls.Decoder) error
 	read = func(r yayamls.Decoder) error {
-		manifestState, err := r.ExpectMapping()
-		if err != nil {
-			return err
-		}
+		manifestState := r.ExpectMapping()
 		for manifestState.HasUnprocessedItems() {
-			key, err := r.ExpectString()
-			if err != nil {
-				return err
-			}
+			key := r.ExpectString()
 			switch key {
 			case "apiVersion":
-				got.apiVersion, err = r.ExpectString()
-				if err != nil {
-					return err
-				}
+				got.apiVersion = r.ExpectString()
 			case "kind":
-				got.kind, err = r.ExpectString()
-				if err != nil {
-					return err
-				}
+				got.kind = r.ExpectString()
 			case "metadata":
-				metadataState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				metadataState := r.ExpectMapping()
 				for metadataState.HasUnprocessedItems() {
-					key, err = r.ExpectString()
-					if err != nil {
-						return err
-					}
+					key = r.ExpectString()
 					switch key {
 					case "name":
-						got.metadata.name, err = r.ExpectString()
-						if err != nil {
-							return err
-						}
+						got.metadata.name = r.ExpectString()
 					default:
 						return fmt.Errorf("unknown key %s", key)
 
 					}
 				}
 			case "spec":
-				specState, err := r.ExpectMapping()
-				if err != nil {
-					return err
-				}
+				specState := r.ExpectMapping()
 				for specState.HasUnprocessedItems() {
-					key, err = r.ExpectString()
-					if err != nil {
-						return err
-					}
+					key = r.ExpectString()
 					switch key {
 					case "storageClassName":
-						got.spec.storageClassName, err = r.ExpectString()
-						if err != nil {
-							return err
-						}
+						got.spec.storageClassName = r.ExpectString()
 					case "accessModes":
-						accessModesState, err := r.ExpectSequence()
-						if err != nil {
-							return err
-						}
+						accessModesState := r.ExpectSequence()
 						for accessModesState.HasUnprocessedItems() {
-							value, err := r.ExpectString()
-							if err != nil {
-								return err
-							}
+							value := r.ExpectString()
 							got.spec.accessModes = append(got.spec.accessModes, value)
 						}
 					case "resources":
-						resourcesState, err := r.ExpectMapping()
-						if err != nil {
-							return err
-						}
+						resourcesState := r.ExpectMapping()
 						for resourcesState.HasUnprocessedItems() {
-							key, err = r.ExpectString()
-							if err != nil {
-								return err
-							}
+							key = r.ExpectString()
 							switch key {
 							case "requests":
-								requestsState, err := r.ExpectMapping()
-								if err != nil {
-									return err
-								}
+								requestsState := r.ExpectMapping()
 								for requestsState.HasUnprocessedItems() {
-									key, err = r.ExpectString()
-									if err != nil {
-										return err
-									}
+									key = r.ExpectString()
 									switch key {
 									case "storage":
-										got.spec.resources.requests.storage, err = r.ExpectString()
-										if err != nil {
-											return err
-										}
+										got.spec.resources.requests.storage = r.ExpectString()
 									default:
 										return fmt.Errorf("unknown key %s", key)
 									}
@@ -1399,7 +1151,7 @@ func TestReader_K8SManifest(t *testing.T) {
 				return fmt.Errorf("unknown key %s", key)
 			}
 		}
-		return nil
+		return r.Error()
 	}
 
 	if err = read(r); err != nil {
