@@ -5,17 +5,18 @@ import (
 	"github.com/KSpaceer/yayamls/schema"
 )
 
-type expectNullable struct {
-	underlying expecter
+type expectNull struct{}
+
+func (expectNull) name() string {
+	return "ExpectNull"
 }
 
-func (e expectNullable) process(n ast.Node, prev visitingResult) visitingResult {
+func (expectNull) process(n ast.Node, prev visitingResult) visitingResult {
 	if schema.IsNull(n) {
 		switch prev.conclusion {
 		case visitingConclusionUnknown, visitingConclusionContinue, visitingConclusionDeny:
 			return visitingResult{
 				conclusion: visitingConclusionConsume,
-				action:     visitingActionSetNull,
 			}
 		default:
 			return visitingResult{
@@ -23,11 +24,24 @@ func (e expectNullable) process(n ast.Node, prev visitingResult) visitingResult 
 			}
 		}
 	}
-	return e.underlying.process(n, prev)
-}
 
-func (e expectNullable) name() string {
-	return e.underlying.name() + "Nullable"
+	switch n.Type() {
+	case ast.ContentType, ast.PropertiesType, ast.AnchorType, ast.TagType, ast.StreamType, ast.MappingEntryType:
+		return visitingResult{
+			conclusion: visitingConclusionContinue,
+		}
+	default:
+		switch prev.conclusion {
+		case visitingConclusionMatch, visitingConclusionContinue:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
+		default:
+			return visitingResult{
+				conclusion: visitingConclusionDeny,
+			}
+		}
+	}
 }
 
 type expectInteger struct{}

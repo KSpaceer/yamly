@@ -8,20 +8,20 @@ import (
 )
 
 var basicDecoders = map[reflect.Kind]string{
-	reflect.String:  "in.ExpectString()",
-	reflect.Bool:    "in.ExpectBoolean()",
-	reflect.Int:     "in.ExpectInteger(0)",
-	reflect.Int8:    "in.ExpectInteger(8)",
-	reflect.Int16:   "in.ExpectInteger(16)",
-	reflect.Int32:   "in.ExpectInteger(32)",
-	reflect.Int64:   "in.ExpectInteger(64)",
-	reflect.Uint:    "in.ExpectUnsigned(0)",
-	reflect.Uint8:   "in.ExpectUnsigned(8)",
-	reflect.Uint16:  "in.ExpectUnsigned(16)",
-	reflect.Uint32:  "in.ExpectUnsigned(32)",
-	reflect.Uint64:  "in.ExpectUnsigned(64)",
-	reflect.Float32: "in.ExpectFloat(32)",
-	reflect.Float64: "in.ExpectFloat(64)",
+	reflect.String:  "in.String()",
+	reflect.Bool:    "in.Boolean()",
+	reflect.Int:     "in.Integer(0)",
+	reflect.Int8:    "in.Integer(8)",
+	reflect.Int16:   "in.Integer(16)",
+	reflect.Int32:   "in.Integer(32)",
+	reflect.Int64:   "in.Integer(64)",
+	reflect.Uint:    "in.Unsigned(0)",
+	reflect.Uint8:   "in.Unsigned(8)",
+	reflect.Uint16:  "in.Unsigned(16)",
+	reflect.Uint32:  "in.Unsigned(32)",
+	reflect.Uint64:  "in.Unsigned(64)",
+	reflect.Float32: "in.Float(32)",
+	reflect.Float64: "in.Float(64)",
 }
 
 type nullableDecodeInfo struct {
@@ -47,7 +47,7 @@ var basicNullableDecoders = map[reflect.Kind]nullableDecodeInfo{
 }
 
 var customDecoders = map[string]string{
-	"time.Time": "in.ExpectTimestamp()",
+	"time.Time": "in.Timestamp()",
 }
 
 func (g *Generator) generateDecoder(t reflect.Type) error {

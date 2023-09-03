@@ -18,14 +18,13 @@ type ASTReader struct {
 
 	extractedCollectionState yayamls.CollectionState
 	extractedValue           string
-	isExtractedNull          bool
 
 	anchors anchorsKeeper
 
 	multipleDenyErrors bool
 	fatalError         error
+	latestDenyError    error
 	denyErrors         []error
-	denied             bool
 }
 
 type visitingConclusion int8
@@ -60,7 +59,6 @@ type visitingAction int8
 const (
 	visitingActionNothing visitingAction = iota
 	visitingActionExtract
-	visitingActionSetNull
 )
 
 type visitingResult struct {
@@ -134,14 +132,31 @@ func (r *ASTReader) setAST(tree ast.Node) {
 	})
 }
 
-func (r *ASTReader) ExpectInteger(bitSize int) int64 {
+func (r *ASTReader) TryNull() bool {
+	if r.hasFatalError() {
+		return false
+	}
+	r.currentExpecter = expectNull{}
+	r.visitCurrentNode()
+	if r.hasFatalError() {
+		return false
+	}
+	if r.latestDenyError != nil {
+		r.latestDenyError = nil
+		return false
+	}
+	return true
+}
+
+func (r *ASTReader) Integer(bitSize int) int64 {
 	if r.hasFatalError() {
 		return 0
 	}
 	r.currentExpecter = expectInteger{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return 0
 	}
 	v, err := schema.ToInteger(r.extractedValue, bitSize)
@@ -152,36 +167,15 @@ func (r *ASTReader) ExpectInteger(bitSize int) int64 {
 	return v
 }
 
-func (r *ASTReader) ExpectNullableInteger(bitSize int) (int64, bool) {
-	if r.hasFatalError() {
-		return 0, false
-	}
-	r.currentExpecter = expectNullable{underlying: expectInteger{}}
-	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
-		return 0, false
-	}
-
-	if r.isExtractedNull {
-		return 0, false
-	}
-	v, err := schema.ToInteger(r.extractedValue, bitSize)
-	if err != nil {
-		r.appendError(err)
-		return 0, false
-	}
-	return v, true
-}
-
-func (r *ASTReader) ExpectUnsigned(bitSize int) uint64 {
+func (r *ASTReader) Unsigned(bitSize int) uint64 {
 	if r.hasFatalError() {
 		return 0
 	}
 	r.currentExpecter = expectInteger{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return 0
 	}
 	v, err := schema.ToUnsignedInteger(r.extractedValue, bitSize)
@@ -192,35 +186,15 @@ func (r *ASTReader) ExpectUnsigned(bitSize int) uint64 {
 	return v
 }
 
-func (r *ASTReader) ExpectNullableUnsigned(bitSize int) (uint64, bool) {
-	if r.hasFatalError() {
-		return 0, false
-	}
-	r.currentExpecter = expectNullable{underlying: expectInteger{}}
-	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
-		return 0, false
-	}
-	if r.isExtractedNull {
-		return 0, false
-	}
-	v, err := schema.ToUnsignedInteger(r.extractedValue, bitSize)
-	if err != nil {
-		r.appendError(err)
-		return 0, false
-	}
-	return v, true
-}
-
-func (r *ASTReader) ExpectBoolean() bool {
+func (r *ASTReader) Boolean() bool {
 	if r.hasFatalError() {
 		return false
 	}
 	r.currentExpecter = expectBoolean{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return false
 	}
 	v, err := schema.ToBoolean(r.extractedValue)
@@ -231,35 +205,15 @@ func (r *ASTReader) ExpectBoolean() bool {
 	return v
 }
 
-func (r *ASTReader) ExpectNullableBoolean() (bool, bool) {
-	if r.hasFatalError() {
-		return false, false
-	}
-	r.currentExpecter = expectNullable{underlying: expectBoolean{}}
-	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
-		return false, false
-	}
-	if r.isExtractedNull {
-		return false, false
-	}
-	v, err := schema.ToBoolean(r.extractedValue)
-	if err != nil {
-		r.appendError(err)
-		return false, false
-	}
-	return v, true
-}
-
-func (r *ASTReader) ExpectFloat(bitSize int) float64 {
+func (r *ASTReader) Float(bitSize int) float64 {
 	if r.hasFatalError() {
 		return 0
 	}
 	r.currentExpecter = expectFloat{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return 0
 	}
 	v, err := schema.ToFloat(r.extractedValue, bitSize)
@@ -270,64 +224,29 @@ func (r *ASTReader) ExpectFloat(bitSize int) float64 {
 	return v
 }
 
-func (r *ASTReader) ExpectNullableFloat(bitSize int) (float64, bool) {
-	if r.hasFatalError() {
-		return 0, false
-	}
-	r.currentExpecter = expectNullable{underlying: expectFloat{}}
-	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
-		return 0, false
-	}
-	if r.isExtractedNull {
-		return 0, false
-	}
-	v, err := schema.ToFloat(r.extractedValue, bitSize)
-	if err != nil {
-		r.appendError(err)
-		return 0, false
-	}
-	return v, true
-}
-
-func (r *ASTReader) ExpectString() string {
+func (r *ASTReader) String() string {
 	if r.hasFatalError() {
 		return ""
 	}
 	r.currentExpecter = expectString{checkForNull: true}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return ""
 	}
 	return r.extractedValue
 }
 
-func (r *ASTReader) ExpectNullableString() (string, bool) {
-	if r.hasFatalError() {
-		return "", false
-	}
-	r.currentExpecter = expectNullable{underlying: expectString{}}
-	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
-		return "", false
-	}
-	if r.isExtractedNull {
-		return "", false
-	}
-	return r.extractedValue, true
-}
-
-func (r *ASTReader) ExpectTimestamp() time.Time {
+func (r *ASTReader) Timestamp() time.Time {
 	if r.hasFatalError() {
 		return time.Time{}
 	}
 	r.currentExpecter = expectTimestamp{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return time.Time{}
 	}
 	v, err := schema.ToTimestamp(r.extractedValue)
@@ -338,93 +257,43 @@ func (r *ASTReader) ExpectTimestamp() time.Time {
 	return v
 }
 
-func (r *ASTReader) ExpectNullableTimestamp() (time.Time, bool) {
-	if r.hasFatalError() {
-		return time.Time{}, false
-	}
-	r.currentExpecter = expectNullable{underlying: expectTimestamp{}}
-	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
-		return time.Time{}, false
-	}
-	if r.isExtractedNull {
-		return time.Time{}, false
-	}
-	v, err := schema.ToTimestamp(r.extractedValue)
-	if err != nil {
-		r.appendError(err)
-		return time.Time{}, false
-	}
-	return v, true
-}
-
-func (r *ASTReader) ExpectSequence() yayamls.CollectionState {
+func (r *ASTReader) Sequence() yayamls.CollectionState {
 	if r.hasFatalError() {
 		return noopCollectionState
 	}
 	r.currentExpecter = expectSequence{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return noopCollectionState
 	}
 	return r.extractedCollectionState
 }
 
-func (r *ASTReader) ExpectNullableSequence() (yayamls.CollectionState, bool) {
-	if r.hasFatalError() {
-		return nil, false
-	}
-	r.currentExpecter = expectNullable{underlying: expectSequence{}}
-	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
-		return nil, false
-	}
-	if r.isExtractedNull {
-		return nil, false
-	}
-	return r.extractedCollectionState, true
-}
-
-func (r *ASTReader) ExpectMapping() yayamls.CollectionState {
+func (r *ASTReader) Mapping() yayamls.CollectionState {
 	if r.hasFatalError() {
 		return noopCollectionState
 	}
 	r.currentExpecter = expectMapping{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return noopCollectionState
 	}
 	return r.extractedCollectionState
 }
 
-func (r *ASTReader) ExpectNullableMapping() (yayamls.CollectionState, bool) {
-	if r.hasFatalError() {
-		return nil, false
-	}
-	r.currentExpecter = expectNullable{underlying: expectMapping{}}
-	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
-		return nil, false
-	}
-	if r.isExtractedNull {
-		return nil, false
-	}
-	return r.extractedCollectionState, true
-}
-
-func (r *ASTReader) ExpectAny() any {
+func (r *ASTReader) Any() any {
 	if r.hasFatalError() {
 		return nil
 	}
 	r.currentExpecter = expectAny{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return nil
 	}
 	valueBuilder := newAnyBuilder(&r.anchors)
@@ -437,14 +306,15 @@ func (r *ASTReader) ExpectAny() any {
 	return v
 }
 
-func (r *ASTReader) ExpectRaw() []byte {
+func (r *ASTReader) Raw() []byte {
 	if r.hasFatalError() {
 		return nil
 	}
 	r.currentExpecter = expectRaw{}
 	r.visitCurrentNode()
-	if r.denied || r.hasFatalError() {
-		r.denied = false
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
 		return nil
 	}
 	w := encode.NewASTWriter()
@@ -544,9 +414,6 @@ func (r *ASTReader) VisitNullNode(n *ast.NullNode) {
 	case visitingActionExtract:
 		r.extractedCollectionState = nil
 		r.extractedValue = ""
-		r.isExtractedNull = false
-	case visitingActionSetNull:
-		r.isExtractedNull = true
 	}
 }
 
@@ -579,10 +446,10 @@ func (r *ASTReader) visitTexterNode(n ast.TexterNode) {
 	case visitingConclusionMatch:
 	case visitingConclusionDeny:
 		r.swapRoutePoint(point)
-		r.appendError(yayamls.DenyError(&denyError{
+		r.setLatestDeny(&denyError{
 			expecter: r.currentExpecter,
-			nt:       n.Type(),
-		}))
+			nt:       point.node.Type(),
+		})
 	case visitingConclusionContinue:
 		r.popRoutePoint()
 	default:
@@ -593,9 +460,6 @@ func (r *ASTReader) visitTexterNode(n ast.TexterNode) {
 	case visitingActionExtract:
 		r.extractedCollectionState = nil
 		r.extractedValue = n.Text()
-		r.isExtractedNull = false
-	case visitingActionSetNull:
-		r.isExtractedNull = true
 	}
 }
 
@@ -625,10 +489,10 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 		r.popRoutePoint()
 	case visitingConclusionMatch:
 	case visitingConclusionDeny:
-		r.appendError(yayamls.DenyError(&denyError{
+		r.setLatestDeny(&denyError{
 			expecter: r.currentExpecter,
 			nt:       point.node.Type(),
-		}))
+		})
 	case visitingConclusionContinue:
 		for r.lastVisitingResult.conclusion == visitingConclusionContinue && !point.iter.empty() {
 			node := point.iter.node()
@@ -656,9 +520,6 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 	case visitingActionExtract:
 		r.extractedCollectionState = newCollectionState(point.iter, childrenSize)
 		r.extractedValue = ""
-		r.isExtractedNull = false
-	case visitingActionSetNull:
-		r.isExtractedNull = true
 	}
 }
 
@@ -677,10 +538,9 @@ func (r *ASTReader) reset() {
 	r.lastVisitingResult = visitingResult{}
 	r.extractedCollectionState = nil
 	r.extractedValue = ""
-	r.isExtractedNull = false
 	r.anchors.clear()
-	r.denied = false
 	r.fatalError = nil
+	r.latestDenyError = nil
 	r.denyErrors = r.denyErrors[:0]
 }
 
@@ -719,9 +579,12 @@ func (r *ASTReader) swapRoutePoint(point routePoint) {
 	r.route[len(r.route)-1] = point
 }
 
+func (r *ASTReader) setLatestDeny(err *denyError) {
+	r.latestDenyError = yayamls.DenyError(err)
+}
+
 func (r *ASTReader) appendError(err error) {
 	if r.multipleDenyErrors && errors.Is(err, yayamls.Denied) {
-		r.denied = true
 		r.denyErrors = append(r.denyErrors, err)
 	} else if r.fatalError == nil {
 		r.fatalError = err

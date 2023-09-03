@@ -24,33 +24,27 @@ type CollectionState interface {
 }
 
 type Decoder interface {
-	ExpectInteger(bitSize int) int64
-	ExpectNullableInteger(bitSize int) (int64, bool)
+	TryNull() bool
 
-	ExpectUnsigned(bitSize int) uint64
-	ExpectNullableUnsigned(bitSize int) (uint64, bool)
+	Integer(bitSize int) int64
 
-	ExpectBoolean() bool
-	ExpectNullableBoolean() (bool, bool)
+	Unsigned(bitSize int) uint64
 
-	ExpectFloat(bitSize int) float64
-	ExpectNullableFloat(bitSize int) (float64, bool)
+	Boolean() bool
 
-	ExpectString() string
-	ExpectNullableString() (string, bool)
+	Float(bitSize int) float64
 
-	ExpectTimestamp() time.Time
-	ExpectNullableTimestamp() (time.Time, bool)
+	String() string
 
-	ExpectSequence() CollectionState
-	ExpectNullableSequence() (CollectionState, bool)
+	Timestamp() time.Time
 
-	ExpectMapping() CollectionState
-	ExpectNullableMapping() (CollectionState, bool)
+	Sequence() CollectionState
 
-	ExpectAny() any
+	Mapping() CollectionState
 
-	ExpectRaw() []byte
+	Any() any
+
+	Raw() []byte
 
 	Error() error
 }
