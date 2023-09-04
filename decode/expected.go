@@ -282,3 +282,29 @@ func (expectRaw) process(n ast.Node, prev visitingResult) visitingResult {
 	}
 
 }
+
+type expectSkip struct{}
+
+func (expectSkip) name() string {
+	return "ExpectSkip"
+}
+
+func (expectSkip) process(n ast.Node, prev visitingResult) visitingResult {
+	switch n.Type() {
+	case ast.ContentType, ast.PropertiesType, ast.TagType, ast.AnchorType:
+		return visitingResult{
+			conclusion: visitingConclusionContinue,
+		}
+	default:
+		switch prev.conclusion {
+		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
+			return visitingResult{
+				conclusion: visitingConclusionContinue,
+			}
+		default:
+			return visitingResult{
+				conclusion: visitingConclusionConsume,
+			}
+		}
+	}
+}

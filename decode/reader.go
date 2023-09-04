@@ -6,6 +6,7 @@ import (
 	"github.com/KSpaceer/yayamls"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/encode"
+	"github.com/KSpaceer/yayamls/parser"
 	"github.com/KSpaceer/yayamls/schema"
 	"time"
 )
@@ -112,6 +113,14 @@ func WithMultipleDenyErrors() ReaderOption {
 	return func(r *ASTReader) {
 		r.multipleDenyErrors = true
 	}
+}
+
+func NewASTReaderFromBytes(src []byte, opts ...ReaderOption) (*ASTReader, error) {
+	tree, err := parser.ParseBytes(src, parser.WithOmitStream())
+	if err != nil {
+		return nil, err
+	}
+	return NewASTReader(tree, opts...), nil
 }
 
 func NewASTReader(tree ast.Node, opts ...ReaderOption) *ASTReader {
@@ -325,6 +334,18 @@ func (r *ASTReader) Raw() []byte {
 	}
 	r.popRoutePoint()
 	return v
+}
+
+func (r *ASTReader) Skip() {
+	if r.hasFatalError() {
+		return
+	}
+	r.currentExpecter = expectSkip{}
+	r.visitCurrentNode()
+	if r.latestDenyError != nil || r.hasFatalError() {
+		r.appendError(r.latestDenyError)
+		r.latestDenyError = nil
+	}
 }
 
 func (r *ASTReader) VisitStreamNode(n *ast.StreamNode) {
@@ -601,4 +622,10 @@ func (r *ASTReader) hasAnyError() bool {
 
 func (r *ASTReader) Error() error {
 	return errors.Join(append([]error{r.fatalError}, r.denyErrors...)...)
+}
+
+func (r *ASTReader) AddError(err error) {
+	if r.fatalError == nil {
+		r.fatalError = err
+	}
 }

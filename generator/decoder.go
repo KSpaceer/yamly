@@ -1,10 +1,13 @@
 package generator
 
 import (
+	"encoding"
 	"fmt"
+	"github.com/KSpaceer/yayamls"
 	"reflect"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 var basicDecoders = map[reflect.Kind]string{
@@ -50,11 +53,181 @@ var customDecoders = map[string]string{
 	"time.Time": "in.Timestamp()",
 }
 
-func (g *Generator) generateDecoder(t reflect.Type) error {
+func (g *Generator) generateUnmarshaler(t reflect.Type) error {
 	fname := g.decoderFunctionName(t)
 	tname := g.extractTypeName(t)
 
-	fmt.Fprintln(g.out, "func", fname, "in yayamls.Decoder, out *", tname, ") {")
+	fmt.Fprintln(g.out, "// UnmarshalYAML supports yayamls.Unmarshaler interface")
+	fmt.Fprintln(g.out, "func (v *"+tname+") UnmarshalYAML(data []byte) error {")
+	fmt.Fprintln(g.out, "  in, err := decode.NewASTReaderFromBytes(data)")
+	fmt.Fprintln(g.out, "  if err != nil {")
+	fmt.Fprintln(g.out, "    return err")
+	fmt.Fprintln(g.out, "  }")
+	fmt.Fprintln(g.out, "  "+fname+"(in, v)")
+	fmt.Fprintln(g.out, "  return in.Error()")
+	fmt.Fprintln(g.out, "}")
+
+	fmt.Fprintln(g.out)
+
+	fmt.Fprintln(g.out, "// UnmarshalYAYAMLS supports yayamls.UnmarshalerYAYAMLS interface")
+	fmt.Fprintln(g.out, "func (v *"+tname+") UnmarshalYAYAMLS(in yayamls.Decoder) {")
+	fmt.Fprintln(g.out, "  "+fname+"(in, v)")
+	fmt.Fprintln(g.out, "}")
+
+	return nil
+}
+
+func (g *Generator) generateDecoder(t reflect.Type) error {
+	if t.Kind() == reflect.Struct {
+		return g.generateStructDecoder(t)
+	}
+
+	fname := g.decoderFunctionName(t)
+	tname := g.extractTypeName(t)
+
+	fmt.Fprintln(g.out, "func "+fname+"(in yayamls.Decoder, out *"+tname+") {")
+	if err := g.generateDecoderBodyWithoutCheck(t, "out", fieldTags{}, 2); err != nil {
+		return err
+	}
+	fmt.Fprintln(g.out, "}")
+	return nil
+}
+
+func (g *Generator) generateStructDecoder(t reflect.Type) error {
+	if t.Kind() != reflect.Struct {
+		return fmt.Errorf("expected struct, but got %s", t)
+	}
+	fname := g.decoderFunctionName(t)
+	tname := g.extractTypeName(t)
+
+	fmt.Fprintln(g.out, "func "+fname+"(in yayamls.Decoder, out *"+tname+") {")
+	fmt.Fprintln(g.out, "  if in.TryNull() {")
+	fmt.Fprintln(g.out, "    var zeroValue "+tname)
+	fmt.Fprintln(g.out, "  *out = zeroValue")
+	fmt.Fprintln(g.out, "  }")
+	fmt.Fprintln(g.out)
+
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if !f.Anonymous || f.Type.Kind() != reflect.Pointer {
+			continue
+		}
+		fmt.Fprintln(g.out, "  out."+f.Name+" = new("+g.extractTypeName(f.Type.Elem())+")")
+	}
+
+	fields, err := getStructFields(t)
+	if err != nil {
+		return fmt.Errorf("cannot generate decoder for %s: %w", t, err)
+	}
+
+	fmt.Fprintln(g.out, "  structMappingState := in.Mapping()")
+	fmt.Fprintln(g.out, "  for structMappingState.HasUnprocessedItems() {")
+	fmt.Fprintln(g.out, "    key := in.String()")
+	fmt.Fprintln(g.out, "    if in.TryNull() {")
+	fmt.Fprintln(g.out, "      continue")
+	fmt.Fprintln(g.out, "    }")
+	fmt.Fprintln(g.out, "    switch key {")
+	for _, f := range fields {
+		if err = g.generateStructFieldDecoder(f); err != nil {
+			return err
+		}
+	}
+	fmt.Fprintln(g.out, "    default:")
+	if g.disallowUnknownFields {
+		fmt.Fprintln(g.out, "      in.AddError(&yayamls.UnknownFieldError{Field: key})")
+	} else {
+		fmt.Fprintln(g.out, "      in.Skip()")
+	}
+	fmt.Fprintln(g.out, "    }")
+	fmt.Fprintln(g.out, "  }")
+	fmt.Fprintln(g.out, "}")
+	return nil
+}
+
+func (g *Generator) generateStructFieldDecoder(f reflect.StructField) error {
+	tags := parseTags(f.Tag)
+
+	if tags.omitField {
+		return nil
+	}
+	name := f.Name
+	if tags.name != "" {
+		name = tags.name
+	}
+
+	fmt.Fprintln(g.out, "    case \""+name+"\":")
+	if err := g.generateDecoderBody(f.Type, "out."+f.Name, tags, 6); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getStructFields(t reflect.Type) ([]reflect.StructField, error) {
+	if t.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("expected struct, but got %s", t)
+	}
+
+	var (
+		embeddedFields []reflect.StructField
+		fields         []reflect.StructField
+	)
+
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		tags := parseTags(f.Tag)
+		if !f.Anonymous || tags.name != "" {
+			continue
+		}
+
+		t := f.Type
+		if t.Kind() == reflect.Pointer {
+			t = t.Elem()
+		}
+
+		if t.Kind() == reflect.Struct {
+			fs, err := getStructFields(t)
+			if err != nil {
+				return nil, fmt.Errorf("error processing embedded field: %w", err)
+			}
+			embeddedFields = mergeStructFields(embeddedFields, fs)
+		} else if (t.Kind() >= reflect.Bool && t.Kind() <= reflect.Complex128) || t.Kind() == reflect.String { // kind is basic
+			if strings.Contains(f.Name, ".") || unicode.IsUpper([]rune(f.Name)[0]) {
+				fields = append(fields, f)
+			}
+		}
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		tags := parseTags(f.Tag)
+		if f.Anonymous && tags.name == "" {
+			continue
+		}
+
+		c := []rune(f.Name)[0]
+		if unicode.IsUpper(c) {
+			fields = append(fields, f)
+		}
+	}
+
+	return mergeStructFields(embeddedFields, fields), nil
+}
+
+func mergeStructFields(firstFields, secondFields []reflect.StructField) []reflect.StructField {
+	var fields []reflect.StructField
+	used := make(map[string]bool)
+	for _, f := range secondFields {
+		used[f.Name] = true
+		fields = append(fields, f)
+	}
+
+	for _, f := range firstFields {
+		if !used[f.Name] {
+			fields = append(fields, f)
+		}
+	}
+	return fields
 }
 
 func (g *Generator) generateDecoderBody(
@@ -63,7 +236,27 @@ func (g *Generator) generateDecoderBody(
 	tags fieldTags,
 	indent int,
 ) error {
-	return nil
+	whitespace := strings.Repeat(" ", indent)
+
+	unmarshalIface := reflect.TypeOf((*yayamls.UnmarshalerYAYAMLS)(nil)).Elem()
+	if reflect.PtrTo(t).Implements(unmarshalIface) {
+		fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalYAYAMLS(in))")
+		return nil
+	}
+
+	unmarshalIface = reflect.TypeOf((*yayamls.Unmarshaler)(nil)).Elem()
+	if reflect.PtrTo(t).Implements(unmarshalIface) {
+		fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalYAML(in.Raw()))")
+		return nil
+	}
+
+	unmarshalIface = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+	if reflect.PtrTo(t).Implements(unmarshalIface) {
+		fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalText(in.String()))")
+		return nil
+	}
+
+	return g.generateDecoderBodyWithoutCheck(t, outArg, tags, indent)
 }
 
 func (g *Generator) generateDecoderBodyWithoutCheck(
@@ -190,7 +383,36 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 		fmt.Fprintln(g.out, whitespace+"    "+outArg+"["+keyVar+"] = "+valueVar)
 		fmt.Fprintln(g.out, whitespace+"  }")
 		fmt.Fprintln(g.out, whitespace+"}")
+	case reflect.Interface:
+		if t.NumMethod() > 0 {
+			if implementsUnmarshalerYAYAMLS(t) {
+				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYAYAMLS(in)")
+			} else if implementsUnmarshaler(t) {
+				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYAML(in.Raw())")
+			} else {
+				return fmt.Errorf("interface type %v is not supported: expect only interface{} (any) or yayamls unmarshalers")
+			}
+		} else {
+			fmt.Fprintln(g.out, whitespace+"if m, ok := "+outArg+".(yayamls.UnmarshalerYAYAMLS); ok {")
+			fmt.Fprintln(g.out, whitespace+"  in.AddError(m.UnmarshalYAYAMLS(in))")
+			fmt.Fprintln(g.out, whitespace+"} else if m, ok := "+outArg+".(yayamls.Unmarshaler); ok {")
+			fmt.Fprintln(g.out, whitespace+"  in.AddError(m.Unmarshal(in.Raw()))")
+			fmt.Fprintln(g.out, whitespace+"} else {")
+			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = in.Any()")
+			fmt.Fprintln(g.out, whitespace+"}")
+		}
+	default:
+		return fmt.Errorf("can't decode type %s", t)
 	}
+	return nil
+}
+
+func implementsUnmarshaler(t reflect.Type) bool {
+	return t.Implements(reflect.TypeOf((*yayamls.Unmarshaler)(nil)).Elem())
+}
+
+func implementsUnmarshalerYAYAMLS(t reflect.Type) bool {
+	return t.Implements(reflect.TypeOf((*yayamls.UnmarshalerYAYAMLS)(nil)).Elem())
 }
 
 func (g *Generator) decoderFunctionName(t reflect.Type) string {

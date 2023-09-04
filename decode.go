@@ -15,7 +15,7 @@ type Unmarshaler interface {
 }
 
 type UnmarshalerYAYAMLS interface {
-	UnmarshalYAYAMLS(Decoder) error
+	UnmarshalYAYAMLS(Decoder)
 }
 
 type CollectionState interface {
@@ -46,7 +46,11 @@ type Decoder interface {
 
 	Raw() []byte
 
+	Skip()
+
 	Error() error
+
+	AddError(err error)
 }
 
 type denyError struct {
@@ -64,4 +68,17 @@ func (de *denyError) Is(err error) bool {
 
 func DenyError(err error) error {
 	return &denyError{err}
+}
+
+type UnknownFieldError struct {
+	Field string
+}
+
+func (ufe *UnknownFieldError) Error() string {
+	return "unknown field " + ufe.Field
+}
+
+func (ufe *UnknownFieldError) Is(err error) bool {
+	_, ok := err.(*UnknownFieldError)
+	return ok
 }

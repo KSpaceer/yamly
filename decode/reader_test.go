@@ -620,7 +620,7 @@ func TestReader_Complex(t *testing.T) {
 		},
 		{
 			name: "struct-like mapping with any",
-			src:  "name: 'name'\nscore: 100\nunique: {key: value}\nenable: true",
+			src:  "name: 'name'\nscore: 100\nskip_me: null\nunique: {key: value}\nenable: true\n",
 			calls: func(r yayamls.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				for mapState.HasUnprocessedItems() {
@@ -641,8 +641,8 @@ func TestReader_Complex(t *testing.T) {
 					case "enable":
 						value := r.Boolean()
 						vs.Add(value)
-					default:
-						return fmt.Errorf("unknown field %s", key)
+					default: // skip_me
+						r.Skip()
 					}
 				}
 				return r.Error()
@@ -684,6 +684,24 @@ func TestReader_Complex(t *testing.T) {
 				return r.Error()
 			},
 			expected: []any{[]byte("value"), "value"},
+		},
+		{
+			name: "skips",
+			src:  "[1,2,3,4,5]",
+			calls: func(r yayamls.Decoder, vs *valueStore) error {
+				seqState := r.Sequence()
+				var i int
+				for seqState.HasUnprocessedItems() {
+					if i%2 == 1 {
+						r.Skip()
+					} else {
+						vs.Add(r.Unsigned(64))
+					}
+					i++
+				}
+				return r.Error()
+			},
+			expected: []any{uint64(1), uint64(3), uint64(5)},
 		},
 	}
 
