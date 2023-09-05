@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	buildTags              = flag.String("build-tags", "", "build tags to add to generated file")
-	generatedType          = flag.String("type", "", "target type to generated marshaling methods")
-	omitempty              = flag.Bool("omitempty", false, "omit empty fields by default")
-	disallowUnknownFields  = flag.Bool("disallow-unknown-fields", false, "return error if unknown field appeared in yaml")
-	output                 = flag.String("output", "", "name of generated file")
-	marshalPointerReceiver = flag.Bool("marshal-ptr-rcv", false, "use pointer receiver in marshal methods")
+	buildTags             = flag.String("build-tags", "", "build tags to add to generated file")
+	generatedType         = flag.String("type", "", "target type to generated marshaling methods")
+	omitempty             = flag.Bool("omitempty", false, "omit empty fields by default")
+	disallowUnknownFields = flag.Bool("disallow-unknown-fields", false, "return error if unknown field appeared in yaml")
+	output                = flag.String("output", "", "name of generated file")
+	encodePointerReceiver = flag.Bool("encode-pointer-receiver", false, "use pointer receiver in encode methods")
 )
 
 func main() {
@@ -106,14 +106,14 @@ func generate(path string) error {
 	}
 
 	g := bootstrap.Generator{
-		PkgPath:                p.PkgPath,
-		PkgName:                p.PkgName,
-		Type:                   *generatedType,
-		Omitempty:              *omitempty,
-		DisallowUnknownFields:  *disallowUnknownFields,
-		MarshalPointerReceiver: *marshalPointerReceiver,
-		OutputName:             outputName,
-		BuildTags:              trimmedBuildTags,
+		PkgPath:               p.PkgPath,
+		PkgName:               p.PkgName,
+		Type:                  *generatedType,
+		Omitempty:             *omitempty,
+		DisallowUnknownFields: *disallowUnknownFields,
+		EncodePointerReceiver: *encodePointerReceiver,
+		OutputName:            outputName,
+		BuildTags:             trimmedBuildTags,
 	}
 
 	if err := g.Generate(); err != nil {

@@ -15,22 +15,16 @@ type MarshalerYAYAMLS interface {
 
 type Inserter interface {
 	InsertInteger(int64)
-	InsertNullableInteger(*int64)
 
 	InsertUnsigned(uint64)
-	InsertNullableUnsigned(*uint64)
 
 	InsertBoolean(bool)
-	InsertNullableBoolean(*bool)
 
 	InsertFloat(float64)
-	InsertNullableFloat(*float64)
 
 	InsertString(string)
-	InsertNullableString(*string)
 
 	InsertTimestamp(time.Time)
-	InsertNullableTimestamp(*time.Time)
 
 	InsertNull()
 
@@ -40,7 +34,7 @@ type Inserter interface {
 	StartMapping()
 	EndMapping()
 
-	InsertRaw([]byte)
+	InsertRaw([]byte, error)
 }
 
 type Encoder interface {
@@ -77,48 +71,24 @@ func (e *encoder[T]) InsertInteger(val int64) {
 	e.builder.InsertInteger(val)
 }
 
-func (e *encoder[T]) InsertNullableInteger(val *int64) {
-	e.builder.InsertNullableInteger(val)
-}
-
 func (e *encoder[T]) InsertUnsigned(val uint64) {
 	e.builder.InsertUnsigned(val)
-}
-
-func (e *encoder[T]) InsertNullableUnsigned(val *uint64) {
-	e.builder.InsertNullableUnsigned(val)
 }
 
 func (e *encoder[T]) InsertBoolean(val bool) {
 	e.builder.InsertBoolean(val)
 }
 
-func (e *encoder[T]) InsertNullableBoolean(val *bool) {
-	e.builder.InsertNullableBoolean(val)
-}
-
 func (e *encoder[T]) InsertFloat(val float64) {
 	e.builder.InsertFloat(val)
-}
-
-func (e *encoder[T]) InsertNullableFloat(val *float64) {
-	e.builder.InsertNullableFloat(val)
 }
 
 func (e *encoder[T]) InsertString(val string) {
 	e.builder.InsertString(val)
 }
 
-func (e *encoder[T]) InsertNullableString(val *string) {
-	e.builder.InsertNullableString(val)
-}
-
 func (e *encoder[T]) InsertTimestamp(val time.Time) {
 	e.builder.InsertTimestamp(val)
-}
-
-func (e *encoder[T]) InsertNullableTimestamp(val *time.Time) {
-	e.builder.InsertNullableTimestamp(val)
 }
 
 func (e *encoder[T]) InsertNull() {
@@ -141,8 +111,8 @@ func (e *encoder[T]) EndMapping() {
 	e.builder.EndMapping()
 }
 
-func (e *encoder[T]) InsertRaw(data []byte) {
-	e.builder.InsertRaw(data)
+func (e *encoder[T]) InsertRaw(data []byte, err error) {
+	e.builder.InsertRaw(data, err)
 }
 
 func (e *encoder[T]) EncodeToString() (string, error) {

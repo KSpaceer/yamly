@@ -25,10 +25,10 @@ type Generator struct {
 	pkgName    string
 	pkgPath    string
 
-	buildTags              string
-	omitempty              bool
-	disallowUnknownFields  bool
-	marshalPointerReceiver bool
+	buildTags             string
+	omitempty             bool
+	disallowUnknownFields bool
+	encodePointerReceiver bool
 
 	imports map[string]string
 
@@ -75,8 +75,8 @@ func (g *Generator) SetDisallowUnknownFields(disallow bool) {
 	g.disallowUnknownFields = disallow
 }
 
-func (g *Generator) SetMarshalPointerReceiver(useReceiver bool) {
-	g.marshalPointerReceiver = useReceiver
+func (g *Generator) SetEncodePointerReceiver(useReceiver bool) {
+	g.encodePointerReceiver = useReceiver
 }
 
 func (g *Generator) AddType(v any) {

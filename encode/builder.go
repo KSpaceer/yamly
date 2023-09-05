@@ -45,32 +45,16 @@ func (t *ASTBuilder) InsertInteger(val int64) {
 	insertNonNullValue(t, val, schema.FromInteger, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertNullableInteger(val *int64) {
-	insertNullableValue(t, val, schema.FromInteger, ast.AbsentQuotingType)
-}
-
 func (t *ASTBuilder) InsertUnsigned(val uint64) {
 	insertNonNullValue(t, val, schema.FromUnsignedInteger, ast.AbsentQuotingType)
-}
-
-func (t *ASTBuilder) InsertNullableUnsigned(val *uint64) {
-	insertNullableValue(t, val, schema.FromUnsignedInteger, ast.AbsentQuotingType)
 }
 
 func (t *ASTBuilder) InsertBoolean(val bool) {
 	insertNonNullValue(t, val, schema.FromBoolean, ast.AbsentQuotingType)
 }
 
-func (t *ASTBuilder) InsertNullableBoolean(val *bool) {
-	insertNullableValue(t, val, schema.FromBoolean, ast.AbsentQuotingType)
-}
-
 func (t *ASTBuilder) InsertFloat(val float64) {
 	insertNonNullValue(t, val, schema.FromFloat, ast.AbsentQuotingType)
-}
-
-func (t *ASTBuilder) InsertNullableFloat(val *float64) {
-	insertNullableValue(t, val, schema.FromFloat, ast.AbsentQuotingType)
 }
 
 func (t *ASTBuilder) InsertString(val string) {
@@ -81,20 +65,8 @@ func (t *ASTBuilder) InsertString(val string) {
 	insertNonNullValue(t, val, func(t string) string { return t }, quoting)
 }
 
-func (t *ASTBuilder) InsertNullableString(val *string) {
-	quoting := ast.DoubleQuotingType
-	if t.opts.unquoteOneliners && val != nil && !isMultiline(*val) {
-		quoting = ast.AbsentQuotingType
-	}
-	insertNullableValue(t, val, func(t string) string { return t }, quoting)
-}
-
 func (t *ASTBuilder) InsertTimestamp(val time.Time) {
 	insertNonNullValue(t, val, schema.FromTimestamp, ast.DoubleQuotingType)
-}
-
-func (t *ASTBuilder) InsertNullableTimestamp(val *time.Time) {
-	insertNullableValue(t, val, schema.FromTimestamp, ast.DoubleQuotingType)
 }
 
 func (t *ASTBuilder) InsertNull() {
@@ -141,8 +113,12 @@ func (t *ASTBuilder) EndMapping() {
 	}
 }
 
-func (t *ASTBuilder) InsertRaw(data []byte) {
+func (t *ASTBuilder) InsertRaw(data []byte, err error) {
 	if t.fatalError != nil {
+		return
+	}
+	if err != nil {
+		t.fatalError = err
 		return
 	}
 	tree, err := parser.ParseBytes(data, parser.WithOmitStream())
@@ -174,26 +150,6 @@ func insertNonNullValue[T any](t *ASTBuilder, val T, converter func(T) string, q
 		),
 		false,
 	)
-}
-
-func insertNullableValue[T any](
-	t *ASTBuilder,
-	val *T,
-	converter func(T) string,
-	quotingType ast.QuotingType,
-) {
-	var newNode ast.Node
-
-	if val == nil {
-		newNode = ast.NewNullNode()
-	} else {
-		newNode = ast.NewTextNode(
-			converter(*val),
-			ast.WithQuotingType(quotingType),
-		)
-	}
-
-	t.insertNode(newNode, false)
 }
 
 func (t *ASTBuilder) insertNode(n ast.Node, pushToRoute bool) {

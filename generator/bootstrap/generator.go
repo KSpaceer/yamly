@@ -18,7 +18,7 @@ type Generator struct {
 	Omitempty             bool
 	DisallowUnknownFields bool
 
-	MarshalPointerReceiver bool
+	EncodePointerReceiver bool
 
 	OutputName string
 	BuildTags  string
@@ -42,7 +42,7 @@ func (g *Generator) generateStub() error {
 	fmt.Fprintln(f)
 
 	var marshallableType string
-	if g.MarshalPointerReceiver {
+	if g.EncodePointerReceiver {
 		marshallableType = "*" + g.Type
 	} else {
 		marshallableType = g.Type
@@ -85,7 +85,7 @@ func (g *Generator) generateMain() (string, error) {
 	}
 	fmt.Fprintf(f, "  g.SetOmitempty(%t)", g.Omitempty)
 	fmt.Fprintf(f, "  g.SetDisallowUnknownFields(%t)", g.DisallowUnknownFields)
-	fmt.Fprintf(f, "  g.SetMarshalPointerReceiver(%t)", g.MarshalPointerReceiver)
+	fmt.Fprintf(f, "  g.SetEncodePointerReceiver(%t)", g.EncodePointerReceiver)
 	fmt.Fprintf(f, "  g.AddType(pkg.Exporter_yayamls_%s(nil))", g.Type)
 
 	fmt.Fprintln(f, "  if err := g.Generate(os.Stdout); err != nil {")

@@ -1,6 +1,7 @@
 package encode_test
 
 import (
+	"encoding/json"
 	"github.com/KSpaceer/yayamls"
 	"github.com/KSpaceer/yayamls/ast"
 	"github.com/KSpaceer/yayamls/ast/astutils"
@@ -28,25 +29,11 @@ func TestBuilder_Simple(t *testing.T) {
 			expected: ast.NewTextNode("15"),
 		},
 		{
-			name: "simple nullable integer",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
-				b.InsertNullableInteger(nil)
-			},
-			expected: ast.NewNullNode(),
-		},
-		{
 			name: "simple unsigned",
 			calls: func(b yayamls.TreeBuilder[ast.Node]) {
 				b.InsertUnsigned(0xFF)
 			},
 			expected: ast.NewTextNode("255"),
-		},
-		{
-			name: "simple nullable unsigned",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
-				b.InsertNullableUnsigned(nil)
-			},
-			expected: ast.NewNullNode(),
 		},
 		{
 			name: "simple boolean",
@@ -56,25 +43,11 @@ func TestBuilder_Simple(t *testing.T) {
 			expected: ast.NewTextNode("true"),
 		},
 		{
-			name: "simple nullable boolean",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
-				b.InsertNullableBoolean(nil)
-			},
-			expected: ast.NewNullNode(),
-		},
-		{
 			name: "simple float",
 			calls: func(b yayamls.TreeBuilder[ast.Node]) {
 				b.InsertFloat(33e6)
 			},
 			expected: ast.NewTextNode("3.3e+07"),
-		},
-		{
-			name: "simple nullable float",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
-				b.InsertNullableFloat(nil)
-			},
-			expected: ast.NewNullNode(),
 		},
 		{
 			name: "simple string",
@@ -94,6 +67,13 @@ func TestBuilder_Simple(t *testing.T) {
 				time.Date(2023, 8, 27, 21, 42, 0, 0, time.UTC).Format(time.RFC3339),
 				ast.WithQuotingType(ast.DoubleQuotingType),
 			),
+		},
+		{
+			name: "null",
+			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+				b.InsertNull()
+			},
+			expected: ast.NewNullNode(),
 		},
 		{
 			name: "simple sequence",
@@ -182,8 +162,7 @@ func TestBuilder_Complex(t *testing.T) {
 					b.InsertString("name")
 					b.InsertString("name")
 					b.InsertString("score")
-					score := uint64(250)
-					b.InsertNullableUnsigned(&score)
+					b.InsertUnsigned(250)
 					b.InsertString("subscription")
 					b.InsertBoolean(true)
 					b.InsertString("nested")
@@ -231,10 +210,9 @@ func TestBuilder_Complex(t *testing.T) {
 			calls: func(b yayamls.TreeBuilder[ast.Node]) {
 				b.StartMapping()
 				b.InsertString("key")
-				value := "value"
-				b.InsertNullableString(&value)
+				b.InsertString("value")
 				b.InsertString("raw")
-				b.InsertRaw([]byte("[1, 2, 3]"))
+				b.InsertRaw(json.Marshal([]int64{1, 2, 3}))
 				b.EndMapping()
 			},
 			expected: ast.NewMappingNode([]ast.Node{
@@ -352,7 +330,7 @@ func TestBuilder_InsertRaw(t *testing.T) {
 			b := encode.NewASTBuilder()
 			b.StartMapping()
 			b.InsertString("raw")
-			b.InsertRaw(tc.src)
+			b.InsertRaw(tc.src, nil)
 			b.EndMapping()
 			result, err := b.Result()
 			if err != nil {

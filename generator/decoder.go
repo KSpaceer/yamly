@@ -27,28 +27,6 @@ var basicDecoders = map[reflect.Kind]string{
 	reflect.Float64: "in.Float(64)",
 }
 
-type nullableDecodeInfo struct {
-	method string
-	castTo string
-}
-
-var basicNullableDecoders = map[reflect.Kind]nullableDecodeInfo{
-	reflect.String:  {method: "in.ExpectNullableString()"},
-	reflect.Bool:    {method: "in.ExpectNullableBoolean()"},
-	reflect.Int:     {method: "in.ExpectNullableInteger(0)", castTo: "int"},
-	reflect.Int8:    {method: "in.ExpectNullableInteger(8)", castTo: "int8"},
-	reflect.Int16:   {method: "in.ExpectNullableInteger(16)", castTo: "int16"},
-	reflect.Int32:   {method: "in.ExpectNullableInteger(32)", castTo: "int32"},
-	reflect.Int64:   {method: "in.ExpectNullableInteger(64)"},
-	reflect.Uint:    {method: "in.ExpectNullableUnsigned(0)", castTo: "uint"},
-	reflect.Uint8:   {method: "in.ExpectNullableUnsigned(8)", castTo: "uint8"},
-	reflect.Uint16:  {method: "in.ExpectNullableUnsigned(16)", castTo: "uint16"},
-	reflect.Uint32:  {method: "in.ExpectNullableUnsigned(32)", castTo: "uint32"},
-	reflect.Uint64:  {method: "in.ExpectNullableUnsigned(64)"},
-	reflect.Float32: {method: "in.ExpectNullableFloat(32)", castTo: "float32"},
-	reflect.Float64: {method: "in.ExpectNullableFloat(64)"},
-}
-
 var customDecoders = map[string]string{
 	"time.Time": "in.Timestamp()",
 }
@@ -307,7 +285,7 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 
 		if elem.Kind() == reflect.Uint8 && elem.Name() == "uint8" {
 			fmt.Fprintln(g.out, whitespace+"if !in.TryNull() {")
-			fmt.Fprintln(g.out, whitespace+"  copy("+outArg+", []byte(in.String())[:])")
+			fmt.Fprintln(g.out, whitespace+"  copy("+outArg+", []byte(in.String()))")
 			fmt.Fprintln(g.out, whitespace+"}")
 		} else {
 			arrayStateVar := g.generateVarName("SeqState")
@@ -349,7 +327,7 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 	case reflect.Map:
 		mapStateVar := g.generateVarName("MapState")
 		key, elem := t.Key(), t.Elem()
-		keyVar, valueVar := g.generateVarName(), g.generateVarName()
+		keyVar, valueVar := g.generateVarName("Key"), g.generateVarName("Value")
 		fmt.Fprintln(g.out, whitespace+"if in.TryNull() {")
 		fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
 		fmt.Fprintln(g.out, whitespace+"} else {")
@@ -390,7 +368,8 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			} else if implementsUnmarshaler(t) {
 				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYAML(in.Raw())")
 			} else {
-				return fmt.Errorf("interface type %v is not supported: expect only interface{} (any) or yayamls unmarshalers")
+				return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
+					"(any) or yayamls unmarshalers", t)
 			}
 		} else {
 			fmt.Fprintln(g.out, whitespace+"if m, ok := "+outArg+".(yayamls.UnmarshalerYAYAMLS); ok {")
