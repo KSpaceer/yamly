@@ -10,7 +10,7 @@ type Marshaler interface {
 }
 
 type MarshalerYAYAMLS interface {
-	MarshalYAYAMLS(Inserter) error
+	MarshalYAYAMLS(Inserter)
 }
 
 type Inserter interface {
@@ -35,6 +35,7 @@ type Inserter interface {
 	EndMapping()
 
 	InsertRaw([]byte, error)
+	InsertRawText([]byte, error)
 }
 
 type Encoder interface {
@@ -113,6 +114,10 @@ func (e *encoder[T]) EndMapping() {
 
 func (e *encoder[T]) InsertRaw(data []byte, err error) {
 	e.builder.InsertRaw(data, err)
+}
+
+func (e *encoder[T]) InsertRawText(text []byte, err error) {
+	e.builder.InsertRawText(text, err)
 }
 
 func (e *encoder[T]) EncodeToString() (string, error) {

@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"encoding"
 	"fmt"
 	"github.com/KSpaceer/yayamls"
 	"reflect"
@@ -32,6 +33,30 @@ var customEncoderFormatStrings = map[string]string{
 	"time.Time": "out.InsertTimestamp(time.Time(%v))",
 }
 
+func (g *Generator) generateMarshaler(t reflect.Type) error {
+	fname := g.encoderFunctionName(t)
+	tname := g.extractTypeName(t)
+
+	if g.encodePointerReceiver {
+		tname = "*" + tname
+	}
+
+	fmt.Fprintln(g.out, "// MarshalYAML supports yayamls.Marshaler interface")
+	fmt.Fprintln(g.out, "func (v "+tname+") MarshalYAML() ([]byte, error) {")
+	fmt.Fprintln(g.out, "  out := yayamls.NewEncoder(encode.NewASTBuilder(), encode.NewASTWriter())")
+	fmt.Fprintln(g.out, "  "+fname+"(out, v)")
+	fmt.Fprintln(g.out, "  return out.EncodeToBytes()")
+	fmt.Fprintln(g.out, "}")
+
+	fmt.Fprintln(g.out)
+
+	fmt.Fprintln(g.out, "// MarshalYAYAMLS supports yayamls.MarshalerYAYAMLS interface")
+	fmt.Fprintln(g.out, "func (v "+tname+") MarshalYAYAMLS(out yayamls.Inserter) {")
+	fmt.Fprintln(g.out, "  "+fname+"(in, v)")
+	fmt.Fprintln(g.out, "}")
+	return nil
+}
+
 func (g *Generator) generateEncoder(t reflect.Type) error {
 	if t.Kind() == reflect.Struct {
 		return g.generateStructEncoder(t)
@@ -46,11 +71,118 @@ func (g *Generator) generateEncoder(t reflect.Type) error {
 	}
 
 	fmt.Fprintln(g.out, "func "+fname+"(out yayamls.Inserter, in "+tname+") {")
-	if err := g.generateEncoderBodyWithoutCheck(t, "in", fieldTags{}, 2); err != nil {
+	if err := g.generateEncoderBodyWithoutCheck(t, "in", fieldTags{}, 2, true); err != nil {
 		return err
 	}
 	fmt.Fprintln(g.out, "}")
 	return nil
+}
+
+func (g *Generator) generateStructEncoder(t reflect.Type) error {
+	fname := g.encoderFunctionName(t)
+	tname := g.extractTypeName(t)
+
+	if g.encodePointerReceiver {
+		tname = "*" + tname
+	}
+
+	fmt.Fprintln(g.out, "func "+fname+"(out yayamls.Inserter, in "+tname+") {")
+	if g.encodePointerReceiver {
+		fmt.Fprintln(g.out, "  if in == nil {")
+		fmt.Fprintln(g.out, "    out.InsertNull()")
+		fmt.Fprintln(g.out, "    return")
+		fmt.Fprintln(g.out, "  }")
+	}
+
+	fs, err := getStructFields(t)
+	if err != nil {
+		return fmt.Errorf("cannot generate encoder for %s: %w", t, err)
+	}
+
+	fmt.Fprintln(g.out, "  out.StartMapping()")
+	for _, f := range fs {
+		if err := g.generateStructFieldEncoder(f); err != nil {
+			return err
+		}
+	}
+	fmt.Fprintln(g.out, "  out.EndMapping()")
+	return nil
+}
+
+func (g *Generator) generateStructFieldEncoder(f reflect.StructField) error {
+	tags := parseTags(f.Tag)
+
+	if tags.omitField {
+		return nil
+	}
+	name := f.Name
+	if tags.name != "" {
+		name = tags.name
+	}
+	canBeNull := !(g.omitempty || tags.omitempty)
+
+	if !canBeNull {
+		fmt.Fprintln(g.out, "  if "+g.generateNotEmptyCheck(f.Type, "in."+f.Name)+" {")
+	} else {
+		fmt.Fprintln(g.out, "  {")
+	}
+
+	fmt.Fprintln(g.out, "    out.InsertString(\""+name+"\")")
+	if err := g.generateEncoderBody(f.Type, "in."+f.Name, tags, 6, canBeNull); err != nil {
+		return err
+	}
+	fmt.Fprintln(g.out, "  }")
+
+	return nil
+}
+
+func (g *Generator) generateNotEmptyCheck(t reflect.Type, arg string) string {
+	switch t.Kind() {
+	case reflect.Slice, reflect.Map:
+		return "len(" + arg + ") > 0"
+	case reflect.Interface, reflect.Pointer:
+		return arg + " != nil"
+	case reflect.Bool:
+		return arg
+	case reflect.String:
+		return arg + ` != ""`
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return arg + " != 0"
+	default:
+		// array does not have "empty" value
+		return "true"
+	}
+}
+
+func (g *Generator) generateEncoderBody(
+	t reflect.Type,
+	inArg string,
+	tags fieldTags,
+	indent int,
+	canBeNull bool,
+) error {
+	whitespace := strings.Repeat(" ", indent)
+
+	marshalIface := reflect.TypeOf((*yayamls.MarshalerYAYAMLS)(nil)).Elem()
+	if reflect.PtrTo(t).Implements(marshalIface) {
+		fmt.Fprintln(g.out, whitespace+inArg+".MarshalYAYAMLS(out)")
+		return nil
+	}
+
+	marshalIface = reflect.TypeOf((*yayamls.Marshaler)(nil)).Elem()
+	if reflect.PtrTo(t).Implements(marshalIface) {
+		fmt.Fprintln(g.out, whitespace+"out.InsertRaw("+inArg+".MarshalYAML())")
+		return nil
+	}
+
+	marshalIface = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+	if reflect.PtrTo(t).Implements(marshalIface) {
+		fmt.Fprintln(g.out, whitespace+"out.InsertRawText("+inArg+"MarshalText())")
+		return nil
+	}
+	return g.generateEncoderBodyWithoutCheck(t, inArg, tags, indent, canBeNull)
 }
 
 func (g *Generator) generateEncoderBodyWithoutCheck(
@@ -66,6 +198,7 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 		fmt.Fprintf(g.out, whitespace+enc+"\n", inArg)
 		return nil
 	} else if enc := customEncoderFormatStrings[t.Name()]; enc != "" {
+		g.imports[t.PkgPath()] = t.Name() // assume it is a standard library
 		fmt.Fprintf(g.out, whitespace+enc+"\n", inArg)
 		return nil
 	}
@@ -172,16 +305,26 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 		if t.NumMethod() > 0 {
 			if implementMarshalerYAYAMLS(t) {
 				fmt.Fprintln(g.out, whitespace+"_ = "+inArg+".MarshalYAYAMLS(out)")
-			} else if implementMarshalerYAYAMLS(t) {
+			} else if implementsMarshaler(t) {
 				fmt.Fprintln(g.out, whitespace+"_ = out.InsertRaw("+inArg+".MarshalYAML(")
 			} else {
 				return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
 					"(any) or yayamls unmarshalers", t)
 			}
 		} else {
-
+			fmt.Fprintln(g.out, whitespace+"if m, ok := "+inArg+".(yayamls.MarshalerYAYAMLS) {")
+			fmt.Fprintln(g.out, whitespace+"  m.MarshalYAYAMLS(out)")
+			fmt.Fprintln(g.out, whitespace+"} else if m, ok := "+inArg+".(yayamls.Marshaler) {")
+			fmt.Fprintln(g.out, whitespace+"  out.InsertRaw(m.MarshalYAML())")
+			fmt.Fprintln(g.out, whitespace+"} else {")
+			// TODO: add reflect-based marshaler
+			fmt.Fprintln(g.out, whitespace+" out.InsertRaw(nil, nil)")
+			fmt.Fprintln(g.out, whitespace+"}")
 		}
+	default:
+		return fmt.Errorf("can't encode type %s", t)
 	}
+	return nil
 }
 
 func implementsMarshaler(t reflect.Type) bool {

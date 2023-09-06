@@ -346,3 +346,70 @@ func joinFunctionNameParts(keepFirst bool, parts ...string) string {
 	}
 	return buf.String()
 }
+
+func getStructFields(t reflect.Type) ([]reflect.StructField, error) {
+	if t.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("expected struct, but got %s", t)
+	}
+
+	var (
+		embeddedFields []reflect.StructField
+		fields         []reflect.StructField
+	)
+
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		tags := parseTags(f.Tag)
+		if !f.Anonymous || tags.name != "" {
+			continue
+		}
+
+		t := f.Type
+		if t.Kind() == reflect.Pointer {
+			t = t.Elem()
+		}
+
+		if t.Kind() == reflect.Struct {
+			fs, err := getStructFields(t)
+			if err != nil {
+				return nil, fmt.Errorf("error processing embedded field: %w", err)
+			}
+			embeddedFields = mergeStructFields(embeddedFields, fs)
+		} else if (t.Kind() >= reflect.Bool && t.Kind() <= reflect.Complex128) || t.Kind() == reflect.String { // kind is basic
+			if strings.Contains(f.Name, ".") || unicode.IsUpper([]rune(f.Name)[0]) {
+				fields = append(fields, f)
+			}
+		}
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		tags := parseTags(f.Tag)
+		if f.Anonymous && tags.name == "" {
+			continue
+		}
+
+		c := []rune(f.Name)[0]
+		if unicode.IsUpper(c) {
+			fields = append(fields, f)
+		}
+	}
+
+	return mergeStructFields(embeddedFields, fields), nil
+}
+
+func mergeStructFields(firstFields, secondFields []reflect.StructField) []reflect.StructField {
+	var fields []reflect.StructField
+	used := make(map[string]bool)
+	for _, f := range secondFields {
+		used[f.Name] = true
+		fields = append(fields, f)
+	}
+
+	for _, f := range firstFields {
+		if !used[f.Name] {
+			fields = append(fields, f)
+		}
+	}
+	return fields
+}

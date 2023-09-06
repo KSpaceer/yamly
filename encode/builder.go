@@ -133,6 +133,17 @@ func (t *ASTBuilder) InsertRaw(data []byte, err error) {
 	t.insertNode(tree, false)
 }
 
+func (t *ASTBuilder) InsertRawText(text []byte, err error) {
+	if t.fatalError != nil {
+		return
+	}
+	if err != nil {
+		t.fatalError = err
+		return
+	}
+	t.InsertString(string(text))
+}
+
 func (t *ASTBuilder) Result() (ast.Node, error) {
 	root := t.root
 	err := t.fatalError
