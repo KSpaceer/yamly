@@ -52,7 +52,7 @@ func (g *Generator) generateMarshaler(t reflect.Type) error {
 
 	fmt.Fprintln(g.out, "// MarshalYAYAMLS supports yayamls.MarshalerYAYAMLS interface")
 	fmt.Fprintln(g.out, "func (v "+tname+") MarshalYAYAMLS(out yayamls.Inserter) {")
-	fmt.Fprintln(g.out, "  "+fname+"(in, v)")
+	fmt.Fprintln(g.out, "  "+fname+"(out, v)")
 	fmt.Fprintln(g.out, "}")
 	return nil
 }
@@ -106,6 +106,7 @@ func (g *Generator) generateStructEncoder(t reflect.Type) error {
 		}
 	}
 	fmt.Fprintln(g.out, "  out.EndMapping()")
+	fmt.Fprintln(g.out, "}")
 	return nil
 }
 
@@ -179,7 +180,7 @@ func (g *Generator) generateEncoderBody(
 
 	marshalIface = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
 	if reflect.PtrTo(t).Implements(marshalIface) {
-		fmt.Fprintln(g.out, whitespace+"out.InsertRawText("+inArg+"MarshalText())")
+		fmt.Fprintln(g.out, whitespace+"out.InsertRawText("+inArg+".MarshalText())")
 		return nil
 	}
 	return g.generateEncoderBodyWithoutCheck(t, inArg, tags, indent, canBeNull)

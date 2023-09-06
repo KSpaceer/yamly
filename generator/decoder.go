@@ -80,7 +80,7 @@ func (g *Generator) generateStructDecoder(t reflect.Type) error {
 	fmt.Fprintln(g.out, "func "+fname+"(in yayamls.Decoder, out *"+tname+") {")
 	fmt.Fprintln(g.out, "  if in.TryNull() {")
 	fmt.Fprintln(g.out, "    var zeroValue "+tname)
-	fmt.Fprintln(g.out, "  *out = zeroValue")
+	fmt.Fprintln(g.out, "    *out = zeroValue")
 	fmt.Fprintln(g.out, "  }")
 	fmt.Fprintln(g.out)
 
@@ -162,7 +162,7 @@ func (g *Generator) generateDecoderBody(
 
 	unmarshalIface = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
 	if reflect.PtrTo(t).Implements(unmarshalIface) {
-		fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalText(in.String()))")
+		fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalText([]byte(in.String())))")
 		return nil
 	}
 
