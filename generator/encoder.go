@@ -164,25 +164,28 @@ func (g *Generator) generateEncoderBody(
 	indent int,
 	canBeNull bool,
 ) error {
-	whitespace := strings.Repeat(" ", indent)
+	if t != g.currentType {
+		whitespace := strings.Repeat(" ", indent)
 
-	marshalIface := reflect.TypeOf((*yayamls.MarshalerYAYAMLS)(nil)).Elem()
-	if reflect.PtrTo(t).Implements(marshalIface) {
-		fmt.Fprintln(g.out, whitespace+inArg+".MarshalYAYAMLS(out)")
-		return nil
+		marshalIface := reflect.TypeOf((*yayamls.MarshalerYAYAMLS)(nil)).Elem()
+		if reflect.PtrTo(t).Implements(marshalIface) {
+			fmt.Fprintln(g.out, whitespace+inArg+".MarshalYAYAMLS(out)")
+			return nil
+		}
+
+		marshalIface = reflect.TypeOf((*yayamls.Marshaler)(nil)).Elem()
+		if reflect.PtrTo(t).Implements(marshalIface) {
+			fmt.Fprintln(g.out, whitespace+"out.InsertRaw("+inArg+".MarshalYAML())")
+			return nil
+		}
+
+		marshalIface = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
+		if reflect.PtrTo(t).Implements(marshalIface) {
+			fmt.Fprintln(g.out, whitespace+"out.InsertRawText("+inArg+".MarshalText())")
+			return nil
+		}
 	}
 
-	marshalIface = reflect.TypeOf((*yayamls.Marshaler)(nil)).Elem()
-	if reflect.PtrTo(t).Implements(marshalIface) {
-		fmt.Fprintln(g.out, whitespace+"out.InsertRaw("+inArg+".MarshalYAML())")
-		return nil
-	}
-
-	marshalIface = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
-	if reflect.PtrTo(t).Implements(marshalIface) {
-		fmt.Fprintln(g.out, whitespace+"out.InsertRawText("+inArg+".MarshalText())")
-		return nil
-	}
 	return g.generateEncoderBodyWithoutCheck(t, inArg, tags, indent, canBeNull)
 }
 
@@ -198,7 +201,7 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 	if enc := basicEncoderFormatStrings[t.Kind()]; enc != "" {
 		fmt.Fprintf(g.out, whitespace+enc+"\n", inArg)
 		return nil
-	} else if enc := customEncoderFormatStrings[t.Name()]; enc != "" {
+	} else if enc := customEncoderFormatStrings[t.String()]; enc != "" {
 		g.imports[t.PkgPath()] = t.Name() // assume it is a standard library
 		fmt.Fprintf(g.out, whitespace+enc+"\n", inArg)
 		return nil
@@ -229,8 +232,8 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 
 			fmt.Fprintln(g.out, whitespace+"  }")
 			fmt.Fprintln(g.out, whitespace+"  out.EndSequence()")
-			fmt.Fprintln(g.out, whitespace+"}")
 		}
+		fmt.Fprintln(g.out, whitespace+"}")
 	case reflect.Array:
 		elem := t.Elem()
 

@@ -63,7 +63,7 @@ func (g *Generator) generateDecoder(t reflect.Type) error {
 	tname := g.extractTypeName(t)
 
 	fmt.Fprintln(g.out, "func "+fname+"(in yayamls.Decoder, out *"+tname+") {")
-	if err := g.generateDecoderBodyWithoutCheck(t, "out", fieldTags{}, 2); err != nil {
+	if err := g.generateDecoderBodyWithoutCheck(reflect.PtrTo(t), "out", fieldTags{}, 2, false); err != nil {
 		return err
 	}
 	fmt.Fprintln(g.out, "}")
@@ -133,7 +133,7 @@ func (g *Generator) generateStructFieldDecoder(f reflect.StructField) error {
 	}
 
 	fmt.Fprintln(g.out, "    case \""+name+"\":")
-	if err := g.generateDecoderBody(f.Type, "out."+f.Name, tags, 6); err != nil {
+	if err := g.generateDecoderBody(f.Type, "out."+f.Name, tags, 6, true); err != nil {
 		return err
 	}
 
@@ -145,28 +145,31 @@ func (g *Generator) generateDecoderBody(
 	outArg string,
 	tags fieldTags,
 	indent int,
+	complexTypeElem bool,
 ) error {
-	whitespace := strings.Repeat(" ", indent)
+	if t != g.currentType {
+		whitespace := strings.Repeat(" ", indent)
 
-	unmarshalIface := reflect.TypeOf((*yayamls.UnmarshalerYAYAMLS)(nil)).Elem()
-	if reflect.PtrTo(t).Implements(unmarshalIface) {
-		fmt.Fprintln(g.out, whitespace+"("+outArg+").UnmarshalYAYAMLS(in)")
-		return nil
+		unmarshalIface := reflect.TypeOf((*yayamls.UnmarshalerYAYAMLS)(nil)).Elem()
+		if reflect.PtrTo(t).Implements(unmarshalIface) {
+			fmt.Fprintln(g.out, whitespace+"("+outArg+").UnmarshalYAYAMLS(in)")
+			return nil
+		}
+
+		unmarshalIface = reflect.TypeOf((*yayamls.Unmarshaler)(nil)).Elem()
+		if reflect.PtrTo(t).Implements(unmarshalIface) {
+			fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalYAML(in.Raw()))")
+			return nil
+		}
+
+		unmarshalIface = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
+		if reflect.PtrTo(t).Implements(unmarshalIface) {
+			fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalText([]byte(in.String())))")
+			return nil
+		}
 	}
 
-	unmarshalIface = reflect.TypeOf((*yayamls.Unmarshaler)(nil)).Elem()
-	if reflect.PtrTo(t).Implements(unmarshalIface) {
-		fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalYAML(in.Raw()))")
-		return nil
-	}
-
-	unmarshalIface = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
-	if reflect.PtrTo(t).Implements(unmarshalIface) {
-		fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalText([]byte(in.String())))")
-		return nil
-	}
-
-	return g.generateDecoderBodyWithoutCheck(t, outArg, tags, indent)
+	return g.generateDecoderBodyWithoutCheck(t, outArg, tags, indent, complexTypeElem)
 }
 
 func (g *Generator) generateDecoderBodyWithoutCheck(
@@ -174,6 +177,7 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 	outArg string,
 	tags fieldTags,
 	indent int,
+	complexTypeElem bool,
 ) error {
 	whitespace := strings.Repeat(" ", indent)
 	if dec := customDecoders[t.String()]; dec != "" {
@@ -203,12 +207,12 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = make("+g.extractTypeName(t)+", 0, "+sliceStateVar+".Size())")
 			fmt.Fprintln(g.out, whitespace+"  for "+sliceStateVar+".HasUnprocessedItems() {")
 			fmt.Fprintln(g.out, whitespace+"    var "+sliceElemVar+" "+g.extractTypeName(elem))
-			fmt.Fprintln(g.out, whitespace+"    "+outArg+" = append("+outArg+", "+sliceElemVar+")")
 
-			if err := g.generateDecoderBody(elem, sliceElemVar, tags, indent+4); err != nil {
+			if err := g.generateDecoderBody(elem, sliceElemVar, tags, indent+4, true); err != nil {
 				return err
 			}
 
+			fmt.Fprintln(g.out, whitespace+"    "+outArg+" = append("+outArg+", "+sliceElemVar+")")
 			fmt.Fprintln(g.out, whitespace+"  }")
 			fmt.Fprintln(g.out, whitespace+"}")
 		}
@@ -227,7 +231,7 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			fmt.Fprintln(g.out, whitespace+"  "+arrayStateVar+" := in.Sequence()")
 			fmt.Fprintln(g.out, whitespace+"  for "+arrayStateVar+".HasUnprocessedItems() && "+iterVar+" < "+strconv.Itoa(t.Len())+"{")
 
-			if err := g.generateDecoderBody(elem, "("+outArg+")["+iterVar+"]", tags, indent+4); err != nil {
+			if err := g.generateDecoderBody(elem, "("+outArg+")["+iterVar+"]", tags, indent+4, true); err != nil {
 				return err
 			}
 			fmt.Fprintln(g.out, whitespace+"    "+iterVar+"++")
@@ -247,11 +251,13 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 		fmt.Fprintln(g.out, whitespace+"if in.TryNull() {")
 		fmt.Fprintln(g.out, whitespace+"  "+outArg+" = nil")
 		fmt.Fprintln(g.out, whitespace+"} else {")
-		fmt.Fprintln(g.out, whitespace+"  if "+outArg+" == nil {")
-		fmt.Fprintln(g.out, whitespace+"    "+outArg+" = new("+g.extractTypeName(t.Elem())+")")
-		fmt.Fprintln(g.out, whitespace+"  }")
+		if complexTypeElem {
+			fmt.Fprintln(g.out, whitespace+"  if "+outArg+" == nil {")
+			fmt.Fprintln(g.out, whitespace+"    "+outArg+" = new("+g.extractTypeName(t.Elem())+")")
+			fmt.Fprintln(g.out, whitespace+"  }")
+		}
 
-		if err := g.generateDecoderBody(t.Elem(), "*"+outArg, tags, indent+2); err != nil {
+		if err := g.generateDecoderBody(t.Elem(), "*"+outArg, tags, indent+2, complexTypeElem); err != nil {
 			return err
 		}
 
@@ -275,22 +281,22 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = make(map["+g.extractTypeName(key)+"]"+g.extractTypeName(elem)+", "+
 				mapStateVar+".Size())")
 		}
-		fmt.Fprintln(g.out, whitespace+"  var (")
-		fmt.Fprintln(g.out, whitespace+"    "+keyVar+" "+g.extractTypeName(key))
-		fmt.Fprintln(g.out, whitespace+"    "+valueVar+" "+g.extractTypeName(elem))
-		fmt.Fprintln(g.out, whitespace+"  )")
 		fmt.Fprintln(g.out)
 		fmt.Fprintln(g.out, whitespace+"  for "+mapStateVar+".HasUnprocessedItems() {")
+		fmt.Fprintln(g.out, whitespace+"    var (")
+		fmt.Fprintln(g.out, whitespace+"      "+keyVar+" "+g.extractTypeName(key))
+		fmt.Fprintln(g.out, whitespace+"      "+valueVar+" "+g.extractTypeName(elem))
+		fmt.Fprintln(g.out, whitespace+"    )")
 
-		if err := g.generateDecoderBody(key, keyVar, tags, indent+4); err != nil {
+		if err := g.generateDecoderBody(key, keyVar, tags, indent+4, true); err != nil {
 			return err
 		}
 
-		if err := g.generateDecoderBody(elem, valueVar, tags, indent+4); err != nil {
+		if err := g.generateDecoderBody(elem, valueVar, tags, indent+4, true); err != nil {
 			return err
 		}
 
-		fmt.Fprintln(g.out, whitespace+"    "+outArg+"["+keyVar+"] = "+valueVar)
+		fmt.Fprintln(g.out, whitespace+"    ("+outArg+")["+keyVar+"] = "+valueVar)
 		fmt.Fprintln(g.out, whitespace+"  }")
 		fmt.Fprintln(g.out, whitespace+"}")
 	case reflect.Interface:

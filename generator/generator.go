@@ -32,7 +32,8 @@ type Generator struct {
 
 	imports map[string]string
 
-	targetType reflect.Type
+	targetType  reflect.Type
+	currentType reflect.Type
 
 	pendingTypes   []reflect.Type
 	generatedTypes map[reflect.Type]bool
@@ -107,6 +108,7 @@ func (g *Generator) Generate(w io.Writer) error {
 		t := g.pendingTypes[len(g.pendingTypes)-1]
 		g.pendingTypes = g.pendingTypes[:len(g.pendingTypes)-1]
 		g.generatedTypes[t] = true
+		g.currentType = t
 
 		if err := g.generateDecoder(t); err != nil {
 			return err
