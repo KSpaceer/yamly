@@ -288,7 +288,7 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 			fmt.Fprintln(g.out, whitespace+"  out.InsertNull()")
 			fmt.Fprintln(g.out, whitespace+"} else {")
 		} else {
-			fmt.Fprintln(g.out, whitespace+"}")
+			fmt.Fprintln(g.out, whitespace+"{")
 		}
 
 		fmt.Fprintln(g.out, whitespace+"  out.StartMapping()")
