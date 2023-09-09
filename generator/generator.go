@@ -3,6 +3,7 @@ package generator
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"path/filepath"
 	"reflect"
@@ -307,7 +308,7 @@ func (g *Generator) generateFunctionName(prefix string, t reflect.Type) string {
 func safeTypeName(t reflect.Type) string {
 	name := t.PkgPath()
 	if t.Name() == "" {
-		name += "anonymous"
+		name += "anonymous" + anonymousStructSuffix(t)
 	} else {
 		name += "." + t.Name()
 	}
@@ -329,6 +330,21 @@ func safeTypeName(t reflect.Type) string {
 	}
 
 	return joinFunctionNameParts(false, parts...)
+}
+
+func anonymousStructSuffix(t reflect.Type) string {
+	if t.Kind() != reflect.Struct {
+		return ""
+	}
+
+	var suffixBuilder bytes.Buffer
+	for i := 0; i < t.NumField(); i++ {
+		suffixBuilder.WriteString(t.Field(i).Name)
+		suffixBuilder.WriteString(t.Field(i).Type.String())
+	}
+	hasher := fnv.New32()
+	hasher.Write(suffixBuilder.Bytes())
+	return fmt.Sprintf("%X", hasher.Sum32())
 }
 
 func joinFunctionNameParts(keepFirst bool, parts ...string) string {

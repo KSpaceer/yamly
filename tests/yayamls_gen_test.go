@@ -81,6 +81,31 @@ func TestGenerator(t *testing.T) {
 			Value:   `structtest.TestType{Integer: 250, Unsigned: 100000, String: "string", Timestamp: time.Now().UTC()}`,
 			Imports: []string{"time"},
 		},
+		{
+			name:    "linked list",
+			PkgName: "linkedlist",
+			TypeDef: "struct{ Value int; Next *TestType; }",
+			Value:   "linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: &linkedlist.TestType{Value: 1000}}}",
+		},
+		{
+			name:    "linked list (with flags)",
+			flags:   []string{"--encode-pointer-receiver", "--disallow-unknown-fields", "--omitempty"},
+			PkgName: "linkedlist",
+			TypeDef: "struct{ Value int; Next *TestType; }",
+			Value:   "linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: &linkedlist.TestType{Value: 1000}}}",
+		},
+		{
+			name:    "anonymous struct",
+			PkgName: "withanon",
+			TypeDef: "struct{ ID uint32; Banned bool; Info struct{ Name string; Age uint8; } }",
+			Value:   "withanon.TestType{ID: 22, Info: struct{ Name string; Age uint8}{Name: \"yayamls\", Age: 0} }",
+		},
+		{
+			name:    "with tags",
+			PkgName: "tagged",
+			TypeDef: "struct{ Name string `yaml:\"my_name\"` ; Age int8 `yaml:\"age,omitempty\"` ; Ignored int `yaml:\"-\"` ; }",
+			Value:   "tagged.TestType{Name: \"yayamls\"}",
+		},
 	}
 
 	for _, tc := range tcases {
