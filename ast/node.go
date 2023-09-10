@@ -128,10 +128,10 @@ func (b *BasicNode) Type() NodeType {
 
 func (*BasicNode) Accept(Visitor) {}
 
+var invalidNode = &BasicNode{NodeType: InvalidType}
+
 func NewInvalidNode() Node {
-	return &BasicNode{
-		NodeType: InvalidType,
-	}
+	return invalidNode
 }
 
 func NewBasicNode(tp NodeType) Node {

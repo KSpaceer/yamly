@@ -71,12 +71,14 @@ func newParser(tokSrc *tokenSource) *parser {
 
 func ParseTokenStream(cts ConfigurableTokenStream) (ast.Node, error) {
 	p := newParser(newTokenSource(cts))
+	defer p.tokSrc.release()
 	return p.Parse()
 }
 
 func ParseTokens(tokens []token.Token) (ast.Node, error) {
 	tokSrc := newTokenSource(newSimpleTokenStream(tokens))
 	p := newParser(tokSrc)
+	defer p.tokSrc.release()
 	return p.Parse()
 }
 
@@ -107,6 +109,7 @@ func ParseBytes(src []byte, opts ...ParseOption) (ast.Node, error) {
 
 func Parse(cts ConfigurableTokenStream) (ast.Node, error) {
 	p := newParser(newTokenSource(cts))
+	defer p.tokSrc.release()
 	return p.Parse()
 }
 

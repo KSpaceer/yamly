@@ -22,13 +22,14 @@ type Tokenizer struct {
 
 func NewTokenizer(src string) *Tokenizer {
 	t := &Tokenizer{
-		ra:           cpaccessor.NewCheckpointingAccessor[rune](newRuneStream(src)),
+		ra:           cpaccessor.NewCheckpointingAccessor[rune](),
 		ctx:          newContext(),
 		lookaheadBuf: make([]rune, 0, lookaheadBufferPreallocationSize),
 		pos: token.Position{
 			Row: 1,
 		},
 	}
+	t.ra.SetStream(newRuneStream(src))
 	return t
 }
 

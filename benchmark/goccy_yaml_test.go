@@ -8,7 +8,6 @@ import (
 )
 
 func BenchmarkGoccyYAML_Unmarshal_Large(b *testing.B) {
-	b.Skip()
 	b.SetBytes(int64(len(largeDataText)))
 	for i := 0; i < b.N; i++ {
 		var s LargeStruct

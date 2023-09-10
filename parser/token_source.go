@@ -3,6 +3,7 @@ package parser
 import (
 	"github.com/KSpaceer/yayamls/pkg/cpaccessor"
 	"github.com/KSpaceer/yayamls/token"
+	"sync"
 )
 
 type RawTokenModer interface {
@@ -20,11 +21,28 @@ type tokenSource struct {
 	RawTokenModer
 }
 
+var accessorsPool = sync.Pool{}
+
+func getCheckpointingAccessor(cts ConfigurableTokenStream) cpaccessor.CheckpointingAccessor[token.Token] {
+	if ca, ok := accessorsPool.Get().(cpaccessor.CheckpointingAccessor[token.Token]); ok {
+		ca.SetStream(cts)
+		return ca
+	}
+	ca := cpaccessor.NewCheckpointingAccessor[token.Token]()
+	ca.SetStream(cts)
+	return ca
+}
+
 func newTokenSource(cts ConfigurableTokenStream) *tokenSource {
 	return &tokenSource{
-		CheckpointingAccessor: cpaccessor.NewCheckpointingAccessor[token.Token](cts),
+		CheckpointingAccessor: getCheckpointingAccessor(cts),
 		RawTokenModer:         cts,
 	}
+}
+
+func (ts *tokenSource) release() {
+	ts.CheckpointingAccessor.Reset()
+	accessorsPool.Put(ts.CheckpointingAccessor)
 }
 
 type simpleTokenStream struct {

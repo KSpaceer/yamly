@@ -19,13 +19,24 @@ const (
 	withoutBuffer = -1
 )
 
-func NewCheckpointingAccessor[T any](stream ResourceStream[T]) CheckpointingAccessor[T] {
+func NewCheckpointingAccessor[T any]() CheckpointingAccessor[T] {
 	return CheckpointingAccessor[T]{
-		stream:           stream,
 		buf:              make([]T, 0, bufferPreallocationSize),
 		bufIndicator:     withoutBuffer,
 		checkpointsStack: make([]int, 0, checkpointsStackPreallocationSize),
 	}
+}
+
+func (a *CheckpointingAccessor[T]) SetStream(stream ResourceStream[T]) {
+	a.Reset()
+	a.stream = stream
+}
+
+func (a *CheckpointingAccessor[T]) Reset() {
+	a.stream = nil
+	a.buf = a.buf[:0]
+	a.bufIndicator = withoutBuffer
+	a.checkpointsStack = a.checkpointsStack[:0]
 }
 
 func (a *CheckpointingAccessor[T]) Next() T {

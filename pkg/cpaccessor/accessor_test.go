@@ -404,7 +404,8 @@ func TestTokenAccessor(t *testing.T) {
 				index:        0,
 			}
 			result := make([]token.Token, 0, len(tc.ExpectedTokens))
-			tokenAccessor := cpaccessor.NewCheckpointingAccessor[token.Token](stream)
+			tokenAccessor := cpaccessor.NewCheckpointingAccessor[token.Token]()
+			tokenAccessor.SetStream(stream)
 
 			var (
 				checkpointIdx int
@@ -469,7 +470,8 @@ func TestCommitWithNestedRollback(t *testing.T) {
 		values: []int{1, 2, 3},
 	}
 
-	accessor := cpaccessor.NewCheckpointingAccessor[int](stream)
+	accessor := cpaccessor.NewCheckpointingAccessor[int]()
+	accessor.SetStream(stream)
 
 	accessor.SetCheckpoint()
 	accessor.Next()
