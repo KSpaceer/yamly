@@ -467,6 +467,8 @@ func (n *NullNode) Accept(v Visitor) {
 	v.VisitNullNode(n)
 }
 
+var nullNode = &NullNode{}
+
 func NewNullNode() Node {
-	return &NullNode{}
+	return nullNode
 }

@@ -18,3 +18,7 @@ func (f *Finder) Mark(tok token.Token) bool {
 	f.m[tok.Start]++
 	return f.m[tok.Start] > deadEndTriggerThreshold
 }
+
+func (f *Finder) Reset() {
+	clear(f.m)
+}

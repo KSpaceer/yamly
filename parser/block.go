@@ -284,7 +284,6 @@ func (p *parser) parseBlockSequence(ind *indentation) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	var entries []ast.Node
 
 	localInd := indentation{
 		value: ind.value + 1,
@@ -297,7 +296,7 @@ func (p *parser) parseBlockSequence(ind *indentation) ast.Node {
 	if !ast.ValidNode(entry) {
 		return ast.NewInvalidNode()
 	}
-	entries = append(entries, entry)
+	entries := []ast.Node{entry}
 
 	for {
 		p.setCheckpoint()

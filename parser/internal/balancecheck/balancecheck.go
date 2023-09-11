@@ -76,3 +76,7 @@ func (b *BalanceChecker) SetMemento(m BalanceCheckerMemento) {
 	b.stack = b.stack[:stackSize]
 	b.cannotBeBalanced = m.cannotBeBalanced
 }
+
+func (b *BalanceChecker) Reset() {
+	b.stack = b.stack[:0]
+}

@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"github.com/KSpaceer/yayamls/pkg/cpaccessor"
+	"github.com/KSpaceer/yayamls/pkg/strslice"
 	"github.com/KSpaceer/yayamls/token"
 	"strings"
 )
@@ -20,7 +21,23 @@ type Tokenizer struct {
 	hasPreparedToken bool
 }
 
-func NewTokenizer(src string) *Tokenizer {
+type tokenizerOpts struct {
+	unsafe bool
+}
+
+type TokenizerOption func(*tokenizerOpts)
+
+func WithUnsafe() TokenizerOption {
+	return func(opts *tokenizerOpts) {
+		opts.unsafe = true
+	}
+}
+
+func NewTokenizer(src string, opts ...TokenizerOption) *Tokenizer {
+	var o tokenizerOpts
+	for _, opt := range opts {
+		opt(&o)
+	}
 	t := &Tokenizer{
 		ra:           cpaccessor.NewCheckpointingAccessor[rune](),
 		ctx:          newContext(),
@@ -29,7 +46,14 @@ func NewTokenizer(src string) *Tokenizer {
 			Row: 1,
 		},
 	}
-	t.ra.SetStream(newRuneStream(src))
+	var runeSrc []byte
+	if o.unsafe {
+		runeSrc = strslice.StringToBytesSlice(src)
+	} else {
+		runeSrc = []byte(src)
+	}
+
+	t.ra.SetStream(newRuneStream(runeSrc))
 	return t
 }
 

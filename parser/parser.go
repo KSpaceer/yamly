@@ -7,6 +7,7 @@ import (
 	"github.com/KSpaceer/yayamls/lexer"
 	"github.com/KSpaceer/yayamls/parser/internal/balancecheck"
 	"github.com/KSpaceer/yayamls/parser/internal/deadend"
+	"github.com/KSpaceer/yayamls/pkg/strslice"
 	"github.com/KSpaceer/yayamls/token"
 	"sync"
 )
@@ -55,6 +56,16 @@ type state struct {
 	balanceCheckMemento balancecheck.BalanceCheckerMemento
 }
 
+var parserPool = sync.Pool{}
+
+func getParser(tokSrc *tokenSource) *parser {
+	if p, ok := parserPool.Get().(*parser); ok {
+		p.tokSrc = tokSrc
+		return p
+	}
+	return newParser(tokSrc)
+}
+
 func newParser(tokSrc *tokenSource) *parser {
 	return &parser{
 		tokSrc: tokSrc,
@@ -78,7 +89,7 @@ func ParseTokenStream(cts ConfigurableTokenStream) (ast.Node, error) {
 func ParseTokens(tokens []token.Token) (ast.Node, error) {
 	tokSrc := newTokenSource(newSimpleTokenStream(tokens))
 	p := newParser(tokSrc)
-	defer p.tokSrc.release()
+	defer p.release()
 	return p.Parse()
 }
 
@@ -104,12 +115,12 @@ func ParseString(src string, opts ...ParseOption) (ast.Node, error) {
 }
 
 func ParseBytes(src []byte, opts ...ParseOption) (ast.Node, error) {
-	return ParseString(string(src), opts...)
+	return ParseString(strslice.BytesSliceToString(src), opts...)
 }
 
 func Parse(cts ConfigurableTokenStream) (ast.Node, error) {
 	p := newParser(newTokenSource(cts))
-	defer p.tokSrc.release()
+	defer p.release()
 	return p.Parse()
 }
 
@@ -162,6 +173,17 @@ func (p *parser) hasErrors() bool {
 
 func (p *parser) error() error {
 	return errors.Join(p.errors...)
+}
+
+func (p *parser) release() {
+	p.tokSrc.release()
+	p.tokSrc = nil
+	p.savedStates = p.savedStates[:0]
+	p.balanceChecker.Reset()
+	p.deadEndFinder.Reset()
+	p.errors = p.errors[:0]
+	p.state = state{startOfLine: true}
+	parserPool.Put(p)
 }
 
 func (p *parser) setCheckpoint() {

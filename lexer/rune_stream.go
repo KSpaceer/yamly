@@ -1,24 +1,28 @@
 package lexer
 
+import (
+	"unicode/utf8"
+)
+
 const EOF rune = -1
 
 type runeStream struct {
-	runes []rune
-	pos   int
+	src []byte
+	pos int
 }
 
-func newRuneStream(src string) *runeStream {
+func newRuneStream(src []byte) *runeStream {
 	return &runeStream{
-		runes: []rune(src),
-		pos:   0,
+		src: src,
+		pos: 0,
 	}
 }
 
 func (r *runeStream) Next() rune {
-	if r.pos >= len(r.runes) {
+	if r.pos >= len(r.src) {
 		return EOF
 	}
-	next := r.runes[r.pos]
-	r.pos++
+	next, diff := utf8.DecodeRune(r.src[r.pos:])
+	r.pos += diff
 	return next
 }
