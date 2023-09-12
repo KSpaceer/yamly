@@ -107,7 +107,7 @@ func (t *ASTBuilder) EndMapping() {
 	case !ast.ValidNode(currentNode):
 		t.fatalError = fmt.Errorf("failed to end mapping: got invalid node")
 	case currentNode.Type() != ast.MappingType:
-		t.fatalError = fmt.Errorf("failed to end mapping: expected mapping, but currenlty at %s", currentNode.Type())
+		t.fatalError = fmt.Errorf("failed to end mapping: expected mapping, but currently at %s", currentNode.Type())
 	default:
 		t.popNode()
 	}
