@@ -2,7 +2,7 @@ package parser
 
 import (
 	"fmt"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/token"
 )
 
 type ParenthesesType int8

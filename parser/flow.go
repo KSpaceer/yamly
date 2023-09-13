@@ -2,9 +2,9 @@ package parser
 
 import (
 	"bytes"
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/chars"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/chars"
+	"github.com/KSpaceer/yamly/token"
 )
 
 // YAML specification: [197] s-l+flow-in-block

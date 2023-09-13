@@ -1,8 +1,8 @@
 package lexer
 
 import (
-	"github.com/KSpaceer/yayamls/chars"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/chars"
+	"github.com/KSpaceer/yamly/token"
 )
 
 type contextType int8

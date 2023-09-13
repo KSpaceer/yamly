@@ -1,7 +1,7 @@
 package chars_test
 
 import (
-	"github.com/KSpaceer/yayamls/chars"
+	"github.com/KSpaceer/yamly/chars"
 	"testing"
 )
 

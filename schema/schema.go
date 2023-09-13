@@ -2,7 +2,7 @@ package schema
 
 import (
 	"fmt"
-	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yamly/ast"
 	"math"
 	"regexp"
 	"strconv"

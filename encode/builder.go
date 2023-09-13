@@ -2,14 +2,14 @@ package encode
 
 import (
 	"fmt"
-	"github.com/KSpaceer/yayamls"
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/parser"
-	"github.com/KSpaceer/yayamls/schema"
+	"github.com/KSpaceer/yamly"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/parser"
+	"github.com/KSpaceer/yamly/schema"
 	"time"
 )
 
-var _ yayamls.TreeBuilder[ast.Node] = (*ASTBuilder)(nil)
+var _ yamly.TreeBuilder[ast.Node] = (*ASTBuilder)(nil)
 
 type ASTBuilder struct {
 	root  ast.Node

@@ -3,12 +3,12 @@ package parser
 import (
 	"bytes"
 	"errors"
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/lexer"
-	"github.com/KSpaceer/yayamls/parser/internal/balancecheck"
-	"github.com/KSpaceer/yayamls/parser/internal/deadend"
-	"github.com/KSpaceer/yayamls/pkg/strslice"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/lexer"
+	"github.com/KSpaceer/yamly/parser/internal/balancecheck"
+	"github.com/KSpaceer/yamly/parser/internal/deadend"
+	"github.com/KSpaceer/yamly/pkg/strslice"
+	"github.com/KSpaceer/yamly/token"
 	"sync"
 )
 

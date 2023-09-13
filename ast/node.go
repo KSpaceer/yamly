@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/token"
 )
 
 type NodeType int8

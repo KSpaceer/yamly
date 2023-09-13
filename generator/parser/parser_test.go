@@ -1,7 +1,7 @@
 package parser_test
 
 import (
-	"github.com/KSpaceer/yayamls/generator/parser"
+	"github.com/KSpaceer/yamly/generator/parser"
 	"testing"
 )
 
@@ -17,14 +17,14 @@ func TestParser_Parse(t *testing.T) {
 		{
 			name:            "current directory",
 			dirPath:         ".",
-			expectedPkgPath: "github.com/KSpaceer/yayamls/generator/parser",
+			expectedPkgPath: "github.com/KSpaceer/yamly/generator/parser",
 			expectedPkgName: "parser",
 		},
 		{
 			name:            "module root",
 			dirPath:         "../..",
-			expectedPkgPath: "github.com/KSpaceer/yayamls",
-			expectedPkgName: "yayamls",
+			expectedPkgPath: "github.com/KSpaceer/yamly",
+			expectedPkgName: "yamly",
 		},
 	}
 

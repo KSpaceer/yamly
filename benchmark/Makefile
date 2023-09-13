@@ -1,12 +1,12 @@
-all: yayamls_bench goccy_bench go_yaml_bench
+all: yamly_bench goccy_bench go_yaml_bench
 
-yayamls_bench:
-	go run ../cmd/yayamls/main.go -build-tags bench_yayamls -type LargeStruct
-	go run ../cmd/yayamls/main.go -build-tags bench_yayamls -type ExtraLargeStruct
-	go run ../cmd/yayamls/main.go -build-tags bench_yayamls -type SmallStruct
-	go test -cpuprofile cpu.out -memprofilerate=1 -memprofile mem.out -benchmem -tags bench_yayamls -bench .
-	#go test -benchmem -tags bench_yayamls -bench .
-	rm *_yayamls.go
+yamly_bench:
+	go run ../cmd/yamlygen/main.go -build-tags bench_yamly -type LargeStruct
+	go run ../cmd/yamlygen/main.go -build-tags bench_yamly -type ExtraLargeStruct
+	go run ../cmd/yamlygen/main.go -build-tags bench_yamly -type SmallStruct
+	#go test -cpuprofile cpu.out -memprofilerate=1 -memprofile mem.out -benchmem -tags bench_yamly -bench .
+	go test -benchmem -tags bench_yamly -bench .
+	rm *_yamly.go
 	
 goccy_bench:
 	go test -benchmem -tags bench_goccy -bench .

@@ -1,6 +1,6 @@
 package decode
 
-import "github.com/KSpaceer/yayamls/ast"
+import "github.com/KSpaceer/yamly/ast"
 
 type anchorsKeeper struct {
 	anchors    map[string]ast.Node

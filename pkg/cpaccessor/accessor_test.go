@@ -1,8 +1,8 @@
 package cpaccessor_test
 
 import (
-	"github.com/KSpaceer/yayamls/pkg/cpaccessor"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/pkg/cpaccessor"
+	"github.com/KSpaceer/yamly/token"
 	"testing"
 )
 

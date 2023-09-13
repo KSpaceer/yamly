@@ -3,11 +3,11 @@ package decode
 import (
 	"errors"
 	"fmt"
-	"github.com/KSpaceer/yayamls"
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/encode"
-	"github.com/KSpaceer/yayamls/parser"
-	"github.com/KSpaceer/yayamls/schema"
+	"github.com/KSpaceer/yamly"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/encode"
+	"github.com/KSpaceer/yamly/parser"
+	"github.com/KSpaceer/yamly/schema"
 	"time"
 )
 
@@ -17,7 +17,7 @@ type ASTReader struct {
 	currentExpecter    expecter
 	lastVisitingResult visitingResult
 
-	extractedCollectionState yayamls.CollectionState
+	extractedCollectionState yamly.CollectionState
 	extractedValue           string
 
 	anchors anchorsKeeper
@@ -92,7 +92,7 @@ func (s *collectionState) Size() int { return s.size }
 
 func (s *collectionState) HasUnprocessedItems() bool { return !s.empty() }
 
-var noopCollectionState yayamls.CollectionState = noopState{}
+var noopCollectionState yamly.CollectionState = noopState{}
 
 type noopState struct{}
 
@@ -100,7 +100,7 @@ func (noopState) Size() int { return 0 }
 
 func (noopState) HasUnprocessedItems() bool { return false }
 
-func newCollectionState(iter nodeIterator, size int) yayamls.CollectionState {
+func newCollectionState(iter nodeIterator, size int) yamly.CollectionState {
 	return &collectionState{
 		size:         size,
 		nodeIterator: iter,
@@ -266,7 +266,7 @@ func (r *ASTReader) Timestamp() time.Time {
 	return v
 }
 
-func (r *ASTReader) Sequence() yayamls.CollectionState {
+func (r *ASTReader) Sequence() yamly.CollectionState {
 	if r.hasFatalError() {
 		return noopCollectionState
 	}
@@ -280,7 +280,7 @@ func (r *ASTReader) Sequence() yayamls.CollectionState {
 	return r.extractedCollectionState
 }
 
-func (r *ASTReader) Mapping() yayamls.CollectionState {
+func (r *ASTReader) Mapping() yamly.CollectionState {
 	if r.hasFatalError() {
 		return noopCollectionState
 	}
@@ -423,7 +423,7 @@ func (r *ASTReader) VisitNullNode(n *ast.NullNode) {
 		r.popRoutePoint()
 	case visitingConclusionDeny:
 		r.swapRoutePoint(point)
-		r.appendError(yayamls.DenyError(&denyError{
+		r.appendError(yamly.DenyError(&denyError{
 			expecter: r.currentExpecter,
 			nt:       n.Type(),
 		}))
@@ -547,7 +547,7 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 func (r *ASTReader) visitCurrentNode() {
 	n := r.currentNode()
 	if n == nil {
-		r.appendError(yayamls.EndOfStream)
+		r.appendError(yamly.EndOfStream)
 	} else {
 		n.Accept(r)
 	}
@@ -601,11 +601,11 @@ func (r *ASTReader) swapRoutePoint(point routePoint) {
 }
 
 func (r *ASTReader) setLatestDeny(err *denyError) {
-	r.latestDenyError = yayamls.DenyError(err)
+	r.latestDenyError = yamly.DenyError(err)
 }
 
 func (r *ASTReader) appendError(err error) {
-	if r.multipleDenyErrors && errors.Is(err, yayamls.Denied) {
+	if r.multipleDenyErrors && errors.Is(err, yamly.Denied) {
 		r.denyErrors = append(r.denyErrors, err)
 	} else if r.fatalError == nil {
 		r.fatalError = err

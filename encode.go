@@ -1,4 +1,4 @@
-package yayamls
+package yamly
 
 import (
 	"io"
@@ -11,10 +11,10 @@ type Marshaler interface {
 	MarshalYAML() ([]byte, error)
 }
 
-// MarshalerYAYAMLS interface can be implemented to customize type's behaviour when being
+// MarshalerYamly interface can be implemented to customize type's behaviour when being
 // marshaled into a YAML document inserting a subtree into builded AST.
-type MarshalerYAYAMLS interface {
-	MarshalYAYAMLS(Inserter)
+type MarshalerYamly interface {
+	MarshalYamly(Inserter)
 }
 
 // Inserter allows inserting values into an YAML AST.

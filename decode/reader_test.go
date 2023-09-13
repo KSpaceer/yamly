@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/KSpaceer/yayamls"
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/decode"
-	"github.com/KSpaceer/yayamls/parser"
+	"github.com/KSpaceer/yamly"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/decode"
+	"github.com/KSpaceer/yamly/parser"
 	"math"
 	"reflect"
 	"testing"
@@ -18,7 +18,7 @@ func TestReader_Simple(t *testing.T) {
 	type tcase struct {
 		name       string
 		ast        ast.Node
-		calls      func(r yayamls.Decoder, vs *valueStore) error
+		calls      func(r yamly.Decoder, vs *valueStore) error
 		expected   []any
 		expectDeny bool
 	}
@@ -30,7 +30,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("15"),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Integer(64)
 				vs.Add(v)
 				return r.Error()
@@ -43,7 +43,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("true"),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Integer(64)
 				vs.Add(v)
 				return r.Error()
@@ -56,7 +56,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("null"),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -72,7 +72,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewMappingNode(nil),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -88,7 +88,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("0xFF"),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Unsigned(64)
 				vs.Add(v)
 				return r.Error()
@@ -101,7 +101,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("3.3"),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Unsigned(64)
 				vs.Add(v)
 				return r.Error()
@@ -117,7 +117,7 @@ func TestReader_Simple(t *testing.T) {
 						ast.NewTextNode(""),
 					),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -133,7 +133,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("lll"),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -150,7 +150,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("true"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Boolean()
 				vs.Add(v)
 				return r.Error()
@@ -164,7 +164,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("YES"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Boolean()
 				vs.Add(v)
 				return r.Error()
@@ -177,7 +177,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("NULL"),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -193,7 +193,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("NULL", ast.WithQuotingType(ast.SingleQuotingType)),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -210,7 +210,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("33e6"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Float(64)
 				vs.Add(v)
 				return r.Error()
@@ -224,7 +224,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("33ee6"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Float(64)
 				vs.Add(v)
 				return r.Error()
@@ -237,7 +237,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewTextNode("Null"),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -253,7 +253,7 @@ func TestReader_Simple(t *testing.T) {
 				[]ast.Node{
 					ast.NewMappingNode(nil),
 				}),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -270,7 +270,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("Null", ast.WithQuotingType(ast.DoubleQuotingType)),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.String()
 				vs.Add(v)
 				return r.Error()
@@ -286,7 +286,7 @@ func TestReader_Simple(t *testing.T) {
 					}),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.String()
 				vs.Add(v)
 				return r.Error()
@@ -301,7 +301,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("~"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -318,7 +318,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("2023-08-23"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Timestamp()
 				vs.Add(v)
 				return r.Error()
@@ -334,7 +334,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("sss"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				v := r.Timestamp()
 				vs.Add(v)
 				return r.Error()
@@ -348,7 +348,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewSequenceNode(nil),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				state := r.Sequence()
 				vs.Add(state.HasUnprocessedItems())
 				vs.Add(state.Size())
@@ -363,7 +363,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewMappingNode(nil),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				state := r.Sequence()
 				vs.Add(state.HasUnprocessedItems())
 				vs.Add(state.Size())
@@ -378,7 +378,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewNullNode(),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -397,7 +397,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("a"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -416,7 +416,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewMappingNode(nil),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				state := r.Mapping()
 				vs.Add(state.HasUnprocessedItems())
 				vs.Add(state.Size())
@@ -431,7 +431,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewSequenceNode(nil),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				state := r.Mapping()
 				vs.Add(state.HasUnprocessedItems())
 				vs.Add(state.Size())
@@ -446,7 +446,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewNullNode(),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 					vs.Add(nil)
 				} else {
@@ -465,7 +465,7 @@ func TestReader_Simple(t *testing.T) {
 					ast.NewTextNode("text"),
 				},
 			),
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				if r.TryNull() {
 				} else {
 					state := r.Mapping()
@@ -486,7 +486,7 @@ func TestReader_Simple(t *testing.T) {
 			err := tc.calls(r, &vs)
 			if err != nil {
 				switch {
-				case tc.expectDeny && errors.Is(err, yayamls.Denied):
+				case tc.expectDeny && errors.Is(err, yamly.Denied):
 					return
 				default:
 					t.Fatalf("unexpected error: %v", err)
@@ -505,7 +505,7 @@ func TestReader_Complex(t *testing.T) {
 	type tcase struct {
 		name       string
 		src        string
-		calls      func(r yayamls.Decoder, vs *valueStore) error
+		calls      func(r yamly.Decoder, vs *valueStore) error
 		expected   []any
 		expectDeny bool
 		expectEOS  bool
@@ -515,7 +515,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "mapping with one pair",
 			src:  "key: value",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				for mapState.HasUnprocessedItems() {
 					key := r.String()
@@ -530,7 +530,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "sequence with two entries",
 			src:  "['val1', \"val2\"]",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				seqState := r.Sequence()
 				for seqState.HasUnprocessedItems() {
 					val := r.String()
@@ -543,7 +543,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "struct-like mapping",
 			src:  "name: \"name\"\nscore: 250\nsubscription: true\nnested: {\"inner\": .inf, \"seq\": null}",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				for mapState.HasUnprocessedItems() {
 					key := r.String()
@@ -593,7 +593,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "anchor and alias",
 			src:  "a: &anc value\nb: *anc",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				for mapState.HasUnprocessedItems() {
 					_ = r.String()
@@ -607,7 +607,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "anchor and alias with any",
 			src:  "a: &anc value\nb: *anc",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				for mapState.HasUnprocessedItems() {
 					_ = r.String()
@@ -621,7 +621,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "struct-like mapping with any",
 			src:  "name: 'name'\nscore: 100\nskip_me: null\nunique: {key: value}\nenable: true\n",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				for mapState.HasUnprocessedItems() {
 					key := r.String()
@@ -652,7 +652,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "anchor and alias with raw",
 			src:  "a: &anc value\nb: *anc",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				_ = r.String()
 				value := r.String()
@@ -670,7 +670,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "anchor and alias with raw (reversed)",
 			src:  "a: &anc value\nb: *anc",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				_ = r.String()
 				value := r.Raw()
@@ -688,7 +688,7 @@ func TestReader_Complex(t *testing.T) {
 		{
 			name: "skips",
 			src:  "[1,2,3,4,5]",
-			calls: func(r yayamls.Decoder, vs *valueStore) error {
+			calls: func(r yamly.Decoder, vs *valueStore) error {
 				seqState := r.Sequence()
 				var i int
 				for seqState.HasUnprocessedItems() {
@@ -715,7 +715,7 @@ func TestReader_Complex(t *testing.T) {
 			vs := valueStore{}
 			if err = tc.calls(r, &vs); err != nil {
 				switch {
-				case tc.expectDeny && errors.Is(err, yayamls.Denied):
+				case tc.expectDeny && errors.Is(err, yamly.Denied):
 					return
 				default:
 					t.Fatalf("unexpected error: %v", err)
@@ -1096,8 +1096,8 @@ func TestReader_K8SManifest(t *testing.T) {
 		t.Fatalf("parser error: %v", err)
 	}
 	r := decode.NewASTReader(tree)
-	var read func(r yayamls.Decoder) error
-	read = func(r yayamls.Decoder) error {
+	var read func(r yamly.Decoder) error
+	read = func(r yamly.Decoder) error {
 		manifestState := r.Mapping()
 		for manifestState.HasUnprocessedItems() {
 			key := r.String()

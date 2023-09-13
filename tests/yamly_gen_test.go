@@ -98,13 +98,13 @@ func TestGenerator(t *testing.T) {
 			name:    "anonymous struct",
 			PkgName: "withanon",
 			TypeDef: "struct{ ID uint32; Banned bool; Info struct{ Name string; Age uint8; } }",
-			Value:   "withanon.TestType{ID: 22, Info: struct{ Name string; Age uint8}{Name: \"yayamls\", Age: 0} }",
+			Value:   "withanon.TestType{ID: 22, Info: struct{ Name string; Age uint8}{Name: \"yamly\", Age: 0} }",
 		},
 		{
 			name:    "with tags",
 			PkgName: "tagged",
 			TypeDef: "struct{ Name string `yaml:\"my_name\"` ; Age int8 `yaml:\"age,omitempty\"` ; Ignored int `yaml:\"-\"` ; }",
-			Value:   "tagged.TestType{Name: \"yayamls\"}",
+			Value:   "tagged.TestType{Name: \"yamly\"}",
 		},
 	}
 
@@ -148,7 +148,7 @@ func TestGenerator(t *testing.T) {
 				t.Fatalf("failed to execute typedef code template: %v", err)
 			}
 
-			execArgs := []string{"run", "../cmd/yayamls/main.go"}
+			execArgs := []string{"run", "../cmd/yamlygen/main.go"}
 			execArgs = append(execArgs, tc.flags...)
 
 			execArgs = append(execArgs, "-type", "TestType")
@@ -159,11 +159,11 @@ func TestGenerator(t *testing.T) {
 			cmd.Stderr = &stderr
 
 			if err := cmd.Run(); err != nil {
-				t.Errorf("failed to run yayamls binary: %v\n\nStderr content: %v", err, stderr.String())
+				t.Errorf("failed to run yamlygen binary: %v\n\nStderr content: %v", err, stderr.String())
 			}
 			stderr.Reset()
 
-			if data, err := os.ReadFile(root + "/" + tc.PkgName + "/test_type_yayamls.go"); err != nil {
+			if data, err := os.ReadFile(root + "/" + tc.PkgName + "/test_type_yamly.go"); err != nil {
 				t.Errorf("failed to read generated file: %v", err)
 			} else {
 				t.Logf("GENERATED DATA:\n\n\n%s\n\n\n===========", string(data))
@@ -198,7 +198,7 @@ import (
   "{{ $import }}"
   {{ end }}
 
-  "github.com/KSpaceer/yayamls/tests/{{ .TmpRoot }}/{{ .PkgName }}"
+  "github.com/KSpaceer/yamly/tests/{{ .TmpRoot }}/{{ .PkgName }}"
 )
 
 func main() {

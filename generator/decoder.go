@@ -3,7 +3,7 @@ package generator
 import (
 	"encoding"
 	"fmt"
-	"github.com/KSpaceer/yayamls"
+	"github.com/KSpaceer/yamly"
 	"reflect"
 	"strconv"
 	"strings"
@@ -34,7 +34,7 @@ func (g *Generator) generateUnmarshaler(t reflect.Type) error {
 	fname := g.decoderFunctionName(t)
 	tname := g.extractTypeName(t)
 
-	fmt.Fprintln(g.out, "// UnmarshalYAML supports yayamls.Unmarshaler interface")
+	fmt.Fprintln(g.out, "// UnmarshalYAML supports yamly.Unmarshaler interface")
 	fmt.Fprintln(g.out, "func (v *"+tname+") UnmarshalYAML(data []byte) error {")
 	fmt.Fprintln(g.out, "  in, err := decode.NewASTReaderFromBytes(data)")
 	fmt.Fprintln(g.out, "  if err != nil {")
@@ -46,8 +46,8 @@ func (g *Generator) generateUnmarshaler(t reflect.Type) error {
 
 	fmt.Fprintln(g.out)
 
-	fmt.Fprintln(g.out, "// UnmarshalYAYAMLS supports yayamls.UnmarshalerYAYAMLS interface")
-	fmt.Fprintln(g.out, "func (v *"+tname+") UnmarshalYAYAMLS(in yayamls.Decoder) {")
+	fmt.Fprintln(g.out, "// UnmarshalYamly supports yamly.UnmarshalerYamly interface")
+	fmt.Fprintln(g.out, "func (v *"+tname+") UnmarshalYamly(in yamly.Decoder) {")
 	fmt.Fprintln(g.out, "  "+fname+"(in, v)")
 	fmt.Fprintln(g.out, "}")
 
@@ -62,7 +62,7 @@ func (g *Generator) generateDecoder(t reflect.Type) error {
 	fname := g.decoderFunctionName(t)
 	tname := g.extractTypeName(t)
 
-	fmt.Fprintln(g.out, "func "+fname+"(in yayamls.Decoder, out *"+tname+") {")
+	fmt.Fprintln(g.out, "func "+fname+"(in yamly.Decoder, out *"+tname+") {")
 	if err := g.generateDecoderBodyWithoutCheck(reflect.PtrTo(t), "out", fieldTags{}, 2, false); err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (g *Generator) generateStructDecoder(t reflect.Type) error {
 	fname := g.decoderFunctionName(t)
 	tname := g.extractTypeName(t)
 
-	fmt.Fprintln(g.out, "func "+fname+"(in yayamls.Decoder, out *"+tname+") {")
+	fmt.Fprintln(g.out, "func "+fname+"(in yamly.Decoder, out *"+tname+") {")
 	fmt.Fprintln(g.out, "  if in.TryNull() {")
 	fmt.Fprintln(g.out, "    var zeroValue "+tname)
 	fmt.Fprintln(g.out, "    *out = zeroValue")
@@ -111,7 +111,7 @@ func (g *Generator) generateStructDecoder(t reflect.Type) error {
 	}
 	fmt.Fprintln(g.out, "    default:")
 	if g.disallowUnknownFields {
-		fmt.Fprintln(g.out, "      in.AddError(&yayamls.UnknownFieldError{Field: key})")
+		fmt.Fprintln(g.out, "      in.AddError(&yamly.UnknownFieldError{Field: key})")
 	} else {
 		fmt.Fprintln(g.out, "      in.Skip()")
 	}
@@ -150,13 +150,13 @@ func (g *Generator) generateDecoderBody(
 	if t != g.currentType {
 		whitespace := strings.Repeat(" ", indent)
 
-		unmarshalIface := reflect.TypeOf((*yayamls.UnmarshalerYAYAMLS)(nil)).Elem()
+		unmarshalIface := reflect.TypeOf((*yamly.UnmarshalerYamly)(nil)).Elem()
 		if reflect.PtrTo(t).Implements(unmarshalIface) {
-			fmt.Fprintln(g.out, whitespace+"("+outArg+").UnmarshalYAYAMLS(in)")
+			fmt.Fprintln(g.out, whitespace+"("+outArg+").UnmarshalYamly(in)")
 			return nil
 		}
 
-		unmarshalIface = reflect.TypeOf((*yayamls.Unmarshaler)(nil)).Elem()
+		unmarshalIface = reflect.TypeOf((*yamly.Unmarshaler)(nil)).Elem()
 		if reflect.PtrTo(t).Implements(unmarshalIface) {
 			fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalYAML(in.Raw()))")
 			return nil
@@ -301,18 +301,18 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 		fmt.Fprintln(g.out, whitespace+"}")
 	case reflect.Interface:
 		if t.NumMethod() > 0 {
-			if implementsUnmarshalerYAYAMLS(t) {
-				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYAYAMLS(in)")
+			if implementsUnmarshalerYamly(t) {
+				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYamly(in)")
 			} else if implementsUnmarshaler(t) {
 				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYAML(in.Raw())")
 			} else {
 				return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
-					"(any) or yayamls unmarshalers", t)
+					"(any) or yamly unmarshalers", t)
 			}
 		} else {
-			fmt.Fprintln(g.out, whitespace+"if m, ok := "+outArg+".(yayamls.UnmarshalerYAYAMLS); ok {")
-			fmt.Fprintln(g.out, whitespace+"  in.AddError(m.UnmarshalYAYAMLS(in))")
-			fmt.Fprintln(g.out, whitespace+"} else if m, ok := "+outArg+".(yayamls.Unmarshaler); ok {")
+			fmt.Fprintln(g.out, whitespace+"if m, ok := "+outArg+".(yamly.UnmarshalerYamly); ok {")
+			fmt.Fprintln(g.out, whitespace+"  in.AddError(m.UnmarshalYamly(in))")
+			fmt.Fprintln(g.out, whitespace+"} else if m, ok := "+outArg+".(yamly.Unmarshaler); ok {")
 			fmt.Fprintln(g.out, whitespace+"  in.AddError(m.Unmarshal(in.Raw()))")
 			fmt.Fprintln(g.out, whitespace+"} else {")
 			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = in.Any()")
@@ -325,11 +325,11 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 }
 
 func implementsUnmarshaler(t reflect.Type) bool {
-	return t.Implements(reflect.TypeOf((*yayamls.Unmarshaler)(nil)).Elem())
+	return t.Implements(reflect.TypeOf((*yamly.Unmarshaler)(nil)).Elem())
 }
 
-func implementsUnmarshalerYAYAMLS(t reflect.Type) bool {
-	return t.Implements(reflect.TypeOf((*yayamls.UnmarshalerYAYAMLS)(nil)).Elem())
+func implementsUnmarshalerYamly(t reflect.Type) bool {
+	return t.Implements(reflect.TypeOf((*yamly.UnmarshalerYamly)(nil)).Elem())
 }
 
 func (g *Generator) decoderFunctionName(t reflect.Type) string {

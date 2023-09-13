@@ -1,6 +1,6 @@
 package balancecheck
 
-import "github.com/KSpaceer/yayamls/token"
+import "github.com/KSpaceer/yamly/token"
 
 type BalanceChecker struct {
 	openers          map[token.Type]token.Type

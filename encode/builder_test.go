@@ -2,10 +2,10 @@ package encode_test
 
 import (
 	"encoding/json"
-	"github.com/KSpaceer/yayamls"
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/ast/astutils"
-	"github.com/KSpaceer/yayamls/encode"
+	"github.com/KSpaceer/yamly"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/ast/astutils"
+	"github.com/KSpaceer/yamly/encode"
 	"math"
 	"strings"
 	"testing"
@@ -15,7 +15,7 @@ import (
 func TestBuilder_Simple(t *testing.T) {
 	type tcase struct {
 		name      string
-		calls     func(b yayamls.TreeBuilder[ast.Node])
+		calls     func(b yamly.TreeBuilder[ast.Node])
 		expected  ast.Node
 		expectErr bool
 	}
@@ -23,42 +23,42 @@ func TestBuilder_Simple(t *testing.T) {
 	tcases := []tcase{
 		{
 			name: "simple integer",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.InsertInteger(15)
 			},
 			expected: ast.NewTextNode("15"),
 		},
 		{
 			name: "simple unsigned",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.InsertUnsigned(0xFF)
 			},
 			expected: ast.NewTextNode("255"),
 		},
 		{
 			name: "simple boolean",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.InsertBoolean(true)
 			},
 			expected: ast.NewTextNode("true"),
 		},
 		{
 			name: "simple float",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.InsertFloat(33e6)
 			},
 			expected: ast.NewTextNode("3.3e+07"),
 		},
 		{
 			name: "simple string",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.InsertString("Null")
 			},
 			expected: ast.NewTextNode("Null", ast.WithQuotingType(ast.DoubleQuotingType)),
 		},
 		{
 			name: "simple timestamp",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.InsertTimestamp(
 					time.Date(2023, 8, 27, 21, 42, 0, 0, time.UTC),
 				)
@@ -70,14 +70,14 @@ func TestBuilder_Simple(t *testing.T) {
 		},
 		{
 			name: "null",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.InsertNull()
 			},
 			expected: ast.NewNullNode(),
 		},
 		{
 			name: "simple sequence",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.StartSequence()
 				b.EndSequence()
 			},
@@ -85,7 +85,7 @@ func TestBuilder_Simple(t *testing.T) {
 		},
 		{
 			name: "simple mapping",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.StartMapping()
 				b.EndMapping()
 			},
@@ -93,7 +93,7 @@ func TestBuilder_Simple(t *testing.T) {
 		},
 		{
 			name: "ending complex node without starting",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.EndSequence()
 			},
 			expectErr: true,
@@ -120,7 +120,7 @@ func TestBuilder_Simple(t *testing.T) {
 func TestBuilder_Complex(t *testing.T) {
 	type tcase struct {
 		name      string
-		calls     func(b yayamls.TreeBuilder[ast.Node])
+		calls     func(b yamly.TreeBuilder[ast.Node])
 		expected  ast.Node
 		expectErr bool
 	}
@@ -128,7 +128,7 @@ func TestBuilder_Complex(t *testing.T) {
 	tcases := []tcase{
 		{
 			name: "mapping with one pair",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.StartMapping()
 				b.InsertString("key")
 				b.InsertString("value")
@@ -143,7 +143,7 @@ func TestBuilder_Complex(t *testing.T) {
 		},
 		{
 			name: "sequence with two entries",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.StartSequence()
 				b.InsertString("val1")
 				b.InsertString("val2")
@@ -156,7 +156,7 @@ func TestBuilder_Complex(t *testing.T) {
 		},
 		{
 			name: "struct-like mapping",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.StartMapping()
 				{
 					b.InsertString("name")
@@ -207,7 +207,7 @@ func TestBuilder_Complex(t *testing.T) {
 		},
 		{
 			name: "raw insertion",
-			calls: func(b yayamls.TreeBuilder[ast.Node]) {
+			calls: func(b yamly.TreeBuilder[ast.Node]) {
 				b.StartMapping()
 				b.InsertString("key")
 				b.InsertString("value")
@@ -411,8 +411,8 @@ func TestBuilder_K8SManifest(t *testing.T) {
 	})
 
 	b := encode.NewASTBuilder(encode.WithUnquotedOneLineStrings())
-	var build func(b yayamls.TreeBuilder[ast.Node])
-	build = func(b yayamls.TreeBuilder[ast.Node]) {
+	var build func(b yamly.TreeBuilder[ast.Node])
+	build = func(b yamly.TreeBuilder[ast.Node]) {
 		b.StartMapping()
 		{
 			b.InsertString("apiVersion")

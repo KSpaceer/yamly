@@ -1,3 +1,3 @@
-module github.com/KSpaceer/yayamls
+module github.com/KSpaceer/yamly
 
 go 1.21

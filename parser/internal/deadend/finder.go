@@ -1,6 +1,6 @@
 package deadend
 
-import "github.com/KSpaceer/yayamls/token"
+import "github.com/KSpaceer/yamly/token"
 
 const deadEndTriggerThreshold = 64
 

@@ -1,8 +1,8 @@
 package balancecheck_test
 
 import (
-	"github.com/KSpaceer/yayamls/parser/internal/balancecheck"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/parser/internal/balancecheck"
+	"github.com/KSpaceer/yamly/token"
 	"testing"
 )
 

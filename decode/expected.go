@@ -1,8 +1,8 @@
 package decode
 
 import (
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/schema"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/schema"
 )
 
 type expectNull struct{}

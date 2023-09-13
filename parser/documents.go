@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/chars"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/chars"
+	"github.com/KSpaceer/yamly/token"
 	"unicode"
 )
 

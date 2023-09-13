@@ -1,8 +1,8 @@
 package lexer_test
 
 import (
-	"github.com/KSpaceer/yayamls/lexer"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/lexer"
+	"github.com/KSpaceer/yamly/token"
 	"testing"
 )
 

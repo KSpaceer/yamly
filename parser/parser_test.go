@@ -1,11 +1,11 @@
 package parser_test
 
 import (
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/ast/astutils"
-	"github.com/KSpaceer/yayamls/chars"
-	"github.com/KSpaceer/yayamls/parser"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/ast/astutils"
+	"github.com/KSpaceer/yamly/chars"
+	"github.com/KSpaceer/yamly/parser"
+	"github.com/KSpaceer/yamly/token"
 	"os"
 	"strings"
 	"testing"

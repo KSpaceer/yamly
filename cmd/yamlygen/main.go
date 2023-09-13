@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/KSpaceer/yayamls/generator/bootstrap"
-	"github.com/KSpaceer/yayamls/generator/parser"
+	"github.com/KSpaceer/yamly/generator/bootstrap"
+	"github.com/KSpaceer/yamly/generator/parser"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,8 +64,8 @@ func main() {
 
 func Usage() {
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, "\tyayamls [flags] -type T [directory]\n")
-	fmt.Fprintf(os.Stderr, "\tyayamls [flags] -type T # uses current directory\n")
+	fmt.Fprintf(os.Stderr, "\tyamlygen [flags] -type T [directory]\n")
+	fmt.Fprintf(os.Stderr, "\tyamlygen [flags] -type T # uses current directory\n")
 	fmt.Fprintf(os.Stderr, "Flags:\n")
 	flag.PrintDefaults()
 }
@@ -93,7 +93,7 @@ func generate(path string) error {
 	if *output != "" {
 		outputName = *output
 	} else {
-		outputName = toSnakeCase(*generatedType) + "_yayamls.go"
+		outputName = toSnakeCase(*generatedType) + "_yamly.go"
 	}
 
 	if filepath.Base(outputName) != outputName {

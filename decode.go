@@ -1,4 +1,4 @@
-package yayamls
+package yamly
 
 import (
 	"errors"
@@ -19,10 +19,10 @@ type Unmarshaler interface {
 	UnmarshalYAML([]byte) error
 }
 
-// UnmarshalerYAYAMLS interface can be implemented to customize type's behaviour when being
+// UnmarshalerYamly interface can be implemented to customize type's behaviour when being
 // unmarshaled from YAML document using Decoder.
-type UnmarshalerYAYAMLS interface {
-	UnmarshalYAYAMLS(Decoder)
+type UnmarshalerYamly interface {
+	UnmarshalYamly(Decoder)
 }
 
 // CollectionState serves as a current state of complex node (e.g. sequence) for Decoder.

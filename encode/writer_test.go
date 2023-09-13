@@ -2,8 +2,8 @@ package encode_test
 
 import (
 	"fmt"
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/encode"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/encode"
 	"testing"
 )
 

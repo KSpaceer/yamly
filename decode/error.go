@@ -2,7 +2,7 @@ package decode
 
 import (
 	"fmt"
-	"github.com/KSpaceer/yayamls/ast"
+	"github.com/KSpaceer/yamly/ast"
 )
 
 type denyError struct {

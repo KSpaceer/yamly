@@ -2,8 +2,8 @@ package parser
 
 import (
 	"bytes"
-	"github.com/KSpaceer/yayamls/ast"
-	"github.com/KSpaceer/yayamls/token"
+	"github.com/KSpaceer/yamly/ast"
+	"github.com/KSpaceer/yamly/token"
 )
 
 // YAML specification: [196] s-l+block-node
