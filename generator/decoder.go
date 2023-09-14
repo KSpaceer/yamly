@@ -34,15 +34,9 @@ func (g *Generator) generateUnmarshaler(t reflect.Type) error {
 	fname := g.decoderFunctionName(t)
 	tname := g.extractTypeName(t)
 
-	fmt.Fprintln(g.out, "// UnmarshalYAML supports yamly.Unmarshaler interface")
-	fmt.Fprintln(g.out, "func (v *"+tname+") UnmarshalYAML(data []byte) error {")
-	fmt.Fprintln(g.out, "  in, err := decode.NewASTReaderFromBytes(data)")
-	fmt.Fprintln(g.out, "  if err != nil {")
-	fmt.Fprintln(g.out, "    return err")
-	fmt.Fprintln(g.out, "  }")
-	fmt.Fprintln(g.out, "  "+fname+"(in, v)")
-	fmt.Fprintln(g.out, "  return in.Error()")
-	fmt.Fprintln(g.out, "}")
+	if err := g.engineGen.GenerateUnmarshalers(g.out, fname, tname); err != nil {
+		return err
+	}
 
 	fmt.Fprintln(g.out)
 
@@ -156,9 +150,11 @@ func (g *Generator) generateDecoderBody(
 			return nil
 		}
 
-		unmarshalIface = reflect.TypeOf((*yamly.Unmarshaler)(nil)).Elem()
-		if reflect.PtrTo(t).Implements(unmarshalIface) {
-			fmt.Fprintln(g.out, whitespace+"in.AddError(("+outArg+").UnmarshalYAML(in.Raw()))")
+		implementsAny, err := g.engineGen.UnmarshalersImplementationCheck(g.out, t, outArg, indent)
+		if err != nil {
+			return err
+		}
+		if implementsAny {
 			return nil
 		}
 
@@ -303,29 +299,25 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 		if t.NumMethod() > 0 {
 			if implementsUnmarshalerYamly(t) {
 				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYamly(in)")
-			} else if implementsUnmarshaler(t) {
-				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYAML(in.Raw())")
-			} else {
+			} else if implements, err := g.engineGen.UnmarshalersImplementationCheck(g.out, t, outArg, indent); err != nil {
+				return err
+			} else if !implements {
 				return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
-					"(any) or yamly unmarshalers", t)
+					"(any), yamly.Unmarshaler or engine-specific unmarshalling interfaces", t)
 			}
 		} else {
 			fmt.Fprintln(g.out, whitespace+"if m, ok := "+outArg+".(yamly.UnmarshalerYamly); ok {")
 			fmt.Fprintln(g.out, whitespace+"  in.AddError(m.UnmarshalYamly(in))")
-			fmt.Fprintln(g.out, whitespace+"} else if m, ok := "+outArg+".(yamly.Unmarshaler); ok {")
-			fmt.Fprintln(g.out, whitespace+"  in.AddError(m.Unmarshal(in.Raw()))")
 			fmt.Fprintln(g.out, whitespace+"} else {")
-			fmt.Fprintln(g.out, whitespace+"  "+outArg+" = in.Any()")
+			if err := g.engineGen.GenerateUnmarshalEmptyInterfaceAssertions(g.out, outArg, indent+2); err != nil {
+				return err
+			}
 			fmt.Fprintln(g.out, whitespace+"}")
 		}
 	default:
 		return fmt.Errorf("can't decode type %s", t)
 	}
 	return nil
-}
-
-func implementsUnmarshaler(t reflect.Type) bool {
-	return t.Implements(reflect.TypeOf((*yamly.Unmarshaler)(nil)).Elem())
 }
 
 func implementsUnmarshalerYamly(t reflect.Type) bool {

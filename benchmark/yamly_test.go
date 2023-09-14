@@ -4,6 +4,7 @@ package benchmark
 
 import (
 	_ "github.com/KSpaceer/yamly"
+	_ "github.com/KSpaceer/yamly/engines/yayamls"
 	"testing"
 )
 

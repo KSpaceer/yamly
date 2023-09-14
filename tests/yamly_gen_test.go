@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 	"text/template"
+
+	_ "github.com/KSpaceer/yamly"
+	_ "github.com/KSpaceer/yamly/engines/yayamls"
 )
 
 func TestGenerator(t *testing.T) {

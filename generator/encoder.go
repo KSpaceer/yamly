@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-func (g *Generator) encoderFunctionName(t reflect.Type) string {
-	return g.generateFunctionName("encode", t)
-}
-
 var basicEncoderFormatStrings = map[reflect.Kind]string{
 	reflect.String:  "out.InsertString(string(%v))",
 	reflect.Bool:    "out.InsertBoolean(bool(%v))",
@@ -41,12 +37,9 @@ func (g *Generator) generateMarshaler(t reflect.Type) error {
 		tname = "*" + tname
 	}
 
-	fmt.Fprintln(g.out, "// MarshalYAML supports yamly.Marshaler interface")
-	fmt.Fprintln(g.out, "func (v "+tname+") MarshalYAML() ([]byte, error) {")
-	fmt.Fprintln(g.out, "  out := yamly.NewEncoder(encode.NewASTBuilder(), encode.NewASTWriter())")
-	fmt.Fprintln(g.out, "  "+fname+"(out, v)")
-	fmt.Fprintln(g.out, "  return out.EncodeToBytes()")
-	fmt.Fprintln(g.out, "}")
+	if err := g.engineGen.GenerateMarshalers(g.out, fname, tname); err != nil {
+		return err
+	}
 
 	fmt.Fprintln(g.out)
 
@@ -173,9 +166,11 @@ func (g *Generator) generateEncoderBody(
 			return nil
 		}
 
-		marshalIface = reflect.TypeOf((*yamly.Marshaler)(nil)).Elem()
-		if reflect.PtrTo(t).Implements(marshalIface) {
-			fmt.Fprintln(g.out, whitespace+"out.InsertRaw("+inArg+".MarshalYAML())")
+		implementsAny, err := g.engineGen.MarshalersImplementationCheck(g.out, t, inArg, indent)
+		if err != nil {
+			return err
+		}
+		if implementsAny {
 			return nil
 		}
 
@@ -309,20 +304,19 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 		if t.NumMethod() > 0 {
 			if implementMarshalerYamly(t) {
 				fmt.Fprintln(g.out, whitespace+"_ = "+inArg+".MarshalYamly(out)")
-			} else if implementsMarshaler(t) {
-				fmt.Fprintln(g.out, whitespace+"_ = out.InsertRaw("+inArg+".MarshalYAML(")
-			} else {
+			} else if implements, err := g.engineGen.MarshalersImplementationCheck(g.out, t, inArg, indent); err != nil {
+				return err
+			} else if !implements {
 				return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
-					"(any) or yamly unmarshalers", t)
+					"(any), yamly.Marshaler or engine-specific marshalling interfaces", t)
 			}
 		} else {
 			fmt.Fprintln(g.out, whitespace+"if m, ok := "+inArg+".(yamly.MarshalerYamly) {")
 			fmt.Fprintln(g.out, whitespace+"  m.MarshalYamly(out)")
-			fmt.Fprintln(g.out, whitespace+"} else if m, ok := "+inArg+".(yamly.Marshaler) {")
-			fmt.Fprintln(g.out, whitespace+"  out.InsertRaw(m.MarshalYAML())")
 			fmt.Fprintln(g.out, whitespace+"} else {")
-			// TODO: add reflect-based marshaler
-			fmt.Fprintln(g.out, whitespace+" out.InsertRaw(nil, nil)")
+			if err := g.engineGen.GenerateMarshalEmptyInterfaceAssertions(g.out, inArg, indent+2); err != nil {
+				return err
+			}
 			fmt.Fprintln(g.out, whitespace+"}")
 		}
 	default:
@@ -331,10 +325,10 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 	return nil
 }
 
-func implementsMarshaler(t reflect.Type) bool {
-	return t.Implements(reflect.TypeOf((*yamly.Marshaler)(nil)).Elem())
-}
-
 func implementMarshalerYamly(t reflect.Type) bool {
 	return t.Implements(reflect.TypeOf((*yamly.MarshalerYamly)(nil)).Elem())
+}
+
+func (g *Generator) encoderFunctionName(t reflect.Type) string {
+	return g.generateFunctionName("encode", t)
 }
