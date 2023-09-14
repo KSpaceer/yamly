@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	astutils2 "github.com/KSpaceer/yamly/engines/yayamls/ast/astutils"
+	"github.com/KSpaceer/yamly/engines/yayamls/ast/astutils"
 	"github.com/KSpaceer/yamly/engines/yayamls/encode"
 	"math"
 	"strings"
@@ -467,8 +467,8 @@ func TestBuilder_K8SManifest(t *testing.T) {
 func compareAST(t *testing.T, expectedAST, gotAST ast.Node) {
 	t.Helper()
 
-	cmp := astutils2.NewComparator()
-	printer := astutils2.NewPrinter()
+	cmp := astutils.NewComparator()
+	printer := astutils.NewPrinter()
 
 	if !cmp.Equal(expectedAST, gotAST) {
 		var s strings.Builder

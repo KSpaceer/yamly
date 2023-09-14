@@ -6,7 +6,7 @@ import (
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/encode"
-	parser2 "github.com/KSpaceer/yamly/engines/yayamls/parser"
+	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 	"github.com/KSpaceer/yamly/engines/yayamls/schema"
 	"time"
 )
@@ -116,7 +116,7 @@ func WithMultipleDenyErrors() ReaderOption {
 }
 
 func NewASTReaderFromBytes(src []byte, opts ...ReaderOption) (*ASTReader, error) {
-	tree, err := parser2.ParseBytes(src, parser2.WithOmitStream())
+	tree, err := parser.ParseBytes(src, parser.WithOmitStream())
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	parser2 "github.com/KSpaceer/yamly/engines/yayamls/parser"
+	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 	"github.com/KSpaceer/yamly/engines/yayamls/schema"
 	"time"
 )
@@ -121,7 +121,7 @@ func (t *ASTBuilder) InsertRaw(data []byte, err error) {
 		t.fatalError = err
 		return
 	}
-	tree, err := parser2.ParseBytes(data, parser2.WithOmitStream())
+	tree, err := parser.ParseBytes(data, parser.WithOmitStream())
 	if err != nil {
 		t.fatalError = err
 		return

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	chars2 "github.com/KSpaceer/yamly/engines/yayamls/chars"
+	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"io"
 	"strings"
 )
@@ -317,9 +317,9 @@ func (w *ASTWriter) maybeWriteLineBreak() {
 
 func (w *ASTWriter) writeMultilineLiteralText(txt string) {
 	lines := strings.Split(txt, "\n")
-	chompingIndicator := chars2.StripChompingCharacter
+	chompingIndicator := chars.StripChompingCharacter
 	if lines[len(lines)-1] == "" {
-		chompingIndicator = chars2.KeepChompingCharacter
+		chompingIndicator = chars.KeepChompingCharacter
 	}
 	w.buf.WriteByte('|')
 	w.buf.WriteRune(chompingIndicator)
@@ -333,7 +333,7 @@ func (w *ASTWriter) writeMultilineLiteralText(txt string) {
 }
 
 func (w *ASTWriter) writeSingleQuotedText(txt string) {
-	txt, err := chars2.ConvertToYAMLSingleQuotedString(txt)
+	txt, err := chars.ConvertToYAMLSingleQuotedString(txt)
 	if err != nil {
 		w.appendError(err)
 	}
@@ -343,7 +343,7 @@ func (w *ASTWriter) writeSingleQuotedText(txt string) {
 }
 
 func (w *ASTWriter) writeDoubleQuotedText(txt string) {
-	txt, err := chars2.ConvertToYAMLDoubleQuotedString(txt)
+	txt, err := chars.ConvertToYAMLDoubleQuotedString(txt)
 	if err != nil {
 		w.appendError(err)
 	}
