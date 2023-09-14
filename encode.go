@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-// Marshaler interface can be implemented to customize type's behaviour when being
-// marshaled into a YAML document returning raw representation
-type Marshaler interface {
-	MarshalYAML() ([]byte, error)
-}
-
 // MarshalerYamly interface can be implemented to customize type's behaviour when being
 // marshaled into a YAML document inserting a subtree into builded AST.
 type MarshalerYamly interface {

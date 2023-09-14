@@ -14,9 +14,7 @@ import (
 )
 
 const (
-	pkgYamly  = "github.com/KSpaceer/yamly"
-	pkgDecode = "github.com/KSpaceer/yamly/decode"
-	pkgEncode = "github.com/KSpaceer/yamly/encode"
+	pkgYamly = "github.com/KSpaceer/yamly"
 )
 
 type Generator struct {
@@ -30,6 +28,8 @@ type Generator struct {
 	omitempty             bool
 	disallowUnknownFields bool
 	encodePointerReceiver bool
+
+	engineGen EngineGenerator
 
 	imports map[string]string
 
@@ -46,12 +46,8 @@ type Generator struct {
 
 func New(outputFile string) *Generator {
 	return &Generator{
-		outputFile: outputFile,
-		imports: map[string]string{
-			pkgYamly:  "yamly",
-			pkgDecode: "decode",
-			pkgEncode: "encode",
-		},
+		outputFile:     outputFile,
+		imports:        map[string]string{pkgYamly: "yamly"},
 		generatedTypes: make(map[reflect.Type]bool),
 		funcNames:      make(map[string]reflect.Type),
 	}
@@ -63,6 +59,13 @@ func (g *Generator) SetPkgName(pkgName string) {
 
 func (g *Generator) SetPkgPath(pkgPath string) {
 	g.pkgPath = pkgPath
+}
+
+func (g *Generator) SetEngineGenerator(eg EngineGenerator) {
+	for pkg, alias := range eg.Packages() {
+		g.imports[pkg] = alias
+	}
+	g.engineGen = eg
 }
 
 func (g *Generator) SetBuildTags(buildTags string) {
@@ -166,9 +169,10 @@ func (g *Generator) generateHeader(out io.Writer) {
 	fmt.Fprintln(out)
 	fmt.Fprintln(out, "// suppress unused package warning")
 	fmt.Fprintln(out, "var (")
-	fmt.Fprintln(out, "  _ yamly.Marshaler")
-	fmt.Fprintln(out, "  _ *encode.ASTWriter")
-	fmt.Fprintln(out, "  _ *decode.ASTReader")
+	fmt.Fprintln(out, "  _ yamly.MarshalerYamly")
+	for _, suppressor := range g.engineGen.WarningSuppressors() {
+		fmt.Fprintln(out, " _ "+suppressor)
+	}
 	fmt.Fprintln(out, ")")
 
 	fmt.Fprintln(out)

@@ -20,6 +20,9 @@ type Generator struct {
 
 	EncodePointerReceiver bool
 
+	EngineGeneratorPackage string
+	EngineGenerator        string
+
 	OutputName string
 	BuildTags  string
 }
@@ -75,6 +78,8 @@ func (g *Generator) generateMain() (string, error) {
 	fmt.Fprintln(f)
 	fmt.Fprintf(f, " generator %q\n", generatorPackage)
 	fmt.Fprintln(f)
+	fmt.Fprintf(f, " engine %q\n", g.EngineGeneratorPackage)
+	fmt.Fprintln(f)
 	fmt.Fprintf(f, "  pkg %q\n", g.PkgPath)
 	fmt.Fprintln(f, ")")
 
@@ -82,6 +87,7 @@ func (g *Generator) generateMain() (string, error) {
 	fmt.Fprintf(f, "  g := generator.New(%q)\n", filepath.Base(g.OutputName))
 	fmt.Fprintf(f, "  g.SetPkgName(%q)\n", g.PkgName)
 	fmt.Fprintf(f, "  g.SetPkgPath(%q)\n", g.PkgPath)
+	fmt.Fprintf(f, "  g.SetEngineGenerator(engine."+g.EngineGenerator+")\n")
 	if g.BuildTags != "" {
 		fmt.Fprintf(f, "  g.SetBuildTags(%q)\n", g.BuildTags)
 	}
