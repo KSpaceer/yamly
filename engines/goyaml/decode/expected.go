@@ -1,8 +1,8 @@
 package decode
 
 import (
-	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	"github.com/KSpaceer/yamly/engines/yayamls/schema"
+	"github.com/KSpaceer/yamly/engines/goyaml/schema"
+	"gopkg.in/yaml.v3"
 )
 
 type expectNull struct{}
@@ -11,7 +11,7 @@ func (expectNull) name() string {
 	return "ExpectNull"
 }
 
-func (expectNull) process(n ast.Node, prev visitingResult) visitingResult {
+func (expectNull) process(n *yaml.Node, prev visitingResult) visitingResult {
 	if schema.IsNull(n) {
 		switch prev.conclusion {
 		case visitingConclusionUnknown, visitingConclusionContinue, visitingConclusionDeny:
@@ -25,21 +25,14 @@ func (expectNull) process(n ast.Node, prev visitingResult) visitingResult {
 		}
 	}
 
-	switch n.Type() {
-	case ast.ContentType, ast.PropertiesType, ast.AnchorType, ast.TagType, ast.StreamType, ast.MappingEntryType:
+	switch prev.conclusion {
+	case visitingConclusionMatch, visitingConclusionContinue:
 		return visitingResult{
 			conclusion: visitingConclusionContinue,
 		}
 	default:
-		switch prev.conclusion {
-		case visitingConclusionMatch, visitingConclusionContinue:
-			return visitingResult{
-				conclusion: visitingConclusionContinue,
-			}
-		default:
-			return visitingResult{
-				conclusion: visitingConclusionDeny,
-			}
+		return visitingResult{
+			conclusion: visitingConclusionDeny,
 		}
 	}
 }
@@ -50,7 +43,7 @@ func (expectInteger) name() string {
 	return "ExpectInteger"
 }
 
-func (expectInteger) process(n ast.Node, prev visitingResult) visitingResult {
+func (expectInteger) process(n *yaml.Node, prev visitingResult) visitingResult {
 	return processTerminalNode(n, prev, schema.IsInteger)
 }
 
@@ -60,7 +53,7 @@ func (expectBoolean) name() string {
 	return "ExpectBoolean"
 }
 
-func (expectBoolean) process(n ast.Node, prev visitingResult) visitingResult {
+func (expectBoolean) process(n *yaml.Node, prev visitingResult) visitingResult {
 	return processTerminalNode(n, prev, schema.IsBoolean)
 }
 
@@ -70,7 +63,7 @@ func (expectFloat) name() string {
 	return "ExpectFloat"
 }
 
-func (expectFloat) process(n ast.Node, prev visitingResult) visitingResult {
+func (expectFloat) process(n *yaml.Node, prev visitingResult) visitingResult {
 	return processTerminalNode(n, prev, schema.IsFloat)
 }
 
@@ -82,17 +75,17 @@ func (expectString) name() string {
 	return "ExpectString"
 }
 
-func (e expectString) process(n ast.Node, prev visitingResult) visitingResult {
+func (e expectString) process(n *yaml.Node, prev visitingResult) visitingResult {
 	return processTerminalNode(n, prev, e.isString)
 }
 
-func (e expectString) isString(n ast.Node) bool {
+func (e expectString) isString(n *yaml.Node) bool {
 	if e.checkForNull {
 		if schema.IsNull(n) {
 			return false
 		}
 	}
-	return n.Type() == ast.TextType
+	return n.Kind == yaml.ScalarNode
 }
 
 type expectTimestamp struct{}
@@ -101,13 +94,13 @@ func (expectTimestamp) name() string {
 	return "ExpectTimestamp"
 }
 
-func (expectTimestamp) process(n ast.Node, prev visitingResult) visitingResult {
+func (expectTimestamp) process(n *yaml.Node, prev visitingResult) visitingResult {
 	return processTerminalNode(n, prev, schema.IsTimestamp)
 }
 
-func processTerminalNode(n ast.Node, prev visitingResult, predicate func(ast.Node) bool) visitingResult {
-	switch n.Type() {
-	case ast.TextType:
+func processTerminalNode(n *yaml.Node, prev visitingResult, predicate func(*yaml.Node) bool) visitingResult {
+	switch n.Kind {
+	case yaml.ScalarNode:
 		if predicate(n) {
 			switch prev.conclusion {
 			case visitingConclusionUnknown, visitingConclusionContinue, visitingConclusionDeny:
@@ -124,7 +117,7 @@ func processTerminalNode(n ast.Node, prev visitingResult, predicate func(ast.Nod
 		return visitingResult{
 			conclusion: visitingConclusionDeny,
 		}
-	case ast.MappingType, ast.SequenceType:
+	case yaml.SequenceNode, yaml.MappingNode:
 		switch prev.conclusion {
 		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
 			return visitingResult{
@@ -134,10 +127,6 @@ func processTerminalNode(n ast.Node, prev visitingResult, predicate func(ast.Nod
 			return visitingResult{
 				conclusion: visitingConclusionDeny,
 			}
-		}
-	case ast.ContentType, ast.PropertiesType, ast.AnchorType, ast.TagType, ast.StreamType, ast.MappingEntryType:
-		return visitingResult{
-			conclusion: visitingConclusionContinue,
 		}
 	default:
 		return visitingResult{
@@ -148,13 +137,13 @@ func processTerminalNode(n ast.Node, prev visitingResult, predicate func(ast.Nod
 
 type expectSequence struct{}
 
-func (e expectSequence) name() string {
+func (expectSequence) name() string {
 	return "ExpectSequence"
 }
 
-func (e expectSequence) process(n ast.Node, prev visitingResult) visitingResult {
-	switch n.Type() {
-	case ast.SequenceType:
+func (expectSequence) process(n *yaml.Node, prev visitingResult) visitingResult {
+	switch n.Kind {
+	case yaml.SequenceNode:
 		switch prev.conclusion {
 		case visitingConclusionUnknown, visitingConclusionDeny:
 			return visitingResult{
@@ -166,7 +155,7 @@ func (e expectSequence) process(n ast.Node, prev visitingResult) visitingResult 
 				conclusion: visitingConclusionContinue,
 			}
 		}
-	case ast.MappingType, ast.TextType:
+	default:
 		switch prev.conclusion {
 		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
 			return visitingResult{
@@ -177,26 +166,18 @@ func (e expectSequence) process(n ast.Node, prev visitingResult) visitingResult 
 				conclusion: visitingConclusionDeny,
 			}
 		}
-	case ast.ContentType, ast.PropertiesType, ast.AnchorType,
-		ast.TagType, ast.StreamType, ast.MappingEntryType:
-		return visitingResult{
-			conclusion: visitingConclusionContinue,
-		}
-	}
-	return visitingResult{
-		conclusion: visitingConclusionDeny,
 	}
 }
 
 type expectMapping struct{}
 
-func (e expectMapping) name() string {
+func (expectMapping) name() string {
 	return "ExpectMapping"
 }
 
-func (e expectMapping) process(n ast.Node, prev visitingResult) visitingResult {
-	switch n.Type() {
-	case ast.MappingType:
+func (expectMapping) process(n *yaml.Node, prev visitingResult) visitingResult {
+	switch n.Kind {
+	case yaml.MappingNode:
 		switch prev.conclusion {
 		case visitingConclusionUnknown, visitingConclusionDeny:
 			return visitingResult{
@@ -208,7 +189,7 @@ func (e expectMapping) process(n ast.Node, prev visitingResult) visitingResult {
 				conclusion: visitingConclusionContinue,
 			}
 		}
-	case ast.SequenceType, ast.TextType:
+	default:
 		switch prev.conclusion {
 		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
 			return visitingResult{
@@ -219,14 +200,6 @@ func (e expectMapping) process(n ast.Node, prev visitingResult) visitingResult {
 				conclusion: visitingConclusionDeny,
 			}
 		}
-	case ast.ContentType, ast.PropertiesType, ast.AnchorType,
-		ast.TagType, ast.StreamType, ast.MappingEntryType:
-		return visitingResult{
-			conclusion: visitingConclusionContinue,
-		}
-	}
-	return visitingResult{
-		conclusion: visitingConclusionDeny,
 	}
 }
 
@@ -236,22 +209,15 @@ func (expectAny) name() string {
 	return "ExpectAny"
 }
 
-func (expectAny) process(n ast.Node, prev visitingResult) visitingResult {
-	switch n.Type() {
-	case ast.MappingType, ast.SequenceType, ast.TextType, ast.NullType:
-		switch prev.conclusion {
-		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
-			return visitingResult{
-				conclusion: visitingConclusionContinue,
-			}
-		default:
-			return visitingResult{
-				conclusion: visitingConclusionMatch,
-			}
+func (expectAny) process(_ *yaml.Node, prev visitingResult) visitingResult {
+	switch prev.conclusion {
+	case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
+		return visitingResult{
+			conclusion: visitingConclusionContinue,
 		}
 	default:
 		return visitingResult{
-			conclusion: visitingConclusionContinue,
+			conclusion: visitingConclusionMatch,
 		}
 	}
 }
@@ -262,25 +228,17 @@ func (expectRaw) name() string {
 	return "ExpectRaw"
 }
 
-func (expectRaw) process(n ast.Node, prev visitingResult) visitingResult {
-	switch n.Type() {
-	case ast.ContentType, ast.PropertiesType, ast.TagType, ast.AnchorType:
+func (expectRaw) process(_ *yaml.Node, prev visitingResult) visitingResult {
+	switch prev.conclusion {
+	case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
 		return visitingResult{
 			conclusion: visitingConclusionContinue,
 		}
 	default:
-		switch prev.conclusion {
-		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
-			return visitingResult{
-				conclusion: visitingConclusionContinue,
-			}
-		default:
-			return visitingResult{
-				conclusion: visitingConclusionMatch,
-			}
+		return visitingResult{
+			conclusion: visitingConclusionMatch,
 		}
 	}
-
 }
 
 type expectNode = expectRaw
@@ -291,22 +249,15 @@ func (expectSkip) name() string {
 	return "ExpectSkip"
 }
 
-func (expectSkip) process(n ast.Node, prev visitingResult) visitingResult {
-	switch n.Type() {
-	case ast.ContentType, ast.PropertiesType, ast.TagType, ast.AnchorType:
+func (expectSkip) process(_ *yaml.Node, prev visitingResult) visitingResult {
+	switch prev.conclusion {
+	case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
 		return visitingResult{
 			conclusion: visitingConclusionContinue,
 		}
 	default:
-		switch prev.conclusion {
-		case visitingConclusionMatch, visitingConclusionConsume, visitingConclusionContinue:
-			return visitingResult{
-				conclusion: visitingConclusionContinue,
-			}
-		default:
-			return visitingResult{
-				conclusion: visitingConclusionConsume,
-			}
+		return visitingResult{
+			conclusion: visitingConclusionConsume,
 		}
 	}
 }

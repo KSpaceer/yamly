@@ -4,14 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/KSpaceer/yamly"
-	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	"github.com/KSpaceer/yamly/engines/yayamls/encode"
-	"github.com/KSpaceer/yamly/engines/yayamls/parser"
-	"github.com/KSpaceer/yamly/engines/yayamls/schema"
+	"github.com/KSpaceer/yamly/engines/goyaml/schema"
+	"gopkg.in/yaml.v3"
 	"time"
 )
 
-var _ yamly.ExtendedDecoder[ast.Node] = (*ASTReader)(nil)
+var _ yamly.ExtendedDecoder[*yaml.Node] = (*ASTReader)(nil)
 
 type ASTReader struct {
 	route []routePoint
@@ -21,8 +19,6 @@ type ASTReader struct {
 
 	extractedCollectionState yamly.CollectionState
 	extractedValue           string
-
-	anchors anchorsKeeper
 
 	multipleDenyErrors bool
 	fatalError         error
@@ -71,17 +67,17 @@ type visitingResult struct {
 
 type routePoint struct {
 	visitingResult visitingResult
-	node           ast.Node
+	node           *yaml.Node
 	iter           nodeIterator
 }
 
 type expecter interface {
 	name() string
-	process(n ast.Node, previousResult visitingResult) visitingResult
+	process(n *yaml.Node, previousResult visitingResult) visitingResult
 }
 
 type nodeIterator interface {
-	node() ast.Node
+	node() *yaml.Node
 	empty() bool
 }
 
@@ -112,21 +108,13 @@ func newCollectionState(iter nodeIterator, size int) yamly.CollectionState {
 type ReaderOption func(*ASTReader)
 
 func WithMultipleDenyErrors() ReaderOption {
-	return func(r *ASTReader) {
-		r.multipleDenyErrors = true
+	return func(reader *ASTReader) {
+		reader.multipleDenyErrors = true
 	}
 }
 
-func NewASTReaderFromBytes(src []byte, opts ...ReaderOption) (*ASTReader, error) {
-	tree, err := parser.ParseBytes(src, parser.WithOmitStream())
-	if err != nil {
-		return nil, err
-	}
-	return NewASTReader(tree, opts...), nil
-}
-
-func NewASTReader(tree ast.Node, opts ...ReaderOption) *ASTReader {
-	r := ASTReader{anchors: newAnchorsKeeper()}
+func NewASTReader(tree *yaml.Node, opts ...ReaderOption) *ASTReader {
+	r := ASTReader{}
 
 	for _, opt := range opts {
 		opt(&r)
@@ -136,8 +124,11 @@ func NewASTReader(tree ast.Node, opts ...ReaderOption) *ASTReader {
 	return &r
 }
 
-func (r *ASTReader) setAST(tree ast.Node) {
+func (r *ASTReader) setAST(tree *yaml.Node) {
 	r.reset()
+	if tree.Kind == yaml.DocumentNode {
+		tree = tree.Content[0]
+	}
 	r.pushRoutePoint(routePoint{
 		node: tree,
 	})
@@ -177,7 +168,6 @@ func (r *ASTReader) Integer(bitSize int) int64 {
 	}
 	return v
 }
-
 func (r *ASTReader) Unsigned(bitSize int) uint64 {
 	if r.hasFatalError() {
 		return 0
@@ -307,7 +297,7 @@ func (r *ASTReader) Any() any {
 		r.latestDenyError = nil
 		return nil
 	}
-	valueBuilder := newAnyBuilder(&r.anchors)
+	valueBuilder := anyBuilder{}
 	v, err := valueBuilder.extractAnyValue(r.currentNode())
 	if err != nil {
 		r.appendError(err)
@@ -328,8 +318,7 @@ func (r *ASTReader) Raw() []byte {
 		r.latestDenyError = nil
 		return nil
 	}
-	w := encode.NewASTWriter()
-	v, err := w.WriteBytes(r.currentNode())
+	v, err := yaml.Marshal(r.currentNode())
 	if err != nil {
 		r.appendError(err)
 		return nil
@@ -338,7 +327,7 @@ func (r *ASTReader) Raw() []byte {
 	return v
 }
 
-func (r *ASTReader) Node() ast.Node {
+func (r *ASTReader) Node() *yaml.Node {
 	if r.hasFatalError() {
 		return nil
 	}
@@ -366,115 +355,39 @@ func (r *ASTReader) Skip() {
 	}
 }
 
-func (r *ASTReader) VisitStreamNode(n *ast.StreamNode) {
-	point := r.peekRoutePoint()
-	if point.visitingResult.conclusion == visitingConclusionUnknown {
-		point.iter = newStreamIterator(n)
+type complexPointOptions struct {
+	beforeVisitFuncs []func(*yaml.Node)
+}
+
+type complexPointOption func(*complexPointOptions)
+
+func beforeVisit(f func(*yaml.Node)) complexPointOption {
+	return func(options *complexPointOptions) {
+		options.beforeVisitFuncs = append(options.beforeVisitFuncs, f)
 	}
-
-	r.processComplexPoint(point, len(n.Documents()))
 }
 
-func (r *ASTReader) VisitTagNode(n *ast.TagNode) {
-	r.visitTexterNode(n)
-}
-
-func (r *ASTReader) VisitAnchorNode(n *ast.AnchorNode) {
-	r.anchors.StoreAnchor(n.Text())
-
-	r.visitTexterNode(n)
-}
-
-func (r *ASTReader) VisitAliasNode(n *ast.AliasNode) {
-	anchored, err := r.anchors.DereferenceAlias(n.Text())
-	if err != nil {
-		r.appendError(err)
-	} else {
+func (r *ASTReader) visitNode(n *yaml.Node) {
+	switch n.Kind {
+	case yaml.DocumentNode:
+		r.visitNode(n.Content[0])
+	case yaml.SequenceNode, yaml.MappingNode:
+		point := r.peekRoutePoint()
+		if point.visitingResult.conclusion == visitingConclusionUnknown {
+			point.iter = newNodeIterator(n)
+		}
+		r.processComplexPoint(point, len(n.Content))
+	case yaml.ScalarNode:
+		r.visitScalarNode(n)
+	case yaml.AliasNode:
 		r.pushRoutePoint(routePoint{
-			node: anchored,
+			node: n.Alias,
 		})
-		anchored.Accept(r)
+		r.visitNode(n.Alias)
 	}
 }
 
-func (r *ASTReader) VisitTextNode(n *ast.TextNode) {
-	r.visitTexterNode(n)
-}
-
-func (r *ASTReader) VisitSequenceNode(n *ast.SequenceNode) {
-	point := r.peekRoutePoint()
-	if point.visitingResult.conclusion == visitingConclusionUnknown {
-		point.iter = newSequenceIterator(n)
-	}
-
-	r.processComplexPoint(point, len(n.Entries()))
-}
-
-func (r *ASTReader) VisitMappingNode(n *ast.MappingNode) {
-	point := r.peekRoutePoint()
-	if point.visitingResult.conclusion == visitingConclusionUnknown {
-		point.iter = newMappingIterator(n)
-	}
-
-	r.processComplexPoint(point, len(n.Entries()))
-}
-
-func (r *ASTReader) VisitMappingEntryNode(n *ast.MappingEntryNode) {
-	point := r.peekRoutePoint()
-	if point.visitingResult.conclusion == visitingConclusionUnknown {
-		point.iter = newMappingEntryIterator(n)
-	}
-
-	r.processComplexPoint(point, 2)
-}
-
-func (r *ASTReader) VisitNullNode(n *ast.NullNode) {
-	point := r.peekRoutePoint()
-
-	point.visitingResult = r.currentExpecter.process(n, point.visitingResult)
-	r.lastVisitingResult = point.visitingResult
-	switch point.visitingResult.conclusion {
-	case visitingConclusionConsume:
-		r.popRoutePoint()
-	case visitingConclusionMatch:
-	case visitingConclusionContinue:
-		r.popRoutePoint()
-	case visitingConclusionDeny:
-		r.swapRoutePoint(point)
-		r.appendError(yamly.DenyError(&denyError{
-			expecter: r.currentExpecter,
-			nt:       n.Type(),
-		}))
-	default:
-		r.appendError(fmt.Errorf("unexpected conclusion: %s", point.visitingResult.conclusion))
-	}
-
-	switch point.visitingResult.action {
-	case visitingActionExtract:
-		r.extractedCollectionState = nil
-		r.extractedValue = ""
-	}
-}
-
-func (r *ASTReader) VisitPropertiesNode(n *ast.PropertiesNode) {
-	point := r.peekRoutePoint()
-	if point.visitingResult.conclusion == visitingConclusionUnknown {
-		point.iter = newPropertiesIterator(n)
-	}
-
-	r.processComplexPoint(point, 2)
-}
-
-func (r *ASTReader) VisitContentNode(n *ast.ContentNode) {
-	point := r.peekRoutePoint()
-	if point.visitingResult.conclusion == visitingConclusionUnknown {
-		point.iter = newContentIterator(n)
-	}
-
-	r.processComplexPoint(point, 2, beforeVisit(r.anchors.BindToLatestAnchor))
-}
-
-func (r *ASTReader) visitTexterNode(n ast.TexterNode) {
+func (r *ASTReader) visitScalarNode(n *yaml.Node) {
 	point := r.peekRoutePoint()
 
 	point.visitingResult = r.currentExpecter.process(n, point.visitingResult)
@@ -486,8 +399,8 @@ func (r *ASTReader) visitTexterNode(n ast.TexterNode) {
 	case visitingConclusionDeny:
 		r.swapRoutePoint(point)
 		r.setLatestDeny(&denyError{
-			expecter: r.currentExpecter,
-			nt:       point.node.Type(),
+			expecter:    r.currentExpecter,
+			nodeContent: point.node.Value,
 		})
 	case visitingConclusionContinue:
 		r.popRoutePoint()
@@ -498,20 +411,8 @@ func (r *ASTReader) visitTexterNode(n ast.TexterNode) {
 	switch point.visitingResult.action {
 	case visitingActionExtract:
 		r.extractedCollectionState = nil
-		r.extractedValue = n.Text()
+		r.extractedValue = n.Value
 	}
-}
-
-type complexPointOptions struct {
-	beforeVisitFuncs []func(ast.Node)
-}
-
-type complexPointOption func(*complexPointOptions)
-
-func beforeVisit(f func(ast.Node)) complexPointOption {
-	return complexPointOption(func(options *complexPointOptions) {
-		options.beforeVisitFuncs = append(options.beforeVisitFuncs, f)
-	})
 }
 
 func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts ...complexPointOption) {
@@ -529,8 +430,8 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 	case visitingConclusionMatch:
 	case visitingConclusionDeny:
 		r.setLatestDeny(&denyError{
-			expecter: r.currentExpecter,
-			nt:       point.node.Type(),
+			expecter:    r.currentExpecter,
+			nodeContent: point.node.Value,
 		})
 	case visitingConclusionContinue:
 		for r.lastVisitingResult.conclusion == visitingConclusionContinue && !point.iter.empty() {
@@ -540,16 +441,15 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 				beforeVisitFunc(node)
 			}
 
-			if ast.ValidNode(node) {
+			if node != nil {
 				r.pushRoutePoint(routePoint{
 					node: node,
 				})
-				node.Accept(r)
+				r.visitNode(node)
 			}
 		}
 		if point.iter.empty() && r.lastVisitingResult.conclusion == visitingConclusionContinue {
 			r.popRoutePoint()
-			r.visitCurrentNode()
 		}
 	default:
 		r.appendError(fmt.Errorf("unexpected conclusion: %s", point.visitingResult.conclusion))
@@ -562,28 +462,27 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 	}
 }
 
-func (r *ASTReader) visitCurrentNode() {
-	n := r.currentNode()
-	if n == nil {
-		r.appendError(yamly.EndOfStream)
-	} else {
-		n.Accept(r)
-	}
-}
-
 func (r *ASTReader) reset() {
 	r.route = r.route[:0]
 	r.currentExpecter = nil
 	r.lastVisitingResult = visitingResult{}
 	r.extractedCollectionState = nil
 	r.extractedValue = ""
-	r.anchors.clear()
 	r.fatalError = nil
 	r.latestDenyError = nil
 	r.denyErrors = r.denyErrors[:0]
 }
 
-func (r *ASTReader) currentNode() ast.Node {
+func (r *ASTReader) visitCurrentNode() {
+	n := r.currentNode()
+	if n == nil {
+		r.appendError(yamly.EndOfStream)
+	} else {
+		r.visitNode(n)
+	}
+}
+
+func (r *ASTReader) currentNode() *yaml.Node {
 	if len(r.route) == 0 {
 		return nil
 	}
@@ -594,13 +493,12 @@ func (r *ASTReader) pushRoutePoint(point routePoint) {
 	r.route = append(r.route, point)
 }
 
-func (r *ASTReader) popRoutePoint() routePoint {
+func (r *ASTReader) popRoutePoint() {
 	if len(r.route) == 0 {
-		return routePoint{}
+		return
 	}
-	point := r.route[len(r.route)-1]
 	r.route = r.route[:len(r.route)-1]
-	return point
+	return
 }
 
 func (r *ASTReader) peekRoutePoint() routePoint {

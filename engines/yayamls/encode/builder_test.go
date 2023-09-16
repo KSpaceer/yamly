@@ -109,6 +109,7 @@ func TestBuilder_Simple(t *testing.T) {
 				if !tc.expectErr {
 					t.Errorf("unexpected error: %v", err)
 				}
+				return
 			} else if tc.expectErr {
 				t.Errorf("expected error, but got nil")
 			}

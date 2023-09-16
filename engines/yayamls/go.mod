@@ -1,6 +1,6 @@
 module github.com/KSpaceer/yamly/engines/yayamls
 
-go 1.21.0
+go 1.21.1
 
 replace github.com/KSpaceer/yamly => ../..
 

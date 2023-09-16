@@ -86,6 +86,13 @@ type Decoder interface {
 	AddError(err error)
 }
 
+// ExtendedDecoder is used to extend Decoder interface with engine-specific
+// methods
+type ExtendedDecoder[T any] interface {
+	Decoder
+	Node() T
+}
+
 type denyError struct {
 	err error
 }

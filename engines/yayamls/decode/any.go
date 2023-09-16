@@ -93,11 +93,7 @@ func (a *anyBuilder) VisitMappingNode(n *ast.MappingNode) {
 			if a.mergeMap == nil {
 				m[a.stringValue] = a.value
 			} else {
-				for k, v := range a.mergeMap {
-					if _, ok := m[k]; !ok {
-						m[k] = v
-					}
-				}
+				mergeMaps(m, a.mergeMap)
 				a.mergeMap = nil
 			}
 		}
@@ -108,6 +104,14 @@ func (a *anyBuilder) VisitMappingNode(n *ast.MappingNode) {
 		a.stringValue = fmt.Sprint(m)
 	} else {
 		a.value = m
+	}
+}
+
+func mergeMaps(dst, src map[string]any) {
+	for k, v := range src {
+		if _, ok := dst[k]; !ok {
+			dst[k] = v
+		}
 	}
 }
 
