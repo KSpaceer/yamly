@@ -141,6 +141,7 @@ func (g *Generator) generateDecoderBody(
 	indent int,
 	complexTypeElem bool,
 ) error {
+	var finishingText string
 	if t != g.currentType {
 		whitespace := strings.Repeat(" ", indent)
 
@@ -150,12 +151,17 @@ func (g *Generator) generateDecoderBody(
 			return nil
 		}
 
-		implementsAny, err := g.engineGen.UnmarshalersImplementationCheck(g.out, t, outArg, indent)
+		implResult, err := g.engineGen.UnmarshalersImplementationCheck(g.out, t, outArg, indent)
 		if err != nil {
 			return err
 		}
-		if implementsAny {
+		switch implResult {
+		case ImplementationResultTrue:
 			return nil
+		case ImplementationResultConditional:
+			indent += 2
+			finishingText = whitespace + "}"
+			whitespace = strings.Repeat(" ", indent)
 		}
 
 		unmarshalIface = reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()
@@ -165,7 +171,12 @@ func (g *Generator) generateDecoderBody(
 		}
 	}
 
-	return g.generateDecoderBodyWithoutCheck(t, outArg, tags, indent, complexTypeElem)
+	err := g.generateDecoderBodyWithoutCheck(t, outArg, tags, indent, complexTypeElem)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(g.out, finishingText)
+	return nil
 }
 
 func (g *Generator) generateDecoderBodyWithoutCheck(
@@ -299,11 +310,17 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 		if t.NumMethod() > 0 {
 			if implementsUnmarshalerYamly(t) {
 				fmt.Fprintln(g.out, whitespace+"_ = "+outArg+".UnmarshalYamly(in)")
-			} else if implements, err := g.engineGen.UnmarshalersImplementationCheck(g.out, t, outArg, indent); err != nil {
+			} else if implResult, err := g.engineGen.UnmarshalersImplementationCheck(g.out, t, outArg, indent); err != nil {
 				return err
-			} else if !implements {
-				return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
-					"(any), yamly.Unmarshaler or engine-specific unmarshalling interfaces", t)
+			} else {
+				switch implResult {
+				case ImplementationResultFalse:
+					return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
+						"(any), yamly.Unmarshaler or engine-specific unmarshalling interfaces", t)
+				case ImplementationResultConditional:
+					fmt.Fprintln(g.out, whitespace+"  in.AddError(yamly.UnmarshalerImplementationError)")
+					fmt.Fprintln(g.out, whitespace+"}")
+				}
 			}
 		} else {
 			fmt.Fprintln(g.out, whitespace+"if m, ok := "+outArg+".(yamly.UnmarshalerYamly); ok {")

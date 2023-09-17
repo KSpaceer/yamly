@@ -1,8 +1,14 @@
 package yamly
 
 import (
+	"errors"
 	"io"
 	"time"
+)
+
+var (
+	MarshalerImplementationError = errors.New("interface type is not supported: expect only interface{} " +
+		"(any), yamly.Marshaler or engine-specific marshalling interfaces")
 )
 
 // MarshalerYamly interface can be implemented to customize type's behaviour when being

@@ -821,7 +821,7 @@ func TestReader_SequencesWithNulls(t *testing.T) {
 				if tc.expected[i] != nil && values[i] != nil {
 					v1, v2 := reflect.ValueOf(tc.expected[i]), reflect.ValueOf(values[i])
 					if !v1.CanConvert(v2.Type()) {
-						t.Errorf("can't case value %v to type of value %v", v1, v2)
+						t.Errorf("can't cast value %v to type of value %v", v1, v2)
 					} else {
 						v1 = v1.Convert(v2.Type())
 						equal = v1.Equal(v2)

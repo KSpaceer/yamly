@@ -18,7 +18,7 @@ var (
 	disallowUnknownFields = flag.Bool("disallow-unknown-fields", false, "return error if unknown field appeared in yaml")
 	output                = flag.String("output", "", "name of generated file")
 	encodePointerReceiver = flag.Bool("encode-pointer-receiver", false, "use pointer receiver in encode methods")
-	engine                = flag.String("engine", "yayamls", "used parser engine for generated code")
+	engine                = flag.String("engine", "goyaml", "used parser engine for generated code")
 )
 
 func main() {
@@ -108,10 +108,14 @@ func generate(path string) error {
 
 	var engineGeneratorPackage, engineGenerator string
 	switch *engine {
+	case "goyaml":
+		engineGeneratorPackage = "github.com/KSpaceer/yamly/engines/goyaml"
+		engineGenerator = "Generator"
 	case "yayamls":
 		engineGeneratorPackage = "github.com/KSpaceer/yamly/engines/yayamls"
 		engineGenerator = "Generator"
-
+	default:
+		return fmt.Errorf("unknown engine %q", *engine)
 	}
 
 	g := bootstrap.Generator{

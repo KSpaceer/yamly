@@ -318,7 +318,10 @@ func (r *ASTReader) Raw() []byte {
 		r.latestDenyError = nil
 		return nil
 	}
-	v, err := yaml.Marshal(r.currentNode())
+	curNode := r.currentNode()
+	transformer := newRawTransformer()
+	v, err := yaml.Marshal(transformer.transform(curNode))
+	transformer.restore(curNode)
 	if err != nil {
 		r.appendError(err)
 		return nil
@@ -450,6 +453,7 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 		}
 		if point.iter.empty() && r.lastVisitingResult.conclusion == visitingConclusionContinue {
 			r.popRoutePoint()
+			r.visitCurrentNode()
 		}
 	default:
 		r.appendError(fmt.Errorf("unexpected conclusion: %s", point.visitingResult.conclusion))
@@ -524,7 +528,7 @@ func (r *ASTReader) appendError(err error) {
 	if r.multipleDenyErrors && errors.Is(err, yamly.Denied) {
 		r.denyErrors = append(r.denyErrors, err)
 	} else if r.fatalError == nil {
-		r.fatalError = err
+		r.setFatalError(err)
 	}
 }
 
@@ -542,6 +546,17 @@ func (r *ASTReader) Error() error {
 
 func (r *ASTReader) AddError(err error) {
 	if r.fatalError == nil {
-		r.fatalError = err
+		r.setFatalError(err)
 	}
+}
+
+func (r *ASTReader) setFatalError(err error) {
+	for _, point := range r.route {
+		if point.iter != nil {
+			for !point.iter.empty() {
+				point.iter.node()
+			}
+		}
+	}
+	r.fatalError = err
 }

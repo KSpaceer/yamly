@@ -32,14 +32,12 @@ type EngineGenerator interface {
 	// UnmarshalersImplementationCheck checks if provided type t implements any of engine-specific
 	// unmarshalling interfaces.
 	// If it does, UnmarshalersImplementationCheck generates code using implemented method, writing it into dst.
-	// Returns true, if type t does implement any expected interface.
-	UnmarshalersImplementationCheck(dst io.Writer, t reflect.Type, outArg string, indent int) (bool, error)
+	UnmarshalersImplementationCheck(dst io.Writer, t reflect.Type, outArg string, indent int) (ImplementationResult, error)
 
 	// MarshalersImplementationCheck checks if provided type t implements any of engine-specific
 	// marshalling interfaces.
 	// If it does, MarshalersImplementationCheck generates code using implemented method, writing it into dst.
-	// Returns true, if type t does implement any expected interface.
-	MarshalersImplementationCheck(dst io.Writer, t reflect.Type, inArg string, indent int) (bool, error)
+	MarshalersImplementationCheck(dst io.Writer, t reflect.Type, inArg string, indent int) (ImplementationResult, error)
 
 	// GenerateUnmarshalEmptyInterfaceAssertions generates code with type assertions for empty interface
 	// (interface{} or any) using unmarshalling interfaces.
@@ -49,3 +47,11 @@ type EngineGenerator interface {
 	// (interface{} or any) using marshalling interfaces.
 	GenerateMarshalEmptyInterfaceAssertions(dst io.Writer, inArg string, indent int) error
 }
+
+type ImplementationResult int8
+
+const (
+	ImplementationResultFalse ImplementationResult = iota
+	ImplementationResultTrue
+	ImplementationResultConditional
+)

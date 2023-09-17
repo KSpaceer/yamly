@@ -195,10 +195,7 @@ func (b *ASTBuilder) insertNode(n *yaml.Node, pushToRoute bool) {
 	currentNode := b.currentNode()
 	if currentNode == nil {
 		b.pushNode(n)
-		b.root = &yaml.Node{
-			Kind:    yaml.DocumentNode,
-			Content: []*yaml.Node{n},
-		}
+		b.root = n
 		return
 	}
 

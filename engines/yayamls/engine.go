@@ -53,28 +53,38 @@ func (engineGenerator) GenerateMarshalers(dst io.Writer, encodeFuncName string, 
 	return nil
 }
 
-func (engineGenerator) UnmarshalersImplementationCheck(dst io.Writer, t reflect.Type, outArg string, indent int) (bool, error) {
+func (engineGenerator) UnmarshalersImplementationCheck(
+	dst io.Writer,
+	t reflect.Type,
+	outArg string,
+	indent int,
+) (generator.ImplementationResult, error) {
 	unmarshalIface := reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 	if reflect.PtrTo(t).Implements(unmarshalIface) {
 		fmt.Fprintln(dst, strings.Repeat(" ", indent)+"in.AddError(("+outArg+").UnmarshalYAML(in.Raw()))")
-		return true, nil
+		return generator.ImplementationResultTrue, nil
 	}
-	return false, nil
+	return generator.ImplementationResultFalse, nil
 }
 
-func (engineGenerator) MarshalersImplementationCheck(dst io.Writer, t reflect.Type, inArg string, indent int) (bool, error) {
+func (engineGenerator) MarshalersImplementationCheck(
+	dst io.Writer,
+	t reflect.Type,
+	inArg string,
+	indent int,
+) (generator.ImplementationResult, error) {
 	marshalIface := reflect.TypeOf((*Marshaler)(nil)).Elem()
 	if reflect.PtrTo(t).Implements(marshalIface) {
 		fmt.Fprintln(dst, strings.Repeat(" ", indent)+"out.InsertRaw("+inArg+".MarshalYAML())")
-		return true, nil
+		return generator.ImplementationResultTrue, nil
 	}
-	return false, nil
+	return generator.ImplementationResultFalse, nil
 }
 
 func (engineGenerator) GenerateUnmarshalEmptyInterfaceAssertions(dst io.Writer, outArg string, indent int) error {
 	whitespace := strings.Repeat(" ", indent)
 	fmt.Fprintln(dst, whitespace+"if m, ok := "+outArg+".(yayamls.Unmarshaler); ok {")
-	fmt.Fprintln(dst, whitespace+"  in.AddError(m.Unmarshal(in.Raw()))")
+	fmt.Fprintln(dst, whitespace+"  in.AddError(m.UnmarshalYAML(in.Raw()))")
 	fmt.Fprintln(dst, whitespace+"} else {")
 	fmt.Fprintln(dst, whitespace+"  "+outArg+" = in.Any()")
 	fmt.Fprintln(dst, whitespace+"}")

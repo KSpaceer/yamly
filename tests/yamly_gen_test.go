@@ -9,11 +9,140 @@ import (
 	"testing"
 	"text/template"
 
+	_ "gopkg.in/yaml.v3"
+
 	_ "github.com/KSpaceer/yamly"
+	_ "github.com/KSpaceer/yamly/engines/goyaml"
 	_ "github.com/KSpaceer/yamly/engines/yayamls"
 )
 
-func TestGenerator(t *testing.T) {
+func TestGenerator_EngineGoYAML(t *testing.T) {
+	var mainCode = `
+package main
+
+import (
+  "fmt"
+  "reflect"
+  "os"
+  {{ range $import := .Imports }}
+  "{{ $import }}"
+  {{ end }}
+
+  "gopkg.in/yaml.v3"
+
+  "github.com/KSpaceer/yamly/tests/{{ .TmpRoot }}/{{ .PkgName }}"
+)
+
+func main() {
+	var v {{ if .UsePointer -}}*{{- end -}}{{ .PkgName }}.TestType
+	v = {{ .Value }}
+    data, err := yaml.Marshal(v) 
+    if err != nil {
+        fmt.Fprintln(os.Stderr, err)
+        os.Exit(1)
+    }
+    var v2 {{ if .UsePointer -}}*{{- end -}}{{ .PkgName }}.TestType
+    err = yaml.Unmarshal(data, &v2) 
+    if err != nil {
+        fmt.Fprintln(os.Stderr, err)
+        os.Exit(1)
+    }
+	if reflect.DeepEqual(v, v2) {
+		fmt.Print("SUCCESS")
+    } else {
+		fmt.Printf("start: %v\n\n\nfinish: %v", v, v2)
+	}
+}
+`
+
+	var mainCodeTemplate = template.Must(template.New("maincode").Parse(mainCode))
+
+	var typeDefinitionCode = `
+package {{ .PkgName }}
+
+{{ if .Imports }}
+import (
+  {{ range $import := .Imports }}
+  "{{ $import }}"
+  {{ end }}
+)
+{{ end }}
+
+type TestType {{ .TypeDef }}
+`
+
+	var typeDefinitionCodeTemplate = template.Must(template.New("typedef").Parse(typeDefinitionCode))
+
+	runEngineTest(t, mainCodeTemplate, typeDefinitionCodeTemplate, "goyaml")
+}
+
+func TestGenerator_EngineYAYAMLS(t *testing.T) {
+	var mainCode = `
+package main
+
+import (
+  "fmt"
+  "reflect"
+  "os"
+  {{ range $import := .Imports }}
+  "{{ $import }}"
+  {{ end }}
+
+  "github.com/KSpaceer/yamly/tests/{{ .TmpRoot }}/{{ .PkgName }}"
+)
+
+func main() {
+	var v {{ if .UsePointer -}}*{{- end -}}{{ .PkgName }}.TestType
+	v = {{ .Value }}
+    data, err := v.MarshalYAML()
+    if err != nil {
+        fmt.Fprintln(os.Stderr, err)
+        os.Exit(1)
+    }
+    var v2 {{ if .UsePointer -}}*{{- end -}}{{ .PkgName }}.TestType
+	{{ if .UsePointer }}
+    v2 = new({{ .PkgName }}.TestType)
+    {{ end }}
+    err = v2.UnmarshalYAML(data)
+    if err != nil {
+        fmt.Fprintln(os.Stderr, err)
+        os.Exit(1)
+    }
+	if reflect.DeepEqual(v, v2) {
+		fmt.Print("SUCCESS")
+    } else {
+		fmt.Printf("start: %v\n\n\nfinish: %v", v, v2)
+	}
+}
+`
+
+	var mainCodeTemplate = template.Must(template.New("maincode").Parse(mainCode))
+
+	var typeDefinitionCode = `
+package {{ .PkgName }}
+
+{{ if .Imports }}
+import (
+  {{ range $import := .Imports }}
+  "{{ $import }}"
+  {{ end }}
+)
+{{ end }}
+
+type TestType {{ .TypeDef }}
+`
+
+	var typeDefinitionCodeTemplate = template.Must(template.New("typedef").Parse(typeDefinitionCode))
+
+	runEngineTest(t, mainCodeTemplate, typeDefinitionCodeTemplate, "yayamls")
+}
+
+func runEngineTest(
+	t *testing.T,
+	mainCodeTemplate, typeDefinitionTemplate *template.Template,
+	engine string,
+) {
+	t.Helper()
 	type tcase struct {
 		name string
 
@@ -21,10 +150,11 @@ func TestGenerator(t *testing.T) {
 
 		TmpRoot string
 
-		Imports []string
-		PkgName string
-		TypeDef string
-		Value   string
+		Imports    []string
+		PkgName    string
+		TypeDef    string
+		Value      string
+		UsePointer bool
 	}
 
 	tcases := []tcase{
@@ -91,11 +221,12 @@ func TestGenerator(t *testing.T) {
 			Value:   "linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: &linkedlist.TestType{Value: 1000}}}",
 		},
 		{
-			name:    "linked list (with flags)",
-			flags:   []string{"--encode-pointer-receiver", "--disallow-unknown-fields", "--omitempty"},
-			PkgName: "linkedlist",
-			TypeDef: "struct{ Value int; Next *TestType; }",
-			Value:   "linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: &linkedlist.TestType{Value: 1000}}}",
+			name:       "linked list (with flags)",
+			flags:      []string{"--encode-pointer-receiver", "--disallow-unknown-fields", "--omitempty"},
+			PkgName:    "linkedlist",
+			TypeDef:    "struct{ Value int; Next *TestType; }",
+			Value:      "&linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: &linkedlist.TestType{Value: 1000}}}",
+			UsePointer: true,
 		},
 		{
 			name:    "anonymous struct",
@@ -147,14 +278,14 @@ func TestGenerator(t *testing.T) {
 			}
 			defer typeFile.Close()
 
-			if err := typeDefinitionCodeTemplate.Execute(typeFile, tc); err != nil {
+			if err := typeDefinitionTemplate.Execute(typeFile, tc); err != nil {
 				t.Fatalf("failed to execute typedef code template: %v", err)
 			}
 
 			execArgs := []string{"run", "../cmd/yamlygen/main.go"}
 			execArgs = append(execArgs, tc.flags...)
 
-			execArgs = append(execArgs, "-type", "TestType")
+			execArgs = append(execArgs, "-type", "TestType", "-engine", engine)
 			execArgs = append(execArgs, root+"/"+tc.PkgName)
 
 			var stdout, stderr bytes.Buffer
@@ -189,57 +320,3 @@ func TestGenerator(t *testing.T) {
 	}
 
 }
-
-var mainCode = `
-package main
-
-import (
-  "fmt"
-  "reflect"
-  "os"
-  {{ range $import := .Imports }}
-  "{{ $import }}"
-  {{ end }}
-
-  "github.com/KSpaceer/yamly/tests/{{ .TmpRoot }}/{{ .PkgName }}"
-)
-
-func main() {
-	var v {{ .PkgName }}.TestType
-	v = {{ .Value }}
-    data, err := v.MarshalYAML()
-    if err != nil {
-        fmt.Fprintln(os.Stderr, err)
-        os.Exit(1)
-    }
-    var v2 {{ .PkgName }}.TestType
-    err = v2.UnmarshalYAML(data)
-    if err != nil {
-        fmt.Fprintln(os.Stderr, err)
-        os.Exit(1)
-    }
-	if reflect.DeepEqual(v, v2) {
-		fmt.Print("SUCCESS")
-    } else {
-		fmt.Printf("start: %v\n\n\nfinish: %v", v, v2)
-	}
-}
-`
-
-var mainCodeTemplate = template.Must(template.New("maincode").Parse(mainCode))
-
-var typeDefinitionCode = `
-package {{ .PkgName }}
-
-{{ if .Imports }}
-import (
-  {{ range $import := .Imports }}
-  "{{ $import }}"
-  {{ end }}
-)
-{{ end }}
-
-type TestType {{ .TypeDef }}
-`
-
-var typeDefinitionCodeTemplate = template.Must(template.New("typedef").Parse(typeDefinitionCode))

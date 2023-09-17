@@ -1,4 +1,4 @@
-//go:build bench_yamly
+//go:build bench_yamly_yayamls_engine
 
 package benchmark
 
@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func BenchmarkYamly_Unmarshal_Large(b *testing.B) {
+func BenchmarkYamly_YAYAMLS_Engine_Unmarshal_Large(b *testing.B) {
 	b.SetBytes(int64(len(largeDataText)))
 	for i := 0; i < b.N; i++ {
 		var s LargeStruct
@@ -19,7 +19,7 @@ func BenchmarkYamly_Unmarshal_Large(b *testing.B) {
 	}
 }
 
-func BenchmarkYamly_Unmarshal_Small(b *testing.B) {
+func BenchmarkYamly_YAYAMLS_Engine_Unmarshal_Small(b *testing.B) {
 	b.SetBytes(int64(len(smallDataText)))
 	for i := 0; i < b.N; i++ {
 		var s SmallStruct

@@ -157,6 +157,7 @@ func (g *Generator) generateEncoderBody(
 	indent int,
 	canBeNull bool,
 ) error {
+	var finishingText string
 	if t != g.currentType {
 		whitespace := strings.Repeat(" ", indent)
 
@@ -166,12 +167,17 @@ func (g *Generator) generateEncoderBody(
 			return nil
 		}
 
-		implementsAny, err := g.engineGen.MarshalersImplementationCheck(g.out, t, inArg, indent)
+		implResult, err := g.engineGen.MarshalersImplementationCheck(g.out, t, inArg, indent)
 		if err != nil {
 			return err
 		}
-		if implementsAny {
+		switch implResult {
+		case ImplementationResultTrue:
 			return nil
+		case ImplementationResultConditional:
+			indent += 2
+			finishingText = whitespace + "}"
+			whitespace = strings.Repeat(" ", indent)
 		}
 
 		marshalIface = reflect.TypeOf((*encoding.TextMarshaler)(nil)).Elem()
@@ -181,7 +187,12 @@ func (g *Generator) generateEncoderBody(
 		}
 	}
 
-	return g.generateEncoderBodyWithoutCheck(t, inArg, tags, indent, canBeNull)
+	err := g.generateEncoderBodyWithoutCheck(t, inArg, tags, indent, canBeNull)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(g.out, finishingText)
+	return nil
 }
 
 func (g *Generator) generateEncoderBodyWithoutCheck(
@@ -304,11 +315,17 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 		if t.NumMethod() > 0 {
 			if implementMarshalerYamly(t) {
 				fmt.Fprintln(g.out, whitespace+"_ = "+inArg+".MarshalYamly(out)")
-			} else if implements, err := g.engineGen.MarshalersImplementationCheck(g.out, t, inArg, indent); err != nil {
+			} else if implResult, err := g.engineGen.MarshalersImplementationCheck(g.out, t, inArg, indent); err != nil {
 				return err
-			} else if !implements {
-				return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
-					"(any), yamly.Marshaler or engine-specific marshalling interfaces", t)
+			} else {
+				switch implResult {
+				case ImplementationResultFalse:
+					return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
+						"(any), yamly.Marshaler or engine-specific marshalling interfaces", t)
+				case ImplementationResultConditional:
+					fmt.Fprintln(g.out, whitespace+"  out.InsertRawText(nil, yamly.MarshalerImplementationError)")
+					fmt.Fprintln(g.out, whitespace+"}")
+				}
 			}
 		} else {
 			fmt.Fprintln(g.out, whitespace+"if m, ok := "+inArg+".(yamly.MarshalerYamly) {")

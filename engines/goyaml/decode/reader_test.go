@@ -1,6 +1,7 @@
 package decode_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"github.com/KSpaceer/yamly"
@@ -482,7 +483,7 @@ func TestReader_Complex(t *testing.T) {
 		},
 		{
 			name: "anchor and alias with raw",
-			src:  "a: &anc value\nb: *anc",
+			src:  "a: &anc value\nb:\n  c: *anc",
 			calls: func(r yamly.Decoder, vs *valueStore) error {
 				mapState := r.Mapping()
 				_ = r.String()
@@ -496,7 +497,26 @@ func TestReader_Complex(t *testing.T) {
 				}
 				return r.Error()
 			},
-			expected: []any{"value", []byte("value")},
+			expected: []any{"value", []byte("c: &anc value\n")},
+		},
+		{
+			name: "node",
+			src:  "a:\n  b: c\nd: e",
+			calls: func(r yamly.Decoder, vs *valueStore) error {
+				mapState := r.Mapping()
+				key1 := r.String()
+				vs.Add(key1)
+				_ = r.(yamly.ExtendedDecoder[*yaml.Node]).Node()
+				key2 := r.String()
+				vs.Add(key2)
+				value2 := r.String()
+				vs.Add(value2)
+				if mapState.HasUnprocessedItems() {
+					return fmt.Errorf("map still has unprocessed items")
+				}
+				return r.Error()
+			},
+			expected: []any{"a", "d", "e"},
 		},
 	}
 
@@ -521,6 +541,445 @@ func TestReader_Complex(t *testing.T) {
 				t.Errorf("values are not equal:\n\nexpected: %v\n\ngot: %v", tc.expected, got)
 			}
 		})
+	}
+}
+
+func TestReader_SequencesWithNulls(t *testing.T) {
+	type tcase struct {
+		name       string
+		src        string
+		methodName string
+		args       []any
+		expected   []any
+	}
+
+	tcases := []tcase{
+		{
+			name:       "integer nullables",
+			src:        "[1, -2, null, 3]",
+			methodName: "Integer",
+			args:       []any{64},
+			expected:   []any{int64(1), int64(-2), nil, int64(3)},
+		},
+		{
+			name:       "unsigned nullables",
+			src:        "[0o777, 0xEEEE, 2, null]",
+			methodName: "Unsigned",
+			args:       []any{64},
+			expected:   []any{uint64(0o777), uint64(0xEEEE), uint64(2), nil},
+		},
+		{
+			name:       "boolean nullables",
+			src:        "[true, ~, null, false]",
+			methodName: "Boolean",
+			expected:   []any{true, nil, nil, false},
+		},
+		{
+			name:       "string nullables",
+			src:        "[plain, 'single', null, \"double\", NULL]",
+			methodName: "String",
+			expected:   []any{"plain", "single", nil, "double", nil},
+		},
+		{
+			name:       "float nullables",
+			src:        "[-.INF, 3e18, .223, 25, NULL, Null]",
+			methodName: "Float",
+			args:       []any{64},
+			expected:   []any{math.Inf(-1), 3e18, .223, float64(25), nil, nil},
+		},
+		{
+			name:       "timestamp nullables",
+			src:        `["2023-08-20T08:24:02Z", "2008-01-02", null]`,
+			methodName: "Timestamp",
+			expected: []any{
+				time.Date(2023, 8, 20, 8, 24, 2, 0, time.UTC),
+				time.Date(2008, 1, 2, 0, 0, 0, 0, time.UTC),
+				nil,
+			},
+		},
+	}
+
+	for _, tc := range tcases {
+		t.Run(tc.name, func(t *testing.T) {
+			var tree yaml.Node
+			if err := yaml.Unmarshal([]byte(tc.src), &tree); err != nil {
+				t.Fatalf("parsing failed: %v", err)
+			}
+			r := decode.NewASTReader(&tree)
+			var values []any
+			methodVal := reflect.ValueOf(r).MethodByName(tc.methodName)
+			args := make([]reflect.Value, len(tc.args))
+			for i := range args {
+				args[i] = reflect.ValueOf(tc.args[i])
+			}
+			err := func() error {
+				seqState := r.Sequence()
+				for seqState.HasUnprocessedItems() {
+					if r.TryNull() {
+						values = append(values, nil)
+					} else {
+						results := methodVal.Call(args)
+						values = append(values, results[0].Interface())
+					}
+				}
+				return r.Error()
+			}()
+			if err != nil {
+				t.Fatalf("failed to read: %v", err)
+			}
+			if len(tc.expected) != len(values) {
+				t.Fatalf("values are not equal:\n\nexpected: %v\n\ngot: %v", tc.expected, values)
+			}
+			for i := range tc.expected {
+				equal := true
+
+				if tc.expected[i] != nil && values[i] != nil {
+					v1, v2 := reflect.ValueOf(tc.expected[i]), reflect.ValueOf(values[i])
+					if !v1.CanConvert(v2.Type()) {
+						t.Errorf("can't cast value %v to type of value %v", v1, v2)
+					} else {
+						v1 = v1.Convert(v2.Type())
+						equal = v1.Equal(v2)
+					}
+				} else if tc.expected[i] != nil || values[i] != nil {
+					equal = false
+				}
+
+				if !equal {
+					t.Errorf("values at index %d are not equal:\nexpected: %v\ngot: %v",
+						i, tc.expected[i], values[i])
+				}
+			}
+		})
+	}
+}
+
+func TestReader_ExpectAny(t *testing.T) {
+	type tcase struct {
+		name     string
+		src      string
+		expected any
+	}
+
+	tcases := []tcase{
+		{
+			name:     "string",
+			src:      "'null'",
+			expected: "null",
+		},
+		{
+			name:     "null",
+			src:      "null",
+			expected: nil,
+		},
+		{
+			name:     "unsigned",
+			src:      "255",
+			expected: uint64(255),
+		},
+		{
+			name:     "integer",
+			src:      "-255",
+			expected: int64(-255),
+		},
+		{
+			name:     "timestamp",
+			src:      "2023-08-26",
+			expected: time.Date(2023, 8, 26, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name:     "float",
+			src:      "2e-6",
+			expected: 2e-6,
+		},
+		{
+			name:     "boolean",
+			src:      "TRUE",
+			expected: true,
+		},
+		{
+			name: "map",
+			src: `
+                 string: 'null'
+                 null: null
+                 unsigned: 255
+                 integer: -255
+                 timestamp: 2023-08-26
+                 float: 2e-6
+                 boolean: true`,
+			expected: map[string]any{
+				"string":    "null",
+				"null":      nil,
+				"unsigned":  uint64(255),
+				"integer":   int64(-255),
+				"timestamp": time.Date(2023, 8, 26, 0, 0, 0, 0, time.UTC),
+				"float":     2e-6,
+				"boolean":   true,
+			},
+		},
+		{
+			name: "sequence",
+			src:  `['null', null, 255, -255, 2023-08-26, 2e-6, true]`,
+			expected: []any{
+				"null",
+				nil,
+				uint64(255),
+				int64(-255),
+				time.Date(2023, 8, 26, 0, 0, 0, 0, time.UTC),
+				2e-6,
+				true,
+			},
+		},
+		{
+			name: "anchor and alias",
+			src: `
+              anchored: &ref value
+              alias: *ref
+              *ref: "another value"`,
+			expected: map[string]any{
+				"anchored": "value",
+				"alias":    "value",
+				"value":    "another value",
+			},
+		},
+		{
+			name: "merge key",
+			src: `
+              default: &default
+                first: 15
+                second: false
+              first:
+                second: true
+                <<: *default
+              second:
+                first: 22
+                <<: *default`,
+			expected: map[string]any{
+				"default": map[string]any{
+					"first":  uint64(15),
+					"second": false,
+				},
+				"first": map[string]any{
+					"first":  uint64(15),
+					"second": true,
+				},
+				"second": map[string]any{
+					"first":  uint64(22),
+					"second": false,
+				},
+			},
+		},
+	}
+
+	for _, tc := range tcases {
+		t.Run(tc.name, func(t *testing.T) {
+			var tree yaml.Node
+			if err := yaml.Unmarshal([]byte(tc.src), &tree); err != nil {
+				t.Fatalf("parsing failed: %v", err)
+			}
+			r := decode.NewASTReader(&tree)
+			result := r.Any()
+			if err := r.Error(); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(tc.expected, result) {
+				t.Errorf("values are not equal:\nexpected: %v\n\ngot: %v", tc.expected, result)
+			}
+		})
+	}
+}
+
+func TestReader_ExpectRaw(t *testing.T) {
+	type tcase struct {
+		name     string
+		src      string
+		expected []byte
+	}
+
+	tcases := []tcase{
+		{
+			name:     "simple value",
+			src:      "'22'",
+			expected: []byte("'22'\n"),
+		},
+		{
+			name:     "simple mapping",
+			src:      "key: value",
+			expected: []byte("key: value\n"),
+		},
+		{
+			name:     "simple sequence",
+			src:      "[1, 2, 3]",
+			expected: []byte("[1, 2, 3]\n"),
+		},
+		{
+			name:     "sequence of mappings",
+			src:      "[{1: 2}, {3: 4}, {5: 6}]",
+			expected: []byte("[{1: 2}, {3: 4}, {5: 6}]\n"),
+		},
+		{
+			name:     "mapping of sequences",
+			src:      "[1, 2, 3]: [4, 5, 6]",
+			expected: []byte("? [1, 2, 3]\n: [4, 5, 6]\n"),
+		},
+	}
+
+	for _, tc := range tcases {
+		t.Run(tc.name, func(t *testing.T) {
+			var tree yaml.Node
+			if err := yaml.Unmarshal([]byte(tc.src), &tree); err != nil {
+				t.Fatalf("parsing failed: %v", err)
+			}
+			r := decode.NewASTReader(&tree)
+			result := r.Raw()
+			if err := r.Error(); err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if !bytes.Equal(tc.expected, result) {
+				t.Errorf("values are not equal:\nexpected: %s\n\ngot: %s", tc.expected, result)
+			}
+		})
+	}
+}
+
+func TestReader_K8SManifest(t *testing.T) {
+	const pvcManifest = `
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: pvc-claim
+    spec:
+      storageClassName: manual
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 3Gi
+`
+
+	type (
+		requests struct {
+			storage string
+		}
+
+		resources struct {
+			requests requests
+		}
+
+		spec struct {
+			storageClassName string
+			accessModes      []string
+			resources        resources
+		}
+
+		metadata struct {
+			name string
+		}
+
+		manifest struct {
+			apiVersion string
+			kind       string
+			metadata   metadata
+			spec       spec
+		}
+	)
+
+	expected := manifest{
+		apiVersion: "v1",
+		kind:       "PersistentVolumeClaim",
+		metadata: metadata{
+			name: "pvc-claim",
+		},
+		spec: spec{
+			storageClassName: "manual",
+			accessModes:      []string{"ReadWriteOnce"},
+			resources: resources{
+				requests: requests{
+					storage: "3Gi",
+				},
+			},
+		},
+	}
+
+	var got manifest
+
+	var tree yaml.Node
+	if err := yaml.Unmarshal([]byte(pvcManifest), &tree); err != nil {
+		t.Fatalf("parsing failed: %v", err)
+	}
+	r := decode.NewASTReader(&tree)
+	var read func(r yamly.Decoder) error
+	read = func(r yamly.Decoder) error {
+		manifestState := r.Mapping()
+		for manifestState.HasUnprocessedItems() {
+			key := r.String()
+			switch key {
+			case "apiVersion":
+				got.apiVersion = r.String()
+			case "kind":
+				got.kind = r.String()
+			case "metadata":
+				metadataState := r.Mapping()
+				for metadataState.HasUnprocessedItems() {
+					key = r.String()
+					switch key {
+					case "name":
+						got.metadata.name = r.String()
+					default:
+						return fmt.Errorf("unknown key %s", key)
+
+					}
+				}
+			case "spec":
+				specState := r.Mapping()
+				for specState.HasUnprocessedItems() {
+					key = r.String()
+					switch key {
+					case "storageClassName":
+						got.spec.storageClassName = r.String()
+					case "accessModes":
+						accessModesState := r.Sequence()
+						for accessModesState.HasUnprocessedItems() {
+							value := r.String()
+							got.spec.accessModes = append(got.spec.accessModes, value)
+						}
+					case "resources":
+						resourcesState := r.Mapping()
+						for resourcesState.HasUnprocessedItems() {
+							key = r.String()
+							switch key {
+							case "requests":
+								requestsState := r.Mapping()
+								for requestsState.HasUnprocessedItems() {
+									key = r.String()
+									switch key {
+									case "storage":
+										got.spec.resources.requests.storage = r.String()
+									default:
+										return fmt.Errorf("unknown key %s", key)
+									}
+								}
+							default:
+								return fmt.Errorf("unknown key %s", key)
+							}
+						}
+					default:
+						return fmt.Errorf("unknown key %s", key)
+					}
+				}
+			default:
+				return fmt.Errorf("unknown key %s", key)
+			}
+		}
+		return r.Error()
+	}
+
+	if err := read(r); err != nil {
+		t.Fatalf("failed to read from YAML: %v", err)
+	}
+
+	if !reflect.DeepEqual(expected, got) {
+		t.Fatalf("expected: %v\n\n\ngot: %v", expected, got)
 	}
 }
 

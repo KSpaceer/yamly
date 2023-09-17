@@ -10,7 +10,9 @@ var (
 	EndOfStream = errors.New("end of YAML stream")
 	// Denied error indicates that Decoder called method was denied because current AST node
 	// can't be represented as desired value.
-	Denied = (*denyError)(nil)
+	Denied                         = (*denyError)(nil)
+	UnmarshalerImplementationError = errors.New("interface type is not supported: expect only interface{} " +
+		"(any), yamly.Unmarshaler or engine-specific unmarshalling interfaces")
 )
 
 // UnmarshalerYamly interface can be implemented to customize type's behaviour when being
