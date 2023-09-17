@@ -1,3 +1,4 @@
+// Package parser contains parser for package name and path.
 package parser
 
 import (
@@ -8,11 +9,13 @@ import (
 	"strings"
 )
 
+// Parser is used to parse package name and path from provided directory.
 type Parser struct {
 	PkgName string
 	PkgPath string
 }
 
+// Parse parses files in dirPath and sets PkgName and PkgPath.
 func (p *Parser) Parse(dirPath string) error {
 	var err error
 	if p.PkgPath, err = findPkgPath(dirPath); err != nil {

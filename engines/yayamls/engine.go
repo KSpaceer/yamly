@@ -1,3 +1,5 @@
+// Package yayamls represents an engine for yamly with
+// unique YAML marshalling system with full specification coverage.
 package yayamls
 
 import (
@@ -14,6 +16,7 @@ const (
 	pkgEncode  = "github.com/KSpaceer/yamly/engines/yayamls/encode"
 )
 
+// Generator is used in generated code.
 var Generator generator.EngineGenerator = engineGenerator{}
 
 type engineGenerator struct{}

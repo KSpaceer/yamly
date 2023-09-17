@@ -80,12 +80,14 @@ func newParser(tokSrc *tokenSource) *parser {
 	}
 }
 
+// ParseTokenStream builds an YAML AST using tokens from given token stream.
 func ParseTokenStream(cts ConfigurableTokenStream) (ast.Node, error) {
 	p := newParser(newTokenSource(cts))
 	defer p.tokSrc.release()
 	return p.Parse()
 }
 
+// ParseTokens builds an YAML AST using provided tokens.
 func ParseTokens(tokens []token.Token) (ast.Node, error) {
 	tokSrc := newTokenSource(newSimpleTokenStream(tokens))
 	p := newParser(tokSrc)
@@ -93,6 +95,7 @@ func ParseTokens(tokens []token.Token) (ast.Node, error) {
 	return p.Parse()
 }
 
+// ParseString builds an YAML AST from parsing provided source string.
 func ParseString(src string, opts ...ParseOption) (ast.Node, error) {
 	o := applyOptions(opts...)
 	var cts ConfigurableTokenStream
@@ -114,16 +117,19 @@ func ParseString(src string, opts ...ParseOption) (ast.Node, error) {
 	return tree, nil
 }
 
+// ParseBytes builds an YAML AST from parsing provided bytes slice.
 func ParseBytes(src []byte, opts ...ParseOption) (ast.Node, error) {
 	return ParseString(strslice.BytesSliceToString(src), opts...)
 }
 
+// Parse builds an YAML AST using tokens from given token stream.
 func Parse(cts ConfigurableTokenStream) (ast.Node, error) {
 	p := newParser(newTokenSource(cts))
 	defer p.release()
 	return p.Parse()
 }
 
+// Parse parses the contained tokens and constructs an YAML AST>
 func (p *parser) Parse() (ast.Node, error) {
 	p.next()
 	p.startOfLine = true
@@ -139,7 +145,7 @@ func (p *parser) next() {
 		if !p.balanceChecker.IsBalanced() {
 			unbalanced, _ := p.balanceChecker.PeekLastUnbalanced()
 			p.appendError(UnbalancedOpeningParenthesisError{
-				Type:        tokenTypeToParenthesesType(unbalanced),
+				ptype:       tokenTypeToParenthesesType(unbalanced),
 				ExpectedPos: p.tok.Start,
 			})
 		}

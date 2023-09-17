@@ -6,11 +6,15 @@ import (
 	"sync"
 )
 
+// RawTokenModer is used to set "raw mode" in lexer,
+// meaning it almost will not change it's state from incoming tokens.
 type RawTokenModer interface {
 	SetRawMode()
 	UnsetRawMode()
 }
 
+// ConfigurableTokenStream represents a token stream with
+// abilities to set checkpoints and change mode to raw tokens.
 type ConfigurableTokenStream interface {
 	cpaccessor.ResourceStream[token.Token]
 	RawTokenModer

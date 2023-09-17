@@ -1,3 +1,4 @@
+// Package schema is used to derive types from YAML source. For more information see shared schema package.
 package schema
 
 import (

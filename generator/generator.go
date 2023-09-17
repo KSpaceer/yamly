@@ -17,6 +17,7 @@ const (
 	pkgYamly = "github.com/KSpaceer/yamly"
 )
 
+// Generator is used to generate code for YAML (un)marshalling methods in runtime.
 type Generator struct {
 	out *bytes.Buffer
 
@@ -44,6 +45,7 @@ type Generator struct {
 	variablesCounter int
 }
 
+// New creates a Generator which will write generated code into outputFile.
 func New(outputFile string) *Generator {
 	return &Generator{
 		outputFile:     outputFile,
@@ -61,6 +63,8 @@ func (g *Generator) SetPkgPath(pkgPath string) {
 	g.pkgPath = pkgPath
 }
 
+// SetEngineGenerator defines engine for Generator. Engine represents
+// a "backend" for generator, including lexer, parser etc.
 func (g *Generator) SetEngineGenerator(eg EngineGenerator) {
 	for pkg, alias := range eg.Packages() {
 		g.imports[pkg] = alias
@@ -84,6 +88,7 @@ func (g *Generator) SetEncodePointerReceiver(useReceiver bool) {
 	g.encodePointerReceiver = useReceiver
 }
 
+// AddType sets a target type for which methods are generated.
 func (g *Generator) AddType(v any) {
 	t := reflect.TypeOf(v)
 	if t.Kind() == reflect.Pointer {
@@ -105,6 +110,7 @@ func (g *Generator) addType(t reflect.Type) {
 	g.pendingTypes = append(g.pendingTypes, t)
 }
 
+// Generate generates code for marshalling methods, writing it into given io.Writer.
 func (g *Generator) Generate(w io.Writer) error {
 	g.out = &bytes.Buffer{}
 
@@ -142,6 +148,7 @@ func (g *Generator) Generate(w io.Writer) error {
 	return err
 }
 
+// generateHeader generates file header with build tags, imports etc.
 func (g *Generator) generateHeader(out io.Writer) {
 	if g.buildTags != "" {
 		fmt.Fprintln(out, "// +build ", g.buildTags)

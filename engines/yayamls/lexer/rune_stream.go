@@ -4,6 +4,7 @@ import (
 	"unicode/utf8"
 )
 
+// EOF indicates the end of file.
 const EOF rune = -1
 
 type runeStream struct {

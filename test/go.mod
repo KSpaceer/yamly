@@ -1,4 +1,4 @@
-module github.com/KSpaceer/yamly/tests
+module github.com/KSpaceer/yamly/test
 
 go 1.21.1
 

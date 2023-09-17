@@ -7,6 +7,8 @@ import (
 )
 
 var (
+	// MarshalerImplementationError is used by engines to indicate that type does not
+	// implement any marshalling interface in runtime.
 	MarshalerImplementationError = errors.New("interface type is not supported: expect only interface{} " +
 		"(any), yamly.Marshaler or engine-specific marshalling interfaces")
 )

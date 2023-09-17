@@ -10,7 +10,9 @@ var (
 	EndOfStream = errors.New("end of YAML stream")
 	// Denied error indicates that Decoder called method was denied because current AST node
 	// can't be represented as desired value.
-	Denied                         = (*denyError)(nil)
+	Denied = (*denyError)(nil)
+	// UnmarshalerImplementationError is used by engines to indicate that type does not
+	// implement any unmarshalling interface in runtime.
 	UnmarshalerImplementationError = errors.New("interface type is not supported: expect only interface{} " +
 		"(any), yamly.Unmarshaler or engine-specific unmarshalling interfaces")
 )
@@ -92,6 +94,8 @@ type Decoder interface {
 // methods
 type ExtendedDecoder[T any] interface {
 	Decoder
+
+	// Node returns current subtree.
 	Node() T
 }
 
@@ -113,6 +117,8 @@ func DenyError(err error) error {
 	return &denyError{err}
 }
 
+// UnknownFieldError is used to indicate unknown field for struct
+// when unmarshaler is generated with unknown field disallowing.
 type UnknownFieldError struct {
 	Field string
 }

@@ -1,3 +1,4 @@
+// Package lexer contains types and methods to transform source text into a bunch of tokens.
 package lexer
 
 import (
@@ -9,6 +10,7 @@ import (
 
 const lookaheadBufferPreallocationSize = 8
 
+// Tokenizer is used to transform the source text into lexical tokens.
 type Tokenizer struct {
 	ra  cpaccessor.CheckpointingAccessor[rune]
 	ctx context
@@ -27,12 +29,16 @@ type tokenizerOpts struct {
 
 type TokenizerOption func(*tokenizerOpts)
 
+// WithUnsafe will make tokenizer to convert string to byte/rune slices using
+// unsafe package (maybe).
 func WithUnsafe() TokenizerOption {
 	return func(opts *tokenizerOpts) {
 		opts.unsafe = true
 	}
 }
 
+// NewTokenizer will create a Tokenizer used to produce tokens from given
+// source text.
 func NewTokenizer(src string, opts ...TokenizerOption) *Tokenizer {
 	var o tokenizerOpts
 	for _, opt := range opts {
@@ -57,14 +63,17 @@ func NewTokenizer(src string, opts ...TokenizerOption) *Tokenizer {
 	return t
 }
 
+// SetRawMode sets tokenizer into raw mode making it ignore context of tokenizing.
 func (t *Tokenizer) SetRawMode() {
 	t.ctx.setRawModeValue(true)
 }
 
+// UnsetRawMode removes raw mode in tokenizer making it pay attention to the context of tokenizing.
 func (t *Tokenizer) UnsetRawMode() {
 	t.ctx.setRawModeValue(false)
 }
 
+// Next emits next token.
 func (t *Tokenizer) Next() token.Token {
 	if t.hasPreparedToken {
 		t.lookbehindTok = t.preparedToken

@@ -48,10 +48,16 @@ type EngineGenerator interface {
 	GenerateMarshalEmptyInterfaceAssertions(dst io.Writer, inArg string, indent int) error
 }
 
+// ImplementationResult defines whether type implements any engine interface or not
 type ImplementationResult int8
 
 const (
+	// ImplementationResultFalse is equal to boolean false, meaning type does not implement any interface
 	ImplementationResultFalse ImplementationResult = iota
+	// ImplementationResultTrue is equal to boolean true, meaning type does implement any of engine interfaces
 	ImplementationResultTrue
+	// ImplementationResultConditional indicates that type can implement one of engine interfaces,
+	// but this depends not only on the type, but additional conditions (like if yamly.Decoder implements more
+	// specific yamly.ExtendedDecoder).
 	ImplementationResultConditional
 )

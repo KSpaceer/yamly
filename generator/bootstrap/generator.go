@@ -1,3 +1,5 @@
+// Package bootstrap contains generator for bootstrap main
+// with actual generating with generator.Generator
 package bootstrap
 
 import (
@@ -10,6 +12,8 @@ import (
 
 const generatorPackage = "github.com/KSpaceer/yamly/generator"
 
+// Generator is used to generate a temporary bootstrap file in target package
+// with actual generator.Generator to generate the actual code.
 type Generator struct {
 	PkgPath string
 	PkgName string

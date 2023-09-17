@@ -1,4 +1,4 @@
-package tests_test
+package test_test
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ import (
 
   "gopkg.in/yaml.v3"
 
-  "github.com/KSpaceer/yamly/tests/{{ .TmpRoot }}/{{ .PkgName }}"
+  "github.com/KSpaceer/yamly/test/{{ .TmpRoot }}/{{ .PkgName }}"
 )
 
 func main() {
@@ -88,7 +88,7 @@ import (
   "{{ $import }}"
   {{ end }}
 
-  "github.com/KSpaceer/yamly/tests/{{ .TmpRoot }}/{{ .PkgName }}"
+  "github.com/KSpaceer/yamly/test/{{ .TmpRoot }}/{{ .PkgName }}"
 )
 
 func main() {

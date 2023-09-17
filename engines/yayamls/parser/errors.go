@@ -5,15 +5,15 @@ import (
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
 )
 
-type ParenthesesType int8
+type parenthesesType int8
 
 const (
-	UnknownParenthesesType ParenthesesType = iota
+	UnknownParenthesesType parenthesesType = iota
 	CurlyParenthesesType
 	SquareParenthesesType
 )
 
-func (pt ParenthesesType) String() string {
+func (pt parenthesesType) String() string {
 	var s string
 	switch pt {
 	case UnknownParenthesesType:
@@ -26,7 +26,7 @@ func (pt ParenthesesType) String() string {
 	return s
 }
 
-func tokenTypeToParenthesesType(t token.Type) ParenthesesType {
+func tokenTypeToParenthesesType(t token.Type) parenthesesType {
 	switch t {
 	case token.SequenceStartType:
 		return SquareParenthesesType
@@ -37,6 +37,8 @@ func tokenTypeToParenthesesType(t token.Type) ParenthesesType {
 	}
 }
 
+// UnbalancedClosingParenthesisError is used to indicate case when a closing parenthesis (or bracket) appears
+// in source without corresponding opening counterpart. E.g. "[]]"
 type UnbalancedClosingParenthesisError struct {
 	Tok token.Token
 }
@@ -46,25 +48,27 @@ func (u UnbalancedClosingParenthesisError) Error() string {
 		u.Tok.Origin, u.Tok.Start)
 }
 
+// UnbalancedOpeningParenthesisError is used to indicate case when an opening parenthesis (or bracket) appears
+// in source without corresponding closing counterpart. E.g. "[[]"
 type UnbalancedOpeningParenthesisError struct {
-	Type        ParenthesesType
+	ptype       parenthesesType
 	ExpectedPos token.Position
 }
 
 func (u UnbalancedOpeningParenthesisError) Error() string {
 	return fmt.Sprintf("parentheses are not balanced: expected to have parentheses %q at position %s",
-		u.Type, u.ExpectedPos)
+		u.ptype, u.ExpectedPos)
 }
 
-type QuoteType int8
+type quoteType int8
 
 const (
-	UnknownQuoteType QuoteType = iota
+	UnknownQuoteType quoteType = iota
 	SingleQuoteType
 	DoubleQuoteType
 )
 
-func (qt QuoteType) String() string {
+func (qt quoteType) String() string {
 	var s string
 	switch qt {
 	case UnknownQuoteType:
@@ -77,16 +81,19 @@ func (qt QuoteType) String() string {
 	return s
 }
 
+// UnbalancedQuotesError is used to indicate case when an opening quote appears
+// in source without corresponding closing counterpart. E.g. "'" or '"""'
 type UnbalancedQuotesError struct {
-	Type        QuoteType
+	qtype       quoteType
 	ExpectedPos token.Position
 }
 
 func (u UnbalancedQuotesError) Error() string {
 	return fmt.Sprintf("quotes are not balanced: expected to have quote %q at position %s",
-		u.Type, u.ExpectedPos)
+		u.qtype, u.ExpectedPos)
 }
 
+// TagError indicates case when tag has a string after it which is not allowed in YAML.
 type TagError struct {
 	Src string
 	Pos token.Position
@@ -97,6 +104,9 @@ func (t TagError) Error() string {
 		t.Src, t.Pos)
 }
 
+// DeadEndError is used to indicate some sort of loops occured during parsing
+// when the same token appears multiple times. When YAML document is correct,
+// there will be no 'dead ends' because parsing will go lightly.
 type DeadEndError struct {
 	Pos token.Position
 }
