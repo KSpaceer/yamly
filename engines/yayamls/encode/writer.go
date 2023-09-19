@@ -19,6 +19,7 @@ const nullValue = "null"
 
 var _ yamly.TreeWriter[ast.Node] = (*ASTWriter)(nil)
 
+// ASTWriter implements yamly.TreeWriter
 type ASTWriter struct {
 	buf              *bytes.Buffer
 	errors           []error
@@ -49,9 +50,16 @@ func NewASTWriter(opts ...WriteOption) *ASTWriter {
 	return &w
 }
 
+// AnchorsKeeper defines methods to bind anchors to aliases and dereference aliases.
 type AnchorsKeeper interface {
+	// StoreAnchor marks anchor name as met.
 	StoreAnchor(anchorName string)
+
+	// BindToLatestAnchor binds given node to the most recent stored anchor name.
 	BindToLatestAnchor(n ast.Node)
+
+	// DereferenceAlias returns node associated with given alias (anchor name).
+	// If alias was not stored or node was not bound to it, returns an error
 	DereferenceAlias(alias string) (ast.Node, error)
 }
 
@@ -59,8 +67,11 @@ type writeOptions struct {
 	anchorsKeeper AnchorsKeeper
 }
 
+// WriteOption allows to modify ASTWriter behavior
 type WriteOption func(*writeOptions)
 
+// WithAnchorsKeeper makes ASTWriter use provided AnchorsKeeper and dereference
+// unknown aliases (i.e. aliases for anchors which are not contained in written AST)
 func WithAnchorsKeeper(ak AnchorsKeeper) WriteOption {
 	return func(options *writeOptions) {
 		options.anchorsKeeper = ak

@@ -1,3 +1,4 @@
+// Package parser contains functions and types to parse tokens into YAML AST.
 package parser
 
 import (

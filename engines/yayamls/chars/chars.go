@@ -1,3 +1,4 @@
+// Package chars contains functions related to YAML characters and keywords specification.
 package chars
 
 import (
@@ -5,10 +6,13 @@ import (
 )
 
 const (
+	// YAMLDirective represents a YAML directive keyword "YAML".
 	YAMLDirective = "YAML"
-	TagDirective  = "TAG"
+	// TagDirective represents a YAML directive keyword "TAG".
+	TagDirective = "TAG"
 )
 
+// Character represents a single YAML character
 type Character = rune
 
 const (
@@ -44,6 +48,8 @@ const (
 	DocumentEndCharacter       Character = '.'
 )
 
+// IsDecimal checks if given string represents a decimal number
+// (i.e. consists only of decimal digits)
 func IsDecimal(s string) bool {
 	for _, c := range s {
 		if !IsDigit(c) {
@@ -185,14 +191,17 @@ func IsFlowIndicatorChar(r rune) bool {
 	}
 }
 
+// IsDigit checks if given rune is decimal digit
 func IsDigit(r rune) bool {
 	return r >= '0' && r <= '9'
 }
 
+// IsHexDigit checks if given rune is hex digit
 func IsHexDigit(r rune) bool {
 	return IsDigit(r) || (r >= 'A' && r <= 'F') || (r >= 'a' && r <= 'f')
 }
 
+// AreHexDigits checks if given runes are hex digits
 func AreHexDigits(runes ...rune) bool {
 	for i := range runes {
 		if !IsHexDigit(runes[i]) {
@@ -202,6 +211,7 @@ func AreHexDigits(runes ...rune) bool {
 	return true
 }
 
+// IsASCIILetter checks if given rune is ASCII letter (a-z or A-Z)
 func IsASCIILetter(r rune) bool {
 	return (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z')
 }
@@ -214,6 +224,9 @@ func IsJSONChar(r rune) bool {
 // YAML specification: [41-58] ns-esc-...
 const singleEscapedCharacters = "0at\tnvfre \"/\\N_LP"
 
+// IsEscapedCharacter checks if given runes are valid escaped sequence of characters in YAML
+// (i.e. \<valid single escaped character>, \x<two hex digits>, \u<four hex digits> or
+// \U<eight hex digits>)
 func IsEscapedCharacter(runes []rune, i int) (int, bool) {
 	if i == len(runes) {
 		return 0, false
@@ -249,10 +262,12 @@ func IsEscapedCharacter(runes []rune, i int) (int, bool) {
 	return i, true
 }
 
+// IsWhitespaceChar checks if given rune is either space or tab
 func IsWhitespaceChar(r rune) bool {
 	return r == SpaceCharacter || r == TabCharacter
 }
 
+// IsLineBreakChar checks if given rune is either LF or CR character.
 func IsLineBreakChar(r rune) bool {
 	return r == LineFeedCharacter || r == CarriageReturnCharacter
 }

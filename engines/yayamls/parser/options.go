@@ -5,6 +5,7 @@ type parseOptions struct {
 	omitStream             bool
 }
 
+// ParseOption allows to modify parser behavior
 type ParseOption interface {
 	apply(options *parseOptions)
 }

@@ -11,6 +11,7 @@ import (
 
 var _ yamly.TreeBuilder[ast.Node] = (*ASTBuilder)(nil)
 
+// ASTBuilder implements yamly.TreeBuilder
 type ASTBuilder struct {
 	root  ast.Node
 	route []ast.Node
@@ -24,8 +25,11 @@ type builderOpts struct {
 	unquoteOneliners bool
 }
 
+// ASTBuilderOption allows to modify ASTBuilder behavior
 type ASTBuilderOption func(*builderOpts)
 
+// WithUnquotedOneLineStrings make ASTBuilder create nodes for one-line strings
+// with absent quoting style (instead of default double quoting style)
 func WithUnquotedOneLineStrings() ASTBuilderOption {
 	return func(opts *builderOpts) {
 		opts.unquoteOneliners = true

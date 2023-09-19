@@ -8,19 +8,19 @@ import (
 type parenthesesType int8
 
 const (
-	UnknownParenthesesType parenthesesType = iota
-	CurlyParenthesesType
-	SquareParenthesesType
+	unknownParenthesesType parenthesesType = iota
+	curlyParenthesesType
+	squareParenthesesType
 )
 
 func (pt parenthesesType) String() string {
 	var s string
 	switch pt {
-	case UnknownParenthesesType:
+	case unknownParenthesesType:
 		s = "unknown"
-	case CurlyParenthesesType:
+	case curlyParenthesesType:
 		s = "}"
-	case SquareParenthesesType:
+	case squareParenthesesType:
 		s = "]"
 	}
 	return s
@@ -29,11 +29,11 @@ func (pt parenthesesType) String() string {
 func tokenTypeToParenthesesType(t token.Type) parenthesesType {
 	switch t {
 	case token.SequenceStartType:
-		return SquareParenthesesType
+		return squareParenthesesType
 	case token.MappingStartType:
-		return CurlyParenthesesType
+		return curlyParenthesesType
 	default:
-		return UnknownParenthesesType
+		return unknownParenthesesType
 	}
 }
 
@@ -63,26 +63,26 @@ func (u UnbalancedOpeningParenthesisError) Error() string {
 type quoteType int8
 
 const (
-	UnknownQuoteType quoteType = iota
-	SingleQuoteType
-	DoubleQuoteType
+	unknownQuoteType quoteType = iota
+	singleQuoteType
+	doubleQuoteType
 )
 
 func (qt quoteType) String() string {
 	var s string
 	switch qt {
-	case UnknownQuoteType:
+	case unknownQuoteType:
 		s = "unknown"
-	case SingleQuoteType:
+	case singleQuoteType:
 		s = "single (`'`)"
-	case DoubleQuoteType:
+	case doubleQuoteType:
 		s = "double (`\"`)"
 	}
 	return s
 }
 
 // UnbalancedQuotesError is used to indicate case when an opening quote appears
-// in source without corresponding closing counterpart. E.g. "'" or '"""'
+// in source without corresponding closing counterpart. E.g. `'` or `"text" "`
 type UnbalancedQuotesError struct {
 	qtype       quoteType
 	ExpectedPos token.Position

@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 )
 
+// ConvertFromYAMLSingleQuotedString 'unquotes' single quoted YAML string
 func ConvertFromYAMLSingleQuotedString(s string) (string, error) {
 	var sb strings.Builder
 	sb.Grow(len(s))
@@ -38,10 +39,12 @@ func ConvertFromYAMLSingleQuotedString(s string) (string, error) {
 	return sb.String(), nil
 }
 
+// ConvertToYAMLSingleQuotedString 'quotes' given string as YAML single quoted string
 func ConvertToYAMLSingleQuotedString(s string) (string, error) {
 	return strings.ReplaceAll(s, "'", "''"), nil
 }
 
+// ConvertFromYAMLDoubleQuotedString 'unquotes' double quoted YAML string
 func ConvertFromYAMLDoubleQuotedString(s string) (string, error) {
 	var sb strings.Builder
 	sb.Grow(len(s))
@@ -75,6 +78,7 @@ func ConvertFromYAMLDoubleQuotedString(s string) (string, error) {
 	return sb.String(), nil
 }
 
+// ConvertToYAMLDoubleQuotedString 'quotes' given string as YAML double quoted string
 func ConvertToYAMLDoubleQuotedString(s string) (string, error) {
 	var sb strings.Builder
 	sb.Grow(len(s))

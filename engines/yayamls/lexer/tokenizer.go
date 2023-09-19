@@ -1,4 +1,4 @@
-// Package lexer contains types and methods to transform source text into a bunch of tokens.
+// Package lexer contains types and methods to transform source text into tokens.
 package lexer
 
 import (
