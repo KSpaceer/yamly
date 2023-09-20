@@ -2,7 +2,8 @@ package parser_test
 
 import (
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	astutils2 "github.com/KSpaceer/yamly/engines/yayamls/ast/astutils"
+	"github.com/KSpaceer/yamly/engines/yayamls/ast/astcmp"
+	"github.com/KSpaceer/yamly/engines/yayamls/ast/astprint"
 	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
@@ -2726,8 +2727,8 @@ func FuzzParseString(f *testing.F) {
 func compareAST(t *testing.T, expectedAST, gotAST ast.Node) {
 	t.Helper()
 
-	cmp := astutils2.NewComparator()
-	printer := astutils2.NewPrinter()
+	cmp := astcmp.NewComparator()
+	printer := astprint.NewPrinter()
 
 	if !cmp.Equal(expectedAST, gotAST) {
 		var s strings.Builder

@@ -1,3 +1,5 @@
+// Package goyaml represents an engine for yamly based on
+// gopkg.in/yaml.v3 package.
 package goyaml
 
 import (

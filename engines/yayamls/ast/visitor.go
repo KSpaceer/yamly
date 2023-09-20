@@ -1,5 +1,7 @@
 package ast
 
+// Visitor implements "Visitor" pattern and allows to traverse AST
+// with some custom logic
 type Visitor interface {
 	VisitStreamNode(n *StreamNode)
 	VisitTagNode(n *TagNode)

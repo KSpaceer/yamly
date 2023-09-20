@@ -1,4 +1,5 @@
-package astutils
+// Package astprint contains types and functions for printing and formatting string representation of YAML AST.
+package astprint
 
 import (
 	"fmt"
@@ -15,7 +16,8 @@ const (
 
 const indentSize = 3
 
-// inspired by github.com/xlab/treeprint
+// Printer implements AST printing logic.
+// Inspired by github.com/xlab/treeprint
 type Printer struct {
 	edgeType    string
 	level       int
@@ -43,6 +45,7 @@ func (p *Printer) cloneWithWriter(w io.Writer) *Printer {
 	}
 }
 
+// Print writes string representation of ast.Node into io.Writer
 func (p *Printer) Print(root ast.Node, w io.Writer) error {
 	if w == nil {
 		return fmt.Errorf("nil io.Writer")

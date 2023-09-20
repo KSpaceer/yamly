@@ -1,30 +1,51 @@
+// Package ast contains types for YAML AST representation.
 package ast
 
 import (
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
 )
 
+// NodeType represents the type of element in AST
 type NodeType int8
 
 const (
+	// InvalidType embodies an erroneous element of AST. They usually appear when an error occures during parsing.
 	InvalidType NodeType = iota
+	// DocumentType represents a YAML document.
 	DocumentType
+	// ContentType represents a content element (scalar, sequence or mapping) with properties (tag, anchor).
 	ContentType
+	// MappingType represents a YAML mapping.
 	MappingType
+	// MappingEntryType represents a single mapping entry (key-value pair).
 	MappingEntryType
+	// SequenceType represents a YAML sequence.
 	SequenceType
+	// CommentType represents a YAML comment.
 	CommentType
+	// DirectiveType represents a YAML directive.
 	DirectiveType
+	// TagType represents a YAML tag.
 	TagType
+	// AnchorType represents a YAML anchor.
 	AnchorType
+	// AliasType represents a YAML alias.
 	AliasType
+	// StreamType represents a YAML stream
 	StreamType
+	// DocumentPrefixType represents a YAML document prefix (BOM + comments)
 	DocumentPrefixType
+	// DocumentSuffixType represents a YAML document suffix (document end + comments)
 	DocumentSuffixType
+	// IndentType represents a YAML indentation.
 	IndentType
+	// PropertiesType represents element's properties (tag, anchor).
 	PropertiesType
+	// BlockHeaderType represents literal/folded properties (chomping, explicit indent indicator)
 	BlockHeaderType
+	// TextType represents a text, i.e. single scalar
 	TextType
+	// NullType represents a null scalar.
 	NullType
 )
 
@@ -72,15 +93,21 @@ func (t NodeType) String() string {
 	return ""
 }
 
+// ChompingType corresponds to YAML chomping type and defines
+// what to do with trailing newlines in literal/folded style.
 type ChompingType int8
 
 const (
 	UnknownChompingType ChompingType = iota
+	// ClipChompingType prescribes removing of trailing newlines except the first one
 	ClipChompingType
+	// StripChompingType prescribes removing of all trailing newlines
 	StripChompingType
+	// KeepChompingType prescribes keeping of all trailing newlines
 	KeepChompingType
 )
 
+// TokenChompingType derives chomping type from given token
 func TokenChompingType(tok token.Token) ChompingType {
 	switch tok.Type {
 	case token.StripChompingType:
@@ -91,33 +118,45 @@ func TokenChompingType(tok token.Token) ChompingType {
 	return UnknownChompingType
 }
 
+// QuotingType represents a quoting type of string.
 type QuotingType int8
 
 const (
 	UnknownQuotingType QuotingType = iota
+	// AbsentQuotingType means that string has no quotes
 	AbsentQuotingType
+	// SingleQuotingType means that string is enclosed in single quotes
 	SingleQuotingType
+	// DoubleQuotingType means that string is enclosed in double quotes
 	DoubleQuotingType
 )
 
+// Node is a single element of YAML AST
 type Node interface {
+	// Type returns the node's type
 	Type() NodeType
+	// Accept implements "Visitor" pattern for AST.
 	Accept(v Visitor)
 }
 
+// Texter is a more specific kind of Node that has some meaningful string data
 type Texter interface {
+	// Text returns string data associated with Texter node
 	Text() string
 }
 
+// TexterNode is a composite of Node and Texter interfaces
 type TexterNode interface {
 	Texter
 	Node
 }
 
+// ValidNode checks if Node is valid and can be processed.
 func ValidNode(n Node) bool {
 	return n != nil && n.Type() != InvalidType
 }
 
+// BasicNode is a simple container for given type and used during parsing.
 type BasicNode struct {
 	NodeType NodeType
 }
@@ -267,10 +306,12 @@ func (*BlockHeaderNode) Type() NodeType {
 
 func (*BlockHeaderNode) Accept(Visitor) {}
 
+// IndentationIndicator returns an indentation value that was explicitly set in block header.
 func (b *BlockHeaderNode) IndentationIndicator() int {
 	return b.indentation
 }
 
+// ChompingIndicator returns a chomping type defines in block header.
 func (b *BlockHeaderNode) ChompingIndicator() ChompingType {
 	return b.chompingType
 }
@@ -282,6 +323,7 @@ func NewBlockHeaderNode(chomping ChompingType, indentation int) Node {
 	}
 }
 
+// TextNodeOption allows to modify YAML element associated with TextNode during creation.
 type TextNodeOption interface {
 	apply(*TextNode)
 }
@@ -292,6 +334,7 @@ func (f textNodeOptionFunc) apply(o *TextNode) {
 	f(o)
 }
 
+// WithQuotingType sets given QuotingType for TextNode string.
 func WithQuotingType(t QuotingType) TextNodeOption {
 	return textNodeOptionFunc(func(node *TextNode) {
 		node.quotingType = t

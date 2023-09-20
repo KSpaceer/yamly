@@ -1,15 +1,18 @@
-package astutils
+// Package astcmp contains types and method to compare YAML ASTs.
+package astcmp
 
 import (
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 )
 
+// Comparator implements AST comparing logic.
 type Comparator struct{}
 
 func NewComparator() *Comparator {
 	return &Comparator{}
 }
 
+// Equal shows if two YAML ASTs are equal.
 func (c *Comparator) Equal(first, second ast.Node) bool {
 	if first == nil || second == nil {
 		return first == nil && second == nil
