@@ -480,7 +480,7 @@ func (r *ASTReader) reset() {
 func (r *ASTReader) visitCurrentNode() {
 	n := r.currentNode()
 	if n == nil {
-		r.appendError(yamly.EndOfStream)
+		r.appendError(yamly.ErrEndOfStream)
 	} else {
 		r.visitNode(n)
 	}
@@ -525,7 +525,7 @@ func (r *ASTReader) setLatestDeny(err *denyError) {
 }
 
 func (r *ASTReader) appendError(err error) {
-	if r.multipleDenyErrors && errors.Is(err, yamly.Denied) {
+	if r.multipleDenyErrors && errors.Is(err, yamly.ErrDenied) {
 		r.denyErrors = append(r.denyErrors, err)
 	} else if r.fatalError == nil {
 		r.setFatalError(err)

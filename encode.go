@@ -6,12 +6,10 @@ import (
 	"time"
 )
 
-var (
-	// MarshalerImplementationError is used by engines to indicate that type does not
-	// implement any marshalling interface in runtime.
-	MarshalerImplementationError = errors.New("interface type is not supported: expect only interface{} " +
-		"(any), yamly.Marshaler or engine-specific marshalling interfaces")
-)
+// ErrMarshalerImplementation is used by engines to indicate that type does not
+// implement any marshalling interface in runtime.
+var ErrMarshalerImplementation = errors.New("interface type is not supported: expect only interface{} " +
+	"(any), yamly.Marshaler or engine-specific marshalling interfaces")
 
 // MarshalerYamly interface can be implemented to customize type's behaviour when being
 // marshaled into a YAML document inserting a subtree into builded AST.
@@ -108,7 +106,7 @@ type encoder[T any] struct {
 }
 
 // NewEncoder returns an Encoder used to construct and serialize YAML AST tree of given type.
-func NewEncoder[T any](builder TreeBuilder[T], writer TreeWriter[T]) Encoder {
+func NewEncoder[T any](builder TreeBuilder[T], writer TreeWriter[T]) Encoder { // nolint: ireturn
 	return &encoder[T]{
 		builder: builder,
 		writer:  writer,

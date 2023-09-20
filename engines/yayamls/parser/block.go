@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
 )
@@ -480,7 +481,7 @@ func (p *parser) parseFoldedContent(ind *indentation, chomping ast.ChompingType)
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	buf := bufsPool.Get().(*bytes.Buffer)
+	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
 
 	p.setCheckpoint()
 	if ast.ValidNode(p.parseDiffLines(ind, buf)) && ast.ValidNode(p.parseChompedLast(chomping, buf)) {
@@ -759,7 +760,7 @@ func (p *parser) parseLiteralContent(ind *indentation, chomping ast.ChompingType
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	buf := bufsPool.Get().(*bytes.Buffer)
+	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
 
 	p.setCheckpoint()
 	if ast.ValidNode(p.parseLiteralText(ind, buf)) {

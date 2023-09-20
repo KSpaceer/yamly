@@ -2,11 +2,12 @@ package encode
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 	"github.com/KSpaceer/yamly/engines/yayamls/schema"
-	"time"
 )
 
 var _ yamly.TreeBuilder[ast.Node] = (*ASTBuilder)(nil)
@@ -180,16 +181,16 @@ func (b *ASTBuilder) insertNode(n ast.Node, pushToRoute bool) {
 
 	switch currentNode.Type() {
 	case ast.MappingType:
-		mapping := currentNode.(*ast.MappingNode)
+		mapping := currentNode.(*ast.MappingNode) // nolint: forcetypeassert
 		entry := ast.NewMappingEntryNode(n, nil)
 		mapping.AppendEntry(entry)
 		b.pushNode(entry)
 	case ast.MappingEntryType:
-		entry := currentNode.(*ast.MappingEntryNode)
+		entry := currentNode.(*ast.MappingEntryNode) // nolint: forcetypeassert
 		entry.SetValue(n)
 		b.popNode()
 	case ast.SequenceType:
-		sequence := currentNode.(*ast.SequenceNode)
+		sequence := currentNode.(*ast.SequenceNode) // nolint: forcetypeassert
 		sequence.AppendEntry(n)
 	default:
 		b.fatalError = fmt.Errorf(

@@ -3,12 +3,13 @@ package decode
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/encode"
 	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 	"github.com/KSpaceer/yamly/engines/yayamls/schema"
-	"time"
 )
 
 var _ yamly.ExtendedDecoder[ast.Node] = (*ASTReader)(nil)
@@ -449,8 +450,7 @@ func (r *ASTReader) VisitNullNode(n *ast.NullNode) {
 		r.appendError(fmt.Errorf("unexpected conclusion: %s", point.visitingResult.conclusion))
 	}
 
-	switch point.visitingResult.action {
-	case visitingActionExtract:
+	if point.visitingResult.action == visitingActionExtract {
 		r.extractedCollectionState = nil
 		r.extractedValue = ""
 	}
@@ -495,8 +495,7 @@ func (r *ASTReader) visitTexterNode(n ast.TexterNode) {
 		r.appendError(fmt.Errorf("unexpected conclusion: %v", point.visitingResult.conclusion))
 	}
 
-	switch point.visitingResult.action {
-	case visitingActionExtract:
+	if point.visitingResult.action == visitingActionExtract {
 		r.extractedCollectionState = nil
 		r.extractedValue = n.Text()
 	}
@@ -555,8 +554,7 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 		r.appendError(fmt.Errorf("unexpected conclusion: %s", point.visitingResult.conclusion))
 	}
 
-	switch point.visitingResult.action {
-	case visitingActionExtract:
+	if point.visitingResult.action == visitingActionExtract {
 		r.extractedCollectionState = newCollectionState(point.iter, childrenSize)
 		r.extractedValue = ""
 	}
@@ -565,7 +563,7 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 func (r *ASTReader) visitCurrentNode() {
 	n := r.currentNode()
 	if n == nil {
-		r.appendError(yamly.EndOfStream)
+		r.appendError(yamly.ErrEndOfStream)
 	} else {
 		n.Accept(r)
 	}
@@ -623,7 +621,7 @@ func (r *ASTReader) setLatestDeny(err *denyError) {
 }
 
 func (r *ASTReader) appendError(err error) {
-	if r.multipleDenyErrors && errors.Is(err, yamly.Denied) {
+	if r.multipleDenyErrors && errors.Is(err, yamly.ErrDenied) {
 		r.denyErrors = append(r.denyErrors, err)
 	} else if r.fatalError == nil {
 		r.fatalError = err

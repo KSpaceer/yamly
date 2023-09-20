@@ -319,7 +319,7 @@ func TestReader_Simple(t *testing.T) {
 			err := tc.calls(r, &vs)
 			if err != nil {
 				switch {
-				case tc.expectDeny && errors.Is(err, yamly.Denied):
+				case tc.expectDeny && errors.Is(err, yamly.ErrDenied):
 					return
 				default:
 					t.Errorf("unexpected error: %v", err)
@@ -530,7 +530,7 @@ func TestReader_Complex(t *testing.T) {
 			vs := valueStore{}
 			if err := tc.calls(r, &vs); err != nil {
 				switch {
-				case tc.expectDeny && errors.Is(err, yamly.Denied):
+				case tc.expectDeny && errors.Is(err, yamly.ErrDenied):
 					return
 				default:
 					t.Errorf("unexpected error: %v", err)

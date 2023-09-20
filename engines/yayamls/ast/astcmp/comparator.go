@@ -41,9 +41,9 @@ func (c *Comparator) Equal(first, second ast.Node) bool {
 			break
 		}
 	}
-	for range firstCh {
+	for range firstCh { // nolint: revive
 	}
-	for range secondCh {
+	for range secondCh { // nolint: revive
 	}
 	return result
 }
@@ -58,7 +58,10 @@ func (c *Comparator) compareNodes(first, second ast.Node) bool {
 
 	switch f := first.(type) {
 	case ast.Texter:
-		return f.Text() == second.(ast.Texter).Text()
+		if sf, ok := second.(ast.Texter); ok {
+			return f.Text() == sf.Text()
+		}
+		return false
 	default:
 		return true
 	}

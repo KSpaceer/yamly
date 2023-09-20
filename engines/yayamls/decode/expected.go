@@ -280,7 +280,6 @@ func (expectRaw) process(n ast.Node, prev visitingResult) visitingResult {
 			}
 		}
 	}
-
 }
 
 type expectNode = expectRaw

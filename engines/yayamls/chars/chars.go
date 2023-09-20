@@ -85,7 +85,7 @@ func IsURI(s string) bool {
 			i++
 		default:
 			r := runes[i]
-			if !(IsDigit(r) || IsASCIILetter(r) || IsFlowIndicatorChar(r) || strings.IndexRune(URIOnlyChars, r) != -1) {
+			if !(IsDigit(r) || IsASCIILetter(r) || IsFlowIndicatorChar(r) || strings.ContainsRune(URIOnlyChars, r)) {
 				return false
 			}
 		}
@@ -109,7 +109,7 @@ func IsTagString(s string) bool {
 			i++
 		default:
 			r := runes[i]
-			if !(IsDigit(r) || IsASCIILetter(r) || strings.IndexRune(TagOnlyChars, r) != -1) {
+			if !(IsDigit(r) || IsASCIILetter(r) || strings.ContainsRune(TagOnlyChars, r)) {
 				return false
 			}
 		}

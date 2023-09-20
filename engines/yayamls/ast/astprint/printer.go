@@ -3,9 +3,10 @@ package astprint
 
 import (
 	"fmt"
-	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"io"
 	"strings"
+
+	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 )
 
 const (
@@ -127,13 +128,13 @@ func (p *Printer) VisitStreamNode(n *ast.StreamNode) {
 	}
 }
 
-func (p *Printer) VisitTagNode(n *ast.TagNode) {}
+func (*Printer) VisitTagNode(*ast.TagNode) {}
 
-func (p *Printer) VisitAnchorNode(n *ast.AnchorNode) {}
+func (*Printer) VisitAnchorNode(*ast.AnchorNode) {}
 
-func (p *Printer) VisitAliasNode(n *ast.AliasNode) {}
+func (*Printer) VisitAliasNode(*ast.AliasNode) {}
 
-func (p *Printer) VisitTextNode(n *ast.TextNode) {}
+func (*Printer) VisitTextNode(*ast.TextNode) {}
 
 func (p *Printer) VisitContentNode(n *ast.ContentNode) {
 	levelsEnded := p.levelsEnded
@@ -169,7 +170,6 @@ func (p *Printer) VisitContentNode(n *ast.ContentNode) {
 			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
-		count++
 		p.printValue(content)
 		p.level++
 		content.Accept(p)
@@ -251,7 +251,6 @@ func (p *Printer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
-		count++
 		p.printValue(value)
 		p.level++
 		value.Accept(p)
@@ -259,7 +258,7 @@ func (p *Printer) VisitMappingEntryNode(n *ast.MappingEntryNode) {
 	}
 }
 
-func (p *Printer) VisitNullNode(n *ast.NullNode) {}
+func (*Printer) VisitNullNode(*ast.NullNode) {}
 
 func (p *Printer) VisitPropertiesNode(n *ast.PropertiesNode) {
 	levelsEnded := p.levelsEnded
@@ -295,7 +294,6 @@ func (p *Printer) VisitPropertiesNode(n *ast.PropertiesNode) {
 			p.levelsEnded = append(p.levelsEnded, p.level)
 			p.edgeType = edgeEnd
 		}
-		count++
 		p.printValue(anchor)
 		p.level++
 		anchor.Accept(p)

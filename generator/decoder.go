@@ -3,10 +3,11 @@ package generator
 import (
 	"encoding"
 	"fmt"
-	"github.com/KSpaceer/yamly"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/KSpaceer/yamly"
 )
 
 var basicDecoders = map[reflect.Kind]string{
@@ -57,7 +58,7 @@ func (g *Generator) generateDecoder(t reflect.Type) error {
 	tname := g.extractTypeName(t)
 
 	fmt.Fprintln(g.out, "func "+fname+"(in yamly.Decoder, out *"+tname+") {")
-	if err := g.generateDecoderBodyWithoutCheck(reflect.PtrTo(t), "out", fieldTags{}, 2, false); err != nil {
+	if err := g.generateDecoderBodyWithoutCheck(reflect.PtrTo(t), "out", fieldTags{}, indentDelta, false); err != nil {
 		return err
 	}
 	fmt.Fprintln(g.out, "}")
@@ -127,11 +128,7 @@ func (g *Generator) generateStructFieldDecoder(f reflect.StructField) error {
 	}
 
 	fmt.Fprintln(g.out, "    case \""+name+"\":")
-	if err := g.generateDecoderBody(f.Type, "out."+f.Name, tags, 6, true); err != nil {
-		return err
-	}
-
-	return nil
+	return g.generateDecoderBody(f.Type, "out."+f.Name, tags, 6, true)
 }
 
 func (g *Generator) generateDecoderBody(
@@ -159,7 +156,7 @@ func (g *Generator) generateDecoderBody(
 		case ImplementationResultTrue:
 			return nil
 		case ImplementationResultConditional:
-			indent += 2
+			indent += indentDelta
 			finishingText = whitespace + "}"
 			whitespace = strings.Repeat(" ", indent)
 		}
@@ -236,7 +233,8 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			fmt.Fprintln(g.out, whitespace+"if !in.TryNull() {")
 			fmt.Fprintln(g.out, whitespace+"  "+iterVar+" := 0")
 			fmt.Fprintln(g.out, whitespace+"  "+arrayStateVar+" := in.Sequence()")
-			fmt.Fprintln(g.out, whitespace+"  for "+arrayStateVar+".HasUnprocessedItems() && "+iterVar+" < "+strconv.Itoa(t.Len())+"{")
+			fmt.Fprintln(g.out, whitespace+"  for "+arrayStateVar+".HasUnprocessedItems() && "+iterVar+
+				" < "+strconv.Itoa(t.Len())+"{")
 
 			if err := g.generateDecoderBody(elem, "("+outArg+")["+iterVar+"]", tags, indent+4, true); err != nil {
 				return err
@@ -264,7 +262,7 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			fmt.Fprintln(g.out, whitespace+"  }")
 		}
 
-		if err := g.generateDecoderBody(t.Elem(), "*"+outArg, tags, indent+2, complexTypeElem); err != nil {
+		if err := g.generateDecoderBody(t.Elem(), "*"+outArg, tags, indent+indentDelta, complexTypeElem); err != nil {
 			return err
 		}
 
@@ -318,7 +316,7 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 					return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
 						"(any), yamly.Unmarshaler or engine-specific unmarshalling interfaces", t)
 				case ImplementationResultConditional:
-					fmt.Fprintln(g.out, whitespace+"  in.AddError(yamly.UnmarshalerImplementationError)")
+					fmt.Fprintln(g.out, whitespace+"  in.AddError(yamly.ErrUnmarshalerImplementation)")
 					fmt.Fprintln(g.out, whitespace+"}")
 				}
 			}
@@ -326,7 +324,7 @@ func (g *Generator) generateDecoderBodyWithoutCheck(
 			fmt.Fprintln(g.out, whitespace+"if m, ok := "+outArg+".(yamly.UnmarshalerYamly); ok {")
 			fmt.Fprintln(g.out, whitespace+"  in.AddError(m.UnmarshalYamly(in))")
 			fmt.Fprintln(g.out, whitespace+"} else {")
-			if err := g.engineGen.GenerateUnmarshalEmptyInterfaceAssertions(g.out, outArg, indent+2); err != nil {
+			if err := g.engineGen.GenerateUnmarshalEmptyInterfaceAssertions(g.out, outArg, indent+indentDelta); err != nil {
 				return err
 			}
 			fmt.Fprintln(g.out, whitespace+"}")

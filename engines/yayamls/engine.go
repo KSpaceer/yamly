@@ -4,10 +4,11 @@ package yayamls
 
 import (
 	"fmt"
-	"github.com/KSpaceer/yamly/generator"
 	"io"
 	"reflect"
 	"strings"
+
+	"github.com/KSpaceer/yamly/generator"
 )
 
 const (
@@ -33,7 +34,7 @@ func (engineGenerator) WarningSuppressors() []string {
 	return []string{"*encode.ASTWriter", "*decode.ASTReader", "yayamls.Marshaler"}
 }
 
-func (engineGenerator) GenerateUnmarshalers(dst io.Writer, decodeFuncName string, typeName string) error {
+func (engineGenerator) GenerateUnmarshalers(dst io.Writer, decodeFuncName, typeName string) error {
 	fmt.Fprintln(dst, "// UnmarshalYAML supports yayamls.Unmarshaler interface")
 	fmt.Fprintln(dst, "func (v *"+typeName+") UnmarshalYAML(data []byte) error {")
 	fmt.Fprintln(dst, "  in, err := decode.NewASTReaderFromBytes(data)")
@@ -46,7 +47,7 @@ func (engineGenerator) GenerateUnmarshalers(dst io.Writer, decodeFuncName string
 	return nil
 }
 
-func (engineGenerator) GenerateMarshalers(dst io.Writer, encodeFuncName string, typeName string) error {
+func (engineGenerator) GenerateMarshalers(dst io.Writer, encodeFuncName, typeName string) error {
 	fmt.Fprintln(dst, "// MarshalYAML supports yayamls.Marshaler")
 	fmt.Fprintln(dst, "func (v "+typeName+") MarshalYAML() ([]byte, error) {")
 	fmt.Fprintln(dst, "  out := yamly.NewEncoder(encode.NewASTBuilder(), encode.NewASTWriter())")

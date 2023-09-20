@@ -61,7 +61,6 @@ func pkgPathFromGoMod(dirPath, goModPath string) (string, error) {
 	rel := path.Join(modulePath, filePathToPackagePath(strings.TrimPrefix(dirPath, filepath.Dir(goModPath))))
 
 	return path.Clean(rel), nil
-
 }
 
 func getModulePath(goModPath string) string {

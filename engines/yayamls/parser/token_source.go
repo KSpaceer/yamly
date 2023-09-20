@@ -1,9 +1,10 @@
 package parser
 
 import (
+	"sync"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/pkg/cpaccessor"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"sync"
 )
 
 // RawTokenModer is used to set "raw mode" in lexer,
@@ -21,20 +22,20 @@ type ConfigurableTokenStream interface {
 }
 
 type tokenSource struct {
-	cpaccessor.CheckpointingAccessor[token.Token]
+	*cpaccessor.CheckpointingAccessor[token.Token]
 	RawTokenModer
 }
 
 var accessorsPool = sync.Pool{}
 
-func getCheckpointingAccessor(cts ConfigurableTokenStream) cpaccessor.CheckpointingAccessor[token.Token] {
-	if ca, ok := accessorsPool.Get().(cpaccessor.CheckpointingAccessor[token.Token]); ok {
+func getCheckpointingAccessor(cts ConfigurableTokenStream) *cpaccessor.CheckpointingAccessor[token.Token] {
+	if ca, ok := accessorsPool.Get().(*cpaccessor.CheckpointingAccessor[token.Token]); ok {
 		ca.SetStream(cts)
 		return ca
 	}
 	ca := cpaccessor.NewCheckpointingAccessor[token.Token]()
 	ca.SetStream(cts)
-	return ca
+	return &ca
 }
 
 func newTokenSource(cts ConfigurableTokenStream) *tokenSource {
@@ -46,7 +47,7 @@ func newTokenSource(cts ConfigurableTokenStream) *tokenSource {
 
 func (ts *tokenSource) release() {
 	ts.CheckpointingAccessor.Reset()
-	accessorsPool.Put(ts.CheckpointingAccessor)
+	accessorsPool.Put(&ts.CheckpointingAccessor)
 }
 
 type simpleTokenStream struct {

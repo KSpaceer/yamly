@@ -2,18 +2,21 @@ package encode_test
 
 import (
 	"encoding/json"
+	"math"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast/astcmp"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast/astprint"
 	"github.com/KSpaceer/yamly/engines/yayamls/encode"
-	"math"
-	"strings"
-	"testing"
-	"time"
 )
 
 func TestBuilder_Simple(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name      string
 		calls     func(b yamly.TreeBuilder[ast.Node])
@@ -102,7 +105,10 @@ func TestBuilder_Simple(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			b := encode.NewASTBuilder()
 			tc.calls(b)
 			result, err := b.Result()
@@ -120,6 +126,8 @@ func TestBuilder_Simple(t *testing.T) {
 }
 
 func TestBuilder_Complex(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name      string
 		calls     func(b yamly.TreeBuilder[ast.Node])
@@ -235,7 +243,10 @@ func TestBuilder_Complex(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			b := encode.NewASTBuilder()
 			tc.calls(b)
 			result, err := b.Result()
@@ -252,6 +263,8 @@ func TestBuilder_Complex(t *testing.T) {
 }
 
 func TestBuilder_InsertRaw(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name     string
 		src      []byte
@@ -328,7 +341,10 @@ func TestBuilder_InsertRaw(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			b := encode.NewASTBuilder()
 			b.StartMapping()
 			b.InsertString("raw")
@@ -362,6 +378,8 @@ func TestBuilder_K8SManifest(t *testing.T) {
 		        requests:
 		          storage: 3Gi
 	*/
+
+	t.Parallel()
 
 	expected := ast.NewMappingNode([]ast.Node{
 		ast.NewMappingEntryNode(

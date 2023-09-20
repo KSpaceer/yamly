@@ -3,6 +3,8 @@ package parser
 import "testing"
 
 func Test_findPkgPath(t *testing.T) {
+	t.Parallel()
+
 	pkgPath, err := findPkgPath(".")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)

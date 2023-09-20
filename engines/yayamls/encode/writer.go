@@ -3,11 +3,12 @@ package encode
 import (
 	"bytes"
 	"errors"
+	"io"
+	"strings"
+
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/chars"
-	"io"
-	"strings"
 )
 
 const (

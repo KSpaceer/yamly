@@ -1,12 +1,15 @@
 package cpaccessor_test
 
 import (
+	"testing"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/pkg/cpaccessor"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"testing"
 )
 
 func TestTokenAccessor(t *testing.T) {
+	t.Parallel()
+
 	type rollbackInfo struct {
 		idx int
 		tok token.Token
@@ -397,7 +400,10 @@ func TestTokenAccessor(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
 			stream := &testStream[token.Token]{
 				values:       tc.LoadedTokens,
 				defaultValue: token.Token{Type: token.EOFType},
@@ -466,6 +472,8 @@ func (t *testStream[T]) Next() T {
 // Accessor must preserve all values rollbacked with nested rollback
 // after committing the last existing checkpoint
 func TestCommitWithNestedRollback(t *testing.T) {
+	t.Parallel()
+
 	stream := &testStream[int]{
 		values: []int{1, 2, 3},
 	}
@@ -485,5 +493,4 @@ func TestCommitWithNestedRollback(t *testing.T) {
 	if value != 3 {
 		t.Fatalf("expected %d but got %d", 3, value)
 	}
-
 }

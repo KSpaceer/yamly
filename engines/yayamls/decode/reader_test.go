@@ -4,14 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/KSpaceer/yamly"
-	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	"github.com/KSpaceer/yamly/engines/yayamls/decode"
-	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 	"math"
 	"reflect"
 	"testing"
 	"time"
+
 )
 
 func TestReader_Simple(t *testing.T) {
@@ -486,7 +483,7 @@ func TestReader_Simple(t *testing.T) {
 			err := tc.calls(r, &vs)
 			if err != nil {
 				switch {
-				case tc.expectDeny && errors.Is(err, yamly.Denied):
+				case tc.expectDeny && errors.Is(err, yamly.ErrDenied):
 					return
 				default:
 					t.Fatalf("unexpected error: %v", err)
@@ -497,7 +494,6 @@ func TestReader_Simple(t *testing.T) {
 				t.Errorf("values are not equal:\n\nexpected: %v\n\ngot: %v", tc.expected, got)
 			}
 		})
-
 	}
 }
 
@@ -715,7 +711,7 @@ func TestReader_Complex(t *testing.T) {
 			vs := valueStore{}
 			if err = tc.calls(r, &vs); err != nil {
 				switch {
-				case tc.expectDeny && errors.Is(err, yamly.Denied):
+				case tc.expectDeny && errors.Is(err, yamly.ErrDenied):
 					return
 				default:
 					t.Fatalf("unexpected error: %v", err)

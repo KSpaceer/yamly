@@ -15,6 +15,8 @@ import (
 
 const (
 	pkgYamly = "github.com/KSpaceer/yamly"
+
+	indentDelta = 2
 )
 
 // Generator is used to generate code for YAML (un)marshalling methods in runtime.
@@ -147,7 +149,9 @@ func (g *Generator) Generate(w io.Writer) error {
 	}
 	var out bytes.Buffer
 	g.generateHeader(&out)
-	g.out.WriteTo(&out)
+	if _, err := out.ReadFrom(g.out); err != nil {
+		return err
+	}
 
 	_, err := w.Write(out.Bytes())
 	return err
@@ -409,7 +413,8 @@ func (g *Generator) getStructFields(t reflect.Type) ([]reflect.StructField, erro
 				return nil, fmt.Errorf("error processing embedded field: %w", err)
 			}
 			embeddedFields = mergeStructFields(embeddedFields, fs)
-		} else if (t.Kind() >= reflect.Bool && t.Kind() <= reflect.Complex128) || t.Kind() == reflect.String { // kind is basic
+		} else if (t.Kind() >= reflect.Bool && t.Kind() <= reflect.Complex128) || t.Kind() == reflect.String {
+			// kind is basic
 			if strings.Contains(f.Name, ".") || unicode.IsUpper([]rune(f.Name)[0]) {
 				fields = append(fields, f)
 			}
@@ -433,7 +438,7 @@ func (g *Generator) getStructFields(t reflect.Type) ([]reflect.StructField, erro
 }
 
 func mergeStructFields(firstFields, secondFields []reflect.StructField) []reflect.StructField {
-	var fields []reflect.StructField
+	fields := make([]reflect.StructField, 0, len(firstFields))
 	used := make(map[string]bool)
 	for _, f := range secondFields {
 		used[f.Name] = true

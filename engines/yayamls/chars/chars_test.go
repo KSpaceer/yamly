@@ -1,8 +1,8 @@
 package chars_test
 
 import (
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"testing"
+
 )
 
 func TestCharSetConformation(t *testing.T) {

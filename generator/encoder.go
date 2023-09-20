@@ -3,9 +3,10 @@ package generator
 import (
 	"encoding"
 	"fmt"
-	"github.com/KSpaceer/yamly"
 	"reflect"
 	"strings"
+
+	"github.com/KSpaceer/yamly"
 )
 
 var basicEncoderFormatStrings = map[reflect.Kind]string{
@@ -323,7 +324,7 @@ func (g *Generator) generateEncoderBodyWithoutCheck(
 					return fmt.Errorf("interface type %v is not supported: expect only interface{} "+
 						"(any), yamly.Marshaler or engine-specific marshalling interfaces", t)
 				case ImplementationResultConditional:
-					fmt.Fprintln(g.out, whitespace+"  out.InsertRawText(nil, yamly.MarshalerImplementationError)")
+					fmt.Fprintln(g.out, whitespace+"  out.InsertRawText(nil, yamly.ErrMarshalerImplementation)")
 					fmt.Fprintln(g.out, whitespace+"}")
 				}
 			}

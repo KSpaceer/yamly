@@ -1,0 +1,39 @@
+run:
+  timeout: 3m
+  skip-dirs:
+    - benchmark
+    - test
+  go: '1.21'
+output:
+  sort-results: true
+linters:
+  disable-all: true
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - errcheck
+    - errname
+    - errorlint
+    - exportloopref
+    - forcetypeassert
+    - gocritic
+    - gofumpt
+    - goimports
+    - gosec
+    - govet
+    - ineffassign
+    - lll
+    - mirror
+    - nestif
+    - paralleltest
+    - prealloc
+    - revive
+    - staticcheck
+    - thelper
+    - unconvert
+linters-settings:
+  gofumpt:
+    extra-rules: true
+  nestif:
+    min-complexity: 6

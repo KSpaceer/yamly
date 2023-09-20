@@ -426,8 +426,7 @@ func (c *context) doubleQuoteMatching(t *Tokenizer, r rune) (token.Token, bool) 
 
 func (c *context) tagMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
-	switch r {
-	case chars.TagCharacter:
+	if r == chars.TagCharacter {
 		tok.End = t.pos
 		tok.Type = token.TagType
 		tok.Origin = string([]rune{r})

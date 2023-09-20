@@ -45,7 +45,7 @@ func ToBoolean(src string) (bool, error) {
 	return val, nil
 }
 
-func tryGetBoolean(s string) (v bool, isBoolean bool) {
+func tryGetBoolean(s string) (v, isBoolean bool) {
 	switch s {
 	case "true", "True", "TRUE":
 		return true, true
@@ -140,9 +140,7 @@ func ToFloat(src string, bitSize int) (float64, error) {
 	}
 }
 
-var (
-	base64Regex = regexp.MustCompile(`^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`)
-)
+var base64Regex = regexp.MustCompile(`^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{2}==)?$`)
 
 // IsBinary shows if string represents a YAML binary scalar (!!binary)
 func IsBinary(s string) bool {
@@ -155,17 +153,15 @@ func IsBinary(s string) bool {
 	return true
 }
 
-var (
-	timestampLayouts = []string{
-		time.RFC3339,
-		time.RFC3339Nano,
-		time.DateOnly,
-		"2006-1-2T15:4:5.999999999Z07:00", // short RFC339Nano
-		"2001-1-2t15:4:5.999999999-07:00", // lower t + time zone without 'Z'
-		"2001-1-2 15:4:5.999999999",       // space separated
-		"2001-1-2",                        // date only short form
-	}
-)
+var timestampLayouts = []string{
+	time.RFC3339,
+	time.RFC3339Nano,
+	time.DateOnly,
+	"2006-1-2T15:4:5.999999999Z07:00", // short RFC339Nano
+	"2001-1-2t15:4:5.999999999-07:00", // lower t + time zone without 'Z'
+	"2001-1-2 15:4:5.999999999",       // space separated
+	"2001-1-2",                        // date only short form
+}
 
 // IsTimestamp shows if string represents a YAML timedate.
 func IsTimestamp(s string) bool {

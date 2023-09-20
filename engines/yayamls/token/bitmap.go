@@ -31,13 +31,13 @@ func (b conformationBitmap) Get(cst chars.CharSetType) (bool, bool) {
 func (b conformationBitmap) setTrue(cst chars.CharSetType) conformationBitmap {
 	shift := 2 * bits.TrailingZeros16(uint16(cst))
 	// remove false
-	b = b & ^(1 << (1 + shift))
+	b &= ^(1 << (1 + shift))
 	return b | (1 << shift)
 }
 
 func (b conformationBitmap) setFalse(cst chars.CharSetType) conformationBitmap {
 	shift := 1 + 2*bits.TrailingZeros16(uint16(cst))
 	// remove true
-	b = b & ^(1 << (shift - 1))
+	b &= ^(1 << (shift - 1))
 	return b | (1 << shift)
 }

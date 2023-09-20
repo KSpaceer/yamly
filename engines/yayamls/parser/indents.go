@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
 )
@@ -106,7 +107,7 @@ func (p *parser) parseIndentLessThanOrEqual(indentation int) ast.Node {
 	return p.parseBorderedIndent(indentation, 0)
 }
 
-func (p *parser) parseBorderedIndent(indentation int, lowBorder int) ast.Node {
+func (p *parser) parseBorderedIndent(indentation, lowBorder int) ast.Node {
 	if p.hasErrors() || indentation < lowBorder {
 		return ast.NewInvalidNode()
 	}

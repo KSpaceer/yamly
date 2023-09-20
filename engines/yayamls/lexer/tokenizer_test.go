@@ -1,12 +1,15 @@
 package lexer_test
 
 import (
+	"testing"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/lexer"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"testing"
 )
 
 func TestTokenizer(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name                 string
 		src                  string
@@ -3034,7 +3037,10 @@ func TestTokenizer(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			tokenizer := lexer.NewTokenizer(tc.src)
 
 			var rawModEnableIndex, rawModDisableIndex int

@@ -4,13 +4,14 @@ package parser
 import (
 	"bytes"
 	"errors"
+	"sync"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/lexer"
 	"github.com/KSpaceer/yamly/engines/yayamls/parser/internal/balancecheck"
 	"github.com/KSpaceer/yamly/engines/yayamls/parser/internal/deadend"
 	"github.com/KSpaceer/yamly/engines/yayamls/pkg/strslice"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"sync"
 )
 
 type context int8
@@ -110,7 +111,7 @@ func ParseString(src string, opts ...ParseOption) (ast.Node, error) {
 		return nil, err
 	}
 	if o.omitStream && tree.Type() == ast.StreamType {
-		stream := tree.(*ast.StreamNode)
+		stream := tree.(*ast.StreamNode) // nolint: forcetypeassert
 		if len(stream.Documents()) == 1 {
 			tree = stream.Documents()[0]
 		}
@@ -217,7 +218,7 @@ func (p *parser) rollback() {
 	}
 }
 
-func newContentNode(properties ast.Node, content ast.Node) ast.Node {
+func newContentNode(properties, content ast.Node) ast.Node {
 	if ast.ValidNode(properties) {
 		content = ast.NewContentNode(properties, content)
 	}

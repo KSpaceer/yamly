@@ -3,8 +3,8 @@
 package token
 
 import (
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"strconv"
+
 )
 
 // Type defines token type.

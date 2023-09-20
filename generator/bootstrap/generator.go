@@ -134,7 +134,7 @@ func (g *Generator) Generate() error {
 	}
 	defer os.Remove(f.Name()) // will remain after rename
 
-	cmd := exec.Command("go", "run", "-tags", g.BuildTags, filepath.Base(path))
+	cmd := exec.Command("go", "run", "-tags", g.BuildTags, filepath.Base(path)) // nolint: gosec
 
 	cmd.Stdout = f
 	cmd.Stderr = os.Stderr
@@ -154,5 +154,5 @@ func (g *Generator) Generate() error {
 		fmt.Println(string(data))
 		return fmt.Errorf("failed to format: %w", err)
 	}
-	return os.WriteFile(g.OutputName, formatedData, 0644)
+	return os.WriteFile(g.OutputName, formatedData, 0o600)
 }

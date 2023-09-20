@@ -45,7 +45,7 @@ func (a *CheckpointingAccessor[T]) Reset() {
 // Next moves accessor to the next element in the stream.
 func (a *CheckpointingAccessor[T]) Next() T {
 	var val T
-	if a.bufIndicator == withoutBuffer {
+	if a.bufIndicator == withoutBuffer { // nolint: nestif
 		// if there is no buffer or we are ahead of it, get next element from the stream
 		val = a.stream.Next()
 		if len(a.checkpointsStack) > 0 {

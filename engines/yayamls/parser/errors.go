@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
 )
 

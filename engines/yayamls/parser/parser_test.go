@@ -1,25 +1,28 @@
 package parser_test
 
 import (
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast/astcmp"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast/astprint"
 	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"os"
-	"strings"
-	"testing"
 )
 
 func TestParseTokens(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name        string
 		tokens      []token.Token
 		expectedAST ast.Node
 	}
 
-	var tcases = []tcase{
+	tcases := []tcase{
 		{
 			name: "empty YAML",
 			tokens: []token.Token{
@@ -2063,18 +2066,22 @@ func TestParseTokens(t *testing.T) {
 		},
 	}
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := parser.ParseTokens(tc.tokens)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
 			compareAST(t, tc.expectedAST, result)
 		})
-
 	}
 }
 
 func TestParseStringWithDefaultTokenStream(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name        string
 		src         string
@@ -2083,7 +2090,7 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 
 	tcases := []tcase{
 		{
-			//https://netplan.readthedocs.io/en/stable/examples/
+			// https://netplan.readthedocs.io/en/stable/examples/
 			name: "netplan example",
 			src: `
                 network:
@@ -2685,7 +2692,10 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			result, err := parser.ParseString(tc.src)
 			if err == nil {
 				compareAST(t, tc.expectedAST, result)
@@ -2693,7 +2703,6 @@ func TestParseStringWithDefaultTokenStream(t *testing.T) {
 				t.Errorf("unexpected error: %s", err)
 			}
 		})
-
 	}
 }
 
@@ -2720,7 +2729,7 @@ func FuzzParseString(f *testing.F) {
 		f.Add(seeds[i])
 	}
 	f.Fuzz(func(t *testing.T, src string) {
-		parser.ParseString(src)
+		_, _ = parser.ParseString(src)
 	})
 }
 

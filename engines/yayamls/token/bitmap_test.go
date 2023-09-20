@@ -6,6 +6,8 @@ import (
 )
 
 func TestConformationBitmap(t *testing.T) {
+	t.Parallel()
+
 	sets := []chars.CharSetType{
 		chars.DecimalCharSetType,
 		chars.WordCharSetType,
@@ -18,6 +20,7 @@ func TestConformationBitmap(t *testing.T) {
 	}
 
 	t.Run("set true", func(t *testing.T) {
+		t.Parallel()
 		m := conformationBitmap(0)
 
 		for i := range sets {
@@ -36,6 +39,7 @@ func TestConformationBitmap(t *testing.T) {
 	})
 
 	t.Run("set false", func(t *testing.T) {
+		t.Parallel()
 		m := conformationBitmap(0)
 
 		for i := range sets {
@@ -54,6 +58,7 @@ func TestConformationBitmap(t *testing.T) {
 	})
 
 	t.Run("rewrite value", func(t *testing.T) {
+		t.Parallel()
 		m := conformationBitmap(0)
 
 		set := sets[2]
@@ -78,6 +83,7 @@ func TestConformationBitmap(t *testing.T) {
 	})
 
 	t.Run("multiple assignments", func(t *testing.T) {
+		t.Parallel()
 		m := conformationBitmap(0)
 
 		sets := sets[1:4]
@@ -102,7 +108,5 @@ func TestConformationBitmap(t *testing.T) {
 				t.Errorf("expected result to be %t, but got %t", value, result)
 			}
 		}
-
 	})
-
 }

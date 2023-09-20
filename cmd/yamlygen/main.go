@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/KSpaceer/yamly/generator/bootstrap"
-	"github.com/KSpaceer/yamly/generator/parser"
 	"os"
 	"path/filepath"
 	"strings"
 	"unicode"
+
+	"github.com/KSpaceer/yamly/generator/bootstrap"
+	"github.com/KSpaceer/yamly/generator/parser"
 )
 
 var (
@@ -84,7 +85,7 @@ func isDirectory(path string) bool {
 func generate(path string) error {
 	p := parser.Parser{}
 	if err := p.Parse(path); err != nil {
-		return fmt.Errorf("Error parsing %v: %v", path, err)
+		return fmt.Errorf("Error parsing %v: %w", path, err)
 	}
 
 	if err := os.Chdir(path); err != nil {
@@ -134,7 +135,7 @@ func generate(path string) error {
 	}
 
 	if err := g.Generate(); err != nil {
-		return fmt.Errorf("Bootstrap failed: %v", err)
+		return fmt.Errorf("Bootstrap failed: %w", err)
 	}
 	return nil
 }
@@ -143,16 +144,17 @@ func toSnakeCase(src string) string {
 	buf := make([]rune, 0, len(src))
 	var prev, cur rune
 	for _, next := range src {
-		if cur == '_' {
+		switch {
+		case cur == '_':
 			if prev != '_' {
 				buf = append(buf, '_')
 			}
-		} else if unicode.IsUpper(cur) {
+		case unicode.IsUpper(cur):
 			if unicode.IsLower(prev) || (unicode.IsUpper(prev) && unicode.IsLower(next)) {
 				buf = append(buf, '_')
 			}
 			buf = append(buf, unicode.ToLower(cur))
-		} else if cur != 0 {
+		case cur != 0:
 			buf = append(buf, unicode.ToLower(cur))
 		}
 		prev, cur = cur, next

@@ -20,14 +20,14 @@ type EngineGenerator interface {
 	// Decode function has following signature:
 	//
 	// func(yamly.Decoder, *typeName)
-	GenerateUnmarshalers(dst io.Writer, decodeFuncName string, typeName string) error
+	GenerateUnmarshalers(dst io.Writer, decodeFuncName, typeName string) error
 
 	// GenerateMarshalers generates marshalling methods for target type
 	// using provided encodeFuncName and typeName. The generated code is written into dst.
 	// Encode function has following signature:
 	//
 	// func(yamly.Encoder, typeName)
-	GenerateMarshalers(dst io.Writer, encodeFuncName string, typeName string) error
+	GenerateMarshalers(dst io.Writer, encodeFuncName, typeName string) error
 
 	// UnmarshalersImplementationCheck checks if provided type t implements any of engine-specific
 	// unmarshalling interfaces.

@@ -1,11 +1,13 @@
 package parser_test
 
 import (
-	"github.com/KSpaceer/yamly/generator/parser"
 	"testing"
+
 )
 
 func TestParser_Parse(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name            string
 		dirPath         string
@@ -29,7 +31,9 @@ func TestParser_Parse(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			p := parser.Parser{}
 			err := p.Parse(tc.dirPath)
 			if err != nil {
@@ -43,5 +47,4 @@ func TestParser_Parse(t *testing.T) {
 			}
 		})
 	}
-
 }

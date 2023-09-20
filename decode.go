@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	// EndOfStream indicates an end of YAML document (stream) during decoding.
-	EndOfStream = errors.New("end of YAML stream")
-	// Denied error indicates that Decoder called method was denied because current AST node
+	// ErrEndOfStream indicates an end of YAML document (stream) during decoding.
+	ErrEndOfStream = errors.New("end of YAML stream")
+	// ErrDenied error indicates that Decoder called method was denied because current AST node
 	// can't be represented as desired value.
-	Denied = (*denyError)(nil)
-	// UnmarshalerImplementationError is used by engines to indicate that type does not
+	ErrDenied = (*denyError)(nil)
+	// ErrUnmarshalerImplementation is used by engines to indicate that type does not
 	// implement any unmarshalling interface in runtime.
-	UnmarshalerImplementationError = errors.New("interface type is not supported: expect only interface{} " +
+	ErrUnmarshalerImplementation = errors.New("interface type is not supported: expect only interface{} " +
 		"(any), yamly.Unmarshaler or engine-specific unmarshalling interfaces")
 )
 
@@ -39,39 +39,39 @@ type Decoder interface {
 
 	// Integer extracts an integer value of given bit size from current text node.
 	// If current node is not a text node or its value does not represent integer,
-	// a Denied error is stored in Decoder.
+	// a ErrDenied error is stored in Decoder.
 	Integer(bitSize int) int64
 
 	// Unsigned extracts an unsigned integer value of given bit size from current text node.
 	// If current node is not a text node or its value does not represent unsigned integer,
-	// a Denied error is stored in Decoder.
+	// a ErrDenied error is stored in Decoder.
 	Unsigned(bitSize int) uint64
 
 	// Boolean extracts a boolean value of given bit size from current text node.
 	// If current node is not a text node or its value does not represent boolean,
-	// a Denied error is stored in Decoder.
+	// a ErrDenied error is stored in Decoder.
 	Boolean() bool
 
 	// Float extracts a float value of given bit size from current text node.
 	// If current node is not a text node or its value does not represent float,
-	// a Denied error is stored in Decoder.
+	// a ErrDenied error is stored in Decoder.
 	Float(bitSize int) float64
 
 	// String extracts a string value of given bit size from current text node.
-	// If current node is not a text node, a Denied error is stored in Decoder.
+	// If current node is not a text node, a ErrDenied error is stored in Decoder.
 	String() string
 
 	// Timestamp extracts a time.Time value of given bit size from current text node.
 	// If current node is not a text node or its value does not represent date,
-	// a Denied error is stored in Decoder.
+	// a ErrDenied error is stored in Decoder.
 	Timestamp() time.Time
 
 	// Sequence expects a sequence node in AST and returns a CollectionState associated with it.
-	// If Decoder meets unexpected node (e.g. text or mapping), a Denied error is stored in Decoder.
+	// If Decoder meets unexpected node (e.g. text or mapping), a ErrDenied error is stored in Decoder.
 	Sequence() CollectionState
 
 	// Mapping expects a mapping node in AST and returns a CollectionState associated with it.
-	// If Decoder meets unexpected node (e.g. text or sequence), a Denied error is stored in Decoder.
+	// If Decoder meets unexpected node (e.g. text or sequence), a ErrDenied error is stored in Decoder.
 	Mapping() CollectionState
 
 	// Any converts current subtree into Go value and returns it.
@@ -112,7 +112,7 @@ func (de *denyError) Is(err error) bool {
 	return ok
 }
 
-// DenyError marks given error as Denied error.
+// DenyError marks given error as ErrDenied error.
 func DenyError(err error) error {
 	return &denyError{err}
 }

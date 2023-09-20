@@ -2,9 +2,10 @@
 package schema
 
 import (
+	"time"
+
 	"github.com/KSpaceer/yamly/engines/pkg/schema"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	"time"
 )
 
 const (
@@ -16,7 +17,7 @@ func IsNull(n ast.Node) bool {
 	case ast.NullType:
 		return true
 	case ast.TextType:
-		txtNode := n.(*ast.TextNode)
+		txtNode := n.(*ast.TextNode) // nolint: forcetypeassert
 		txt := txtNode.Text()
 		return schema.IsNull(txt) &&
 			(txtNode.QuotingType() == ast.UnknownQuotingType ||
@@ -29,7 +30,7 @@ func IsBoolean(n ast.Node) bool {
 	if n.Type() != ast.TextType {
 		return false
 	}
-	txtNode := n.(*ast.TextNode)
+	txtNode := n.(*ast.TextNode) // nolint: forcetypeassert
 	txt := txtNode.Text()
 	return schema.IsBoolean(txt)
 }
@@ -46,7 +47,7 @@ func IsInteger(n ast.Node) bool {
 	if n.Type() != ast.TextType {
 		return false
 	}
-	txtNode := n.(*ast.TextNode)
+	txtNode := n.(*ast.TextNode) // nolint: forcetypeassert
 	txt := txtNode.Text()
 	return schema.IsInteger(txt)
 }
@@ -55,7 +56,7 @@ func IsUnsignedInteger(n ast.Node) bool {
 	if n.Type() != ast.TextType {
 		return false
 	}
-	txtNode := n.(*ast.TextNode)
+	txtNode := n.(*ast.TextNode) // nolint: forcetypeassert
 	txt := txtNode.Text()
 	return schema.IsUnsignedInteger(txt)
 }
@@ -80,7 +81,7 @@ func IsFloat(n ast.Node) bool {
 	if n.Type() != ast.TextType {
 		return false
 	}
-	txtNode := n.(*ast.TextNode)
+	txtNode := n.(*ast.TextNode) // nolint: forcetypeassert
 	txt := txtNode.Text()
 	return schema.IsFloat(txt)
 }
@@ -97,7 +98,7 @@ func IsBinary(n ast.Node) bool {
 	if n.Type() != ast.TextType {
 		return false
 	}
-	txtNode := n.(*ast.TextNode)
+	txtNode := n.(*ast.TextNode) // nolint: forcetypeassert
 	txt := txtNode.Text()
 	return schema.IsBinary(txt)
 }
@@ -106,7 +107,7 @@ func IsMergeKey(n ast.Node) bool {
 	if n.Type() != ast.TextType {
 		return false
 	}
-	txtNode := n.(*ast.TextNode)
+	txtNode := n.(*ast.TextNode) // nolint: forcetypeassert
 	txt := txtNode.Text()
 	return txt == MergeKey
 }
@@ -115,7 +116,7 @@ func IsTimestamp(n ast.Node) bool {
 	if n.Type() != ast.TextType {
 		return false
 	}
-	txtNode := n.(*ast.TextNode)
+	txtNode := n.(*ast.TextNode) // nolint: forcetypeassert
 	txt := txtNode.Text()
 	return schema.IsTimestamp(txt)
 }

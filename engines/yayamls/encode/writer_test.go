@@ -2,12 +2,15 @@ package encode_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/encode"
-	"testing"
 )
 
 func TestWriteString(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name      string
 		ast       ast.Node
@@ -201,7 +204,10 @@ func TestWriteString(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			var opts []encode.WriteOption
 			if tc.withAnchors {
 				opts = append(opts, encode.WithAnchorsKeeper(&tc.anchors))

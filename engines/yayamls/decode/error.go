@@ -2,6 +2,7 @@ package decode
 
 import (
 	"fmt"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 )
 

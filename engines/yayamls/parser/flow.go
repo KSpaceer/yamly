@@ -2,6 +2,7 @@ package parser
 
 import (
 	"bytes"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
@@ -167,7 +168,7 @@ func (p *parser) parseDoubleOneLine() ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	buf := bufsPool.Get().(*bytes.Buffer)
+	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
 	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
@@ -184,7 +185,7 @@ func (p *parser) parseDoubleMultiLine(ind *indentation) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	buf := bufsPool.Get().(*bytes.Buffer)
+	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
 	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
@@ -342,7 +343,7 @@ func (p *parser) parseSingleOneLine() ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	buf := bufsPool.Get().(*bytes.Buffer)
+	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
 	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
@@ -359,7 +360,7 @@ func (p *parser) parseSingleMultiLine(ind *indentation) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	buf := bufsPool.Get().(*bytes.Buffer)
+	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
 	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
@@ -937,7 +938,7 @@ func (p *parser) parsePlainMultiLine(ind *indentation, ctx context) ast.Node {
 	if !ok || !ast.ValidNode(firstLine) {
 		return ast.NewInvalidNode()
 	}
-	buf := bufsPool.Get().(*bytes.Buffer)
+	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
 	buf.WriteString(firstLine.Text())
 	for {
 		savedLen := buf.Len()
@@ -1000,7 +1001,7 @@ func (p *parser) parsePlainOneLine(ctx context) ast.Node {
 	if p.hasErrors() {
 		return ast.NewInvalidNode()
 	}
-	buf := bufsPool.Get().(*bytes.Buffer)
+	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
 	defer func() {
 		buf.Reset()
 		bufsPool.Put(buf)

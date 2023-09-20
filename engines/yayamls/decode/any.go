@@ -3,6 +3,7 @@ package decode
 import (
 	"errors"
 	"fmt"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/schema"
 )
@@ -98,11 +99,12 @@ func (a *anyBuilder) VisitMappingNode(n *ast.MappingNode) {
 			}
 		}
 	}
-	if a.extractMergeMap {
+	switch {
+	case a.extractMergeMap:
 		a.mergeMap = m
-	} else if a.extractString {
+	case a.extractString:
 		a.stringValue = fmt.Sprint(m)
-	} else {
+	default:
 		a.value = m
 	}
 }

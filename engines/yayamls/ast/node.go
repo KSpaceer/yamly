@@ -173,7 +173,7 @@ func NewInvalidNode() Node {
 	return invalidNode
 }
 
-func NewBasicNode(tp NodeType) Node {
+func NewBasicNode(tp NodeType) *BasicNode {
 	return &BasicNode{
 		NodeType: tp,
 	}
@@ -195,7 +195,7 @@ func (s *StreamNode) Documents() []Node {
 	return s.documents
 }
 
-func NewStreamNode(documents []Node) Node {
+func NewStreamNode(documents []Node) *StreamNode {
 	return &StreamNode{
 		documents: documents,
 	}
@@ -222,7 +222,7 @@ func (p *PropertiesNode) Anchor() Node {
 	return p.anchor
 }
 
-func NewPropertiesNode(tag, anchor Node) Node {
+func NewPropertiesNode(tag, anchor Node) *PropertiesNode {
 	return &PropertiesNode{
 		tag:    tag,
 		anchor: anchor,
@@ -245,7 +245,7 @@ func (t *TagNode) Text() string {
 	return t.text
 }
 
-func NewTagNode(text string) Node {
+func NewTagNode(text string) *TagNode {
 	return &TagNode{
 		text: text,
 	}
@@ -267,7 +267,7 @@ func (a *AnchorNode) Text() string {
 	return a.text
 }
 
-func NewAnchorNode(text string) Node {
+func NewAnchorNode(text string) *AnchorNode {
 	return &AnchorNode{
 		text: text,
 	}
@@ -289,7 +289,7 @@ func (a *AliasNode) Text() string {
 	return a.text
 }
 
-func NewAliasNode(text string) Node {
+func NewAliasNode(text string) *AliasNode {
 	return &AliasNode{
 		text: text,
 	}
@@ -316,7 +316,7 @@ func (b *BlockHeaderNode) ChompingIndicator() ChompingType {
 	return b.chompingType
 }
 
-func NewBlockHeaderNode(chomping ChompingType, indentation int) Node {
+func NewBlockHeaderNode(chomping ChompingType, indentation int) *BlockHeaderNode {
 	return &BlockHeaderNode{
 		indentation:  indentation,
 		chompingType: chomping,
@@ -362,7 +362,7 @@ func (t *TextNode) Text() string {
 	return t.text
 }
 
-func NewTextNode(text string, opts ...TextNodeOption) Node {
+func NewTextNode(text string, opts ...TextNodeOption) *TextNode {
 	node := TextNode{
 		text: text,
 	}
@@ -393,7 +393,7 @@ func (c *ContentNode) Content() Node {
 	return c.content
 }
 
-func NewContentNode(properties, content Node) Node {
+func NewContentNode(properties, content Node) *ContentNode {
 	return &ContentNode{
 		properties: properties,
 		content:    content,
@@ -414,7 +414,7 @@ func (i *IndentNode) Indent() int {
 
 func (*IndentNode) Accept(Visitor) {}
 
-func NewIndentNode(indent int) Node {
+func NewIndentNode(indent int) *IndentNode {
 	return &IndentNode{
 		indent: indent,
 	}
@@ -440,7 +440,7 @@ func (s *SequenceNode) AppendEntry(n Node) {
 	s.entries = append(s.entries, n)
 }
 
-func NewSequenceNode(entries []Node) Node {
+func NewSequenceNode(entries []Node) *SequenceNode {
 	return &SequenceNode{entries: entries}
 }
 
@@ -464,7 +464,7 @@ func (m *MappingNode) AppendEntry(n Node) {
 	m.entries = append(m.entries, n)
 }
 
-func NewMappingNode(entries []Node) Node {
+func NewMappingNode(entries []Node) *MappingNode {
 	return &MappingNode{entries: entries}
 }
 
@@ -496,7 +496,7 @@ func (m *MappingEntryNode) SetValue(n Node) {
 	m.value = n
 }
 
-func NewMappingEntryNode(key, value Node) Node {
+func NewMappingEntryNode(key, value Node) *MappingEntryNode {
 	return &MappingEntryNode{key: key, value: value}
 }
 
@@ -512,6 +512,6 @@ func (n *NullNode) Accept(v Visitor) {
 
 var nullNode = &NullNode{}
 
-func NewNullNode() Node {
+func NewNullNode() *NullNode {
 	return nullNode
 }

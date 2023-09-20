@@ -2,11 +2,12 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"strconv"
-	"strings"
 )
 
 // YAML specification: [162] c-b-block-header

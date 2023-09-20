@@ -2,10 +2,11 @@
 package lexer
 
 import (
+	"strings"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/pkg/cpaccessor"
 	"github.com/KSpaceer/yamly/engines/yayamls/pkg/strslice"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"strings"
 )
 
 const lookaheadBufferPreallocationSize = 8

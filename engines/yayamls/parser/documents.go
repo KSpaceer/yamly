@@ -1,10 +1,11 @@
 package parser
 
 import (
+	"unicode"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"unicode"
 )
 
 // YAML specification: [211] l-yaml-stream

@@ -1,12 +1,15 @@
 package balancecheck_test
 
 import (
+	"testing"
+
 	"github.com/KSpaceer/yamly/engines/yayamls/parser/internal/balancecheck"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
-	"testing"
 )
 
 func TestParenthesesBalance(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name string
 		src  []token.Type
@@ -53,7 +56,10 @@ func TestParenthesesBalance(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			b := balancecheck.NewBalanceChecker([][2]token.Type{
 				{token.MappingStartType, token.MappingEndType},
 				{token.SequenceStartType, token.SequenceEndType},
@@ -71,6 +77,8 @@ func TestParenthesesBalance(t *testing.T) {
 }
 
 func TestQuotesBalance(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name string
 		src  []token.Type
@@ -102,7 +110,10 @@ func TestQuotesBalance(t *testing.T) {
 		},
 	}
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			b := balancecheck.NewBalanceChecker([][2]token.Type{
 				{token.DoubleQuoteType, token.DoubleQuoteType},
 			})
