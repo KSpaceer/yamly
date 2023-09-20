@@ -19,6 +19,7 @@ var (
 	output                = flag.String("output", "", "name of generated file")
 	encodePointerReceiver = flag.Bool("encode-pointer-receiver", false, "use pointer receiver in encode methods")
 	engine                = flag.String("engine", "goyaml", "used parser engine for generated code")
+	inlineEmbedded        = flag.Bool("inline-embedded", false, "inline embedded fields into YAML mapping")
 )
 
 func main() {
@@ -125,6 +126,7 @@ func generate(path string) error {
 		Omitempty:              *omitempty,
 		DisallowUnknownFields:  *disallowUnknownFields,
 		EncodePointerReceiver:  *encodePointerReceiver,
+		InlineEmbedded:         *inlineEmbedded,
 		OutputName:             outputName,
 		BuildTags:              trimmedBuildTags,
 		EngineGeneratorPackage: engineGeneratorPackage,

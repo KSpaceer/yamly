@@ -23,6 +23,7 @@ type Generator struct {
 	DisallowUnknownFields bool
 
 	EncodePointerReceiver bool
+	InlineEmbedded        bool
 
 	EngineGeneratorPackage string
 	EngineGenerator        string
@@ -98,6 +99,7 @@ func (g *Generator) generateMain() (string, error) {
 	fmt.Fprintf(f, "  g.SetOmitempty(%t)\n", g.Omitempty)
 	fmt.Fprintf(f, "  g.SetDisallowUnknownFields(%t)\n", g.DisallowUnknownFields)
 	fmt.Fprintf(f, "  g.SetEncodePointerReceiver(%t)\n", g.EncodePointerReceiver)
+	fmt.Fprintf(f, "  g.SetInlineEmbedded(%t)\n", g.InlineEmbedded)
 	fmt.Fprintf(f, "  g.AddType(pkg.Exporter_yamly_%s(nil))\n", g.Type)
 
 	fmt.Fprintln(f, "  if err := g.Generate(os.Stdout); err != nil {")

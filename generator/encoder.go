@@ -87,7 +87,7 @@ func (g *Generator) generateStructEncoder(t reflect.Type) error {
 		fmt.Fprintln(g.out, "  }")
 	}
 
-	fs, err := getStructFields(t)
+	fs, err := g.getStructFields(t)
 	if err != nil {
 		return fmt.Errorf("cannot generate encoder for %s: %w", t, err)
 	}

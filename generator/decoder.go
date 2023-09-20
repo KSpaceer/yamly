@@ -86,7 +86,7 @@ func (g *Generator) generateStructDecoder(t reflect.Type) error {
 		fmt.Fprintln(g.out, "  out."+f.Name+" = new("+g.extractTypeName(f.Type.Elem())+")")
 	}
 
-	fields, err := getStructFields(t)
+	fields, err := g.getStructFields(t)
 	if err != nil {
 		return fmt.Errorf("cannot generate decoder for %s: %w", t, err)
 	}

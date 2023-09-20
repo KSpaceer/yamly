@@ -29,6 +29,7 @@ type Generator struct {
 	omitempty             bool
 	disallowUnknownFields bool
 	encodePointerReceiver bool
+	inlineEmbedded        bool
 
 	engineGen EngineGenerator
 
@@ -86,6 +87,10 @@ func (g *Generator) SetDisallowUnknownFields(disallow bool) {
 
 func (g *Generator) SetEncodePointerReceiver(useReceiver bool) {
 	g.encodePointerReceiver = useReceiver
+}
+
+func (g *Generator) SetInlineEmbedded(inlineEmbedded bool) {
+	g.inlineEmbedded = inlineEmbedded
 }
 
 // AddType sets a target type for which methods are generated.
@@ -376,7 +381,7 @@ func joinFunctionNameParts(keepFirst bool, parts ...string) string {
 	return buf.String()
 }
 
-func getStructFields(t reflect.Type) ([]reflect.StructField, error) {
+func (g *Generator) getStructFields(t reflect.Type) ([]reflect.StructField, error) {
 	if t.Kind() != reflect.Struct {
 		return nil, fmt.Errorf("expected struct, but got %s", t)
 	}
@@ -389,7 +394,7 @@ func getStructFields(t reflect.Type) ([]reflect.StructField, error) {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		tags := parseTags(f.Tag)
-		if !f.Anonymous || tags.name != "" {
+		if !(f.Anonymous && g.inlineEmbedded && tags.name == "") && !tags.inline {
 			continue
 		}
 
@@ -399,7 +404,7 @@ func getStructFields(t reflect.Type) ([]reflect.StructField, error) {
 		}
 
 		if t.Kind() == reflect.Struct {
-			fs, err := getStructFields(t)
+			fs, err := g.getStructFields(t)
 			if err != nil {
 				return nil, fmt.Errorf("error processing embedded field: %w", err)
 			}
@@ -414,7 +419,7 @@ func getStructFields(t reflect.Type) ([]reflect.StructField, error) {
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		tags := parseTags(f.Tag)
-		if f.Anonymous && tags.name == "" {
+		if (f.Anonymous && g.inlineEmbedded && tags.name == "") || tags.inline {
 			continue
 		}
 

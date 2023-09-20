@@ -10,6 +10,7 @@ type fieldTags struct {
 
 	omitField bool
 	omitempty bool
+	inline    bool
 }
 
 func parseTags(f reflect.StructTag) fieldTags {
@@ -27,6 +28,8 @@ func parseTags(f reflect.StructTag) fieldTags {
 			t.name = s
 		case s == "omitempty":
 			t.omitempty = true
+		case s == "inline":
+			t.inline = true
 		}
 	}
 

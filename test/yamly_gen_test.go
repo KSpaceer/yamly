@@ -69,6 +69,10 @@ import (
 {{ end }}
 
 type TestType {{ .TypeDef }}
+
+{{ range $i, $typedef := .ExtraTypeDefs }}
+type ExtraType{{ $i }} {{ $typedef }}
+{{ end }}
 `
 
 	var typeDefinitionCodeTemplate = template.Must(template.New("typedef").Parse(typeDefinitionCode))
@@ -130,6 +134,10 @@ import (
 {{ end }}
 
 type TestType {{ .TypeDef }}
+
+{{ range $i, $typedef := .ExtraTypeDefs }}
+type ExtraType{{ $i }} {{ $typedef }}
+{{ end }}
 `
 
 	var typeDefinitionCodeTemplate = template.Must(template.New("typedef").Parse(typeDefinitionCode))
@@ -155,6 +163,8 @@ func runEngineTest(
 		TypeDef    string
 		Value      string
 		UsePointer bool
+
+		ExtraTypeDefs []string
 	}
 
 	tcases := []tcase{
@@ -239,6 +249,16 @@ func runEngineTest(
 			PkgName: "tagged",
 			TypeDef: "struct{ Name string `yaml:\"my_name\"` ; Age int8 `yaml:\"age,omitempty\"` ; Ignored int `yaml:\"-\"` ; }",
 			Value:   "tagged.TestType{Name: \"yamly\"}",
+		},
+		{
+			name:    "inlining",
+			flags:   []string{"--inline-embedded"},
+			PkgName: "inlined",
+			TypeDef: "struct{ Name string `yaml:\"my_name\"` ; ExtraType0 ; }",
+			Value:   "inlined.TestType{Name: \"inlined-yamly\", ExtraType0: inlined.ExtraType0{Nested: \"yamly-nested\"}}",
+			ExtraTypeDefs: []string{
+				"struct{ Nested string `yaml:\"nested\"`; }",
+			},
 		},
 	}
 
