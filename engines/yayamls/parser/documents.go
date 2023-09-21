@@ -4,8 +4,8 @@ import (
 	"unicode"
 
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 // YAML specification: [211] l-yaml-stream
@@ -185,10 +185,10 @@ func (p *parser) parseDirective() ast.Node {
 	p.tokSrc.UnsetRawMode()
 	var directiveNode ast.Node
 	switch p.tok.Origin {
-	case chars.YAMLDirective:
+	case yamlchar.YAMLDirective:
 		p.next()
 		directiveNode = p.parseYAMLDirective()
-	case chars.TagDirective:
+	case yamlchar.TagDirective:
 		p.next()
 		directiveNode = p.parseTagDirective()
 	default:
@@ -265,7 +265,7 @@ func (p *parser) parseTagHandle() ast.Node {
 
 	// YAML specification: [92] c-named-tag-handle
 	p.setCheckpoint()
-	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.WordCharSetType) {
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.WordCharSetType) {
 		p.next()
 		if p.tok.Type == token.TagType {
 			p.next()
@@ -295,8 +295,8 @@ func (p *parser) parseTagPrefix() ast.Node {
 		if p.tok.Type != token.StringType || len(p.tok.Origin) == 0 {
 			return ast.NewInvalidNode()
 		}
-		if !chars.ConformsCharSet(p.tok.Origin[:1], chars.TagCharSetType) ||
-			!p.tok.ConformsCharSet(chars.URICharSetType) {
+		if !yamlchar.ConformsCharSet(p.tok.Origin[:1], yamlchar.TagCharSetType) ||
+			!p.tok.ConformsCharSet(yamlchar.URICharSetType) {
 			return ast.NewInvalidNode()
 		}
 		p.next()
@@ -311,7 +311,7 @@ func (p *parser) parseLocalTagPrefix() ast.Node {
 		return ast.NewInvalidNode()
 	}
 	p.next()
-	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.URICharSetType) {
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.URICharSetType) {
 		p.next()
 	}
 	return ast.NewBasicNode(ast.TagType)

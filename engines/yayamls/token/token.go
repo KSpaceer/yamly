@@ -5,6 +5,7 @@ package token
 import (
 	"strconv"
 
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 // Type defines token type.
@@ -198,7 +199,7 @@ func (t Token) String() string {
 		t.Start.String() + " End:" + t.End.String() + "\n"
 }
 
-func (t *Token) ConformsCharSet(cst chars.CharSetType) bool {
+func (t *Token) ConformsCharSet(cst yamlchar.CharSetType) bool {
 	result, ok := t.conformationMap.Get(cst)
 	if ok {
 		return result
@@ -206,8 +207,8 @@ func (t *Token) ConformsCharSet(cst chars.CharSetType) bool {
 	return t.slowConformation(cst)
 }
 
-func (t *Token) slowConformation(cst chars.CharSetType) bool {
-	result := chars.ConformsCharSet(t.Origin, cst)
+func (t *Token) slowConformation(cst yamlchar.CharSetType) bool {
+	result := yamlchar.ConformsCharSet(t.Origin, cst)
 	t.conformationMap = t.conformationMap.Set(cst, result)
 	return result
 }

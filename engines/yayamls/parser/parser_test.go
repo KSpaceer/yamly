@@ -8,9 +8,9 @@ import (
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast/astcmp"
 	"github.com/KSpaceer/yamly/engines/yayamls/ast/astprint"
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 func TestParseTokens(t *testing.T) {
@@ -696,7 +696,7 @@ func TestParseTokens(t *testing.T) {
 				},
 				{
 					Type:   token.StringType,
-					Origin: chars.YAMLDirective,
+					Origin: yamlchar.YAMLDirective,
 				},
 				{
 					Type:   token.SpaceType,
@@ -716,7 +716,7 @@ func TestParseTokens(t *testing.T) {
 				},
 				{
 					Type:   token.StringType,
-					Origin: chars.TagDirective,
+					Origin: yamlchar.TagDirective,
 				},
 				{
 					Type:   token.SpaceType,
@@ -1500,7 +1500,7 @@ func TestParseTokens(t *testing.T) {
 				},
 				{
 					Type:   token.StringType,
-					Origin: chars.TagDirective,
+					Origin: yamlchar.TagDirective,
 				},
 				{
 					Type:   token.SpaceType,

@@ -1,8 +1,8 @@
 package lexer
 
 import (
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 type contextType int8
@@ -109,9 +109,9 @@ func (c *context) matchSpecialToken(t *Tokenizer, r rune) (token.Token, bool) {
 func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	switch r {
-	case chars.SequenceEntryCharacter:
+	case yamlchar.SequenceEntryCharacter:
 		lookaheadPred := func(runes []rune) bool {
-			return chars.IsBlankChar(runes[0]) || runes[0] == EOF
+			return yamlchar.IsBlankChar(runes[0]) || runes[0] == EOF
 		}
 
 		if t.lookahead(1, lookaheadPred) && t.lookbehind(token.MayPrecedeWord) {
@@ -122,8 +122,8 @@ func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 		}
 
 		if t.lookahead(3, func(runes []rune) bool {
-			return runes[0] == runes[1] && runes[1] == chars.DirectiveEndCharacter &&
-				(chars.IsBlankChar(runes[2]) || runes[2] == EOF)
+			return runes[0] == runes[1] && runes[1] == yamlchar.DirectiveEndCharacter &&
+				(yamlchar.IsBlankChar(runes[2]) || runes[2] == EOF)
 		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.Origin = string([]rune{r, t.ra.Next(), t.ra.Next()})
 			t.pos.Column += 2
@@ -131,25 +131,25 @@ func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Type = token.DirectiveEndType
 			return tok, true
 		}
-	case chars.MappingKeyCharacter:
+	case yamlchar.MappingKeyCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
-			return chars.IsBlankChar(runes[0]) || runes[0] == EOF
+			return yamlchar.IsBlankChar(runes[0]) || runes[0] == EOF
 		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.MappingKeyType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.MappingValueCharacter:
+	case yamlchar.MappingValueCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
-			return chars.IsBlankChar(runes[0]) || runes[0] == EOF
+			return yamlchar.IsBlankChar(runes[0]) || runes[0] == EOF
 		}) {
 			tok.End = t.pos
 			tok.Type = token.MappingValueType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.SequenceStartCharacter:
+	case yamlchar.SequenceStartCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			c.switchContext(flowContextType)
 			tok.End = t.pos
@@ -158,7 +158,7 @@ func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			return tok, true
 		}
 
-	case chars.MappingStartCharacter:
+	case yamlchar.MappingStartCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			c.switchContext(flowContextType)
 			tok.End = t.pos
@@ -166,7 +166,7 @@ func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.CommentCharacter:
+	case yamlchar.CommentCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			c.switchContext(commentContextType)
 			tok.End = t.pos
@@ -174,27 +174,27 @@ func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.AnchorCharacter:
+	case yamlchar.AnchorCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.AnchorType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.AliasCharacter:
+	case yamlchar.AliasCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			tok.End = t.pos
 			tok.Type = token.AliasType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.TagCharacter:
+	case yamlchar.TagCharacter:
 		c.switchContext(tagContextType)
 		tok.End = t.pos
 		tok.Type = token.TagType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.LiteralCharacter:
+	case yamlchar.LiteralCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			c.switchContext(multilineBlockStartContextType)
 			tok.End = t.pos
@@ -202,7 +202,7 @@ func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.FoldedCharacter:
+	case yamlchar.FoldedCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			c.switchContext(multilineBlockStartContextType)
 			tok.End = t.pos
@@ -210,27 +210,27 @@ func (c *context) blockMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.SingleQuoteCharacter:
+	case yamlchar.SingleQuoteCharacter:
 		c.switchContext(singleQuoteContextType)
 		tok.End = t.pos
 		tok.Type = token.SingleQuoteType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.DoubleQuoteCharacter:
+	case yamlchar.DoubleQuoteCharacter:
 		c.switchContext(doubleQuoteContextType)
 		tok.End = t.pos
 		tok.Type = token.DoubleQuoteType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.DirectiveCharacter:
+	case yamlchar.DirectiveCharacter:
 		tok.End = t.pos
 		tok.Type = token.DirectiveType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.DocumentEndCharacter:
+	case yamlchar.DocumentEndCharacter:
 		if t.lookahead(3, func(runes []rune) bool {
-			return runes[0] == runes[1] && runes[1] == chars.DocumentEndCharacter &&
-				(chars.IsBlankChar(runes[2]) || runes[2] == EOF)
+			return runes[0] == runes[1] && runes[1] == yamlchar.DocumentEndCharacter &&
+				(yamlchar.IsBlankChar(runes[2]) || runes[2] == EOF)
 		}) && t.lookbehind(token.MayPrecedeWord) {
 			tok.Origin = string([]rune{r, t.ra.Next(), t.ra.Next()})
 			t.pos.Column += 2
@@ -246,30 +246,30 @@ func (c *context) flowMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 
 	switch r {
-	case chars.MappingKeyCharacter:
+	case yamlchar.MappingKeyCharacter:
 		if t.lookahead(1, func(runes []rune) bool {
-			return chars.IsBlankChar(runes[0]) || runes[0] == EOF
+			return yamlchar.IsBlankChar(runes[0]) || runes[0] == EOF
 		}) && t.lookbehind(mayPrecedeWordInFlow) {
 			tok.End = t.pos
 			tok.Type = token.MappingKeyType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.MappingValueCharacter:
+	case yamlchar.MappingValueCharacter:
 		canBeAdjacent := func(tok token.Token) bool {
 			return token.IsClosingFlowIndicator(tok) || tok.Type == token.DoubleQuoteType ||
 				tok.Type == token.SingleQuoteType
 		}
 
 		if t.lookahead(1, func(runes []rune) bool {
-			return chars.IsBlankChar(runes[0]) || chars.IsFlowIndicatorChar(runes[0]) || runes[0] == EOF
+			return yamlchar.IsBlankChar(runes[0]) || yamlchar.IsFlowIndicatorChar(runes[0]) || runes[0] == EOF
 		}) || t.lookbehind(canBeAdjacent) {
 			tok.End = t.pos
 			tok.Type = token.MappingValueType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.SequenceStartCharacter:
+	case yamlchar.SequenceStartCharacter:
 		if t.lookbehind(mayPrecedeWordInFlow) {
 			c.switchContext(flowContextType)
 			tok.End = t.pos
@@ -277,7 +277,7 @@ func (c *context) flowMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.MappingStartCharacter:
+	case yamlchar.MappingStartCharacter:
 		if t.lookbehind(mayPrecedeWordInFlow) {
 			c.switchContext(flowContextType)
 			tok.End = t.pos
@@ -285,39 +285,39 @@ func (c *context) flowMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.SequenceEndCharacter:
+	case yamlchar.SequenceEndCharacter:
 		c.revertContext()
 		tok.End = t.pos
 		tok.Type = token.SequenceEndType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.MappingEndCharacter:
+	case yamlchar.MappingEndCharacter:
 		c.revertContext()
 		tok.End = t.pos
 		tok.Type = token.MappingEndType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.AnchorCharacter:
+	case yamlchar.AnchorCharacter:
 		if t.lookbehind(mayPrecedeWordInFlow) {
 			tok.End = t.pos
 			tok.Type = token.AnchorType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.AliasCharacter:
+	case yamlchar.AliasCharacter:
 		if t.lookbehind(mayPrecedeWordInFlow) {
 			tok.End = t.pos
 			tok.Type = token.AliasType
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.TagCharacter:
+	case yamlchar.TagCharacter:
 		c.switchContext(tagContextType)
 		tok.End = t.pos
 		tok.Type = token.TagType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.SingleQuoteCharacter:
+	case yamlchar.SingleQuoteCharacter:
 		if t.lookbehind(func(tok token.Token) bool {
 			return mayPrecedeWordInFlow(tok) || tok.Type == token.MappingValueType
 		}) {
@@ -327,7 +327,7 @@ func (c *context) flowMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.DoubleQuoteCharacter:
+	case yamlchar.DoubleQuoteCharacter:
 		if t.lookbehind(func(tok token.Token) bool {
 			return mayPrecedeWordInFlow(tok) || tok.Type == token.MappingValueType
 		}) {
@@ -337,7 +337,7 @@ func (c *context) flowMatching(t *Tokenizer, r rune) (token.Token, bool) {
 			tok.Origin = string([]rune{r})
 			return tok, true
 		}
-	case chars.CollectEntryCharacter:
+	case yamlchar.CollectEntryCharacter:
 		tok.End = t.pos
 		tok.Type = token.CollectEntryType
 		tok.Origin = string([]rune{r})
@@ -357,17 +357,17 @@ func (c *context) commentMatching(t *Tokenizer, r rune) (token.Token, bool) {
 func (c *context) multilineBlockStartMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	switch r {
-	case chars.StripChompingCharacter:
+	case yamlchar.StripChompingCharacter:
 		tok.End = t.pos
 		tok.Type = token.StripChompingType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.KeepChompingCharacter:
+	case yamlchar.KeepChompingCharacter:
 		tok.End = t.pos
 		tok.Type = token.KeepChompingType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.CommentCharacter:
+	case yamlchar.CommentCharacter:
 		if t.lookbehind(token.MayPrecedeWord) {
 			c.switchContext(commentContextType)
 			tok.End = t.pos
@@ -382,9 +382,9 @@ func (c *context) multilineBlockStartMatching(t *Tokenizer, r rune) (token.Token
 func (c *context) singleQuoteMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
 	var escaped bool
-	if r == chars.SingleQuoteCharacter {
+	if r == yamlchar.SingleQuoteCharacter {
 		if !c.escaped && t.lookahead(1, func(runes []rune) bool {
-			return runes[0] != chars.SingleQuoteCharacter
+			return runes[0] != yamlchar.SingleQuoteCharacter
 		}) {
 			c.revertContext()
 			tok.End = t.pos
@@ -402,16 +402,16 @@ func (c *context) doubleQuoteMatching(t *Tokenizer, r rune) (token.Token, bool) 
 	tok := token.Token{Start: t.pos}
 	var escaped bool
 	switch r {
-	case chars.EscapeCharacter:
+	case yamlchar.EscapeCharacter:
 		if !c.escaped {
 			escaped = true
 		}
-	case chars.SpaceCharacter:
+	case yamlchar.SpaceCharacter:
 		if c.escaped {
 			c.escaped = false
 			return token.Token{}, false
 		}
-	case chars.DoubleQuoteCharacter:
+	case yamlchar.DoubleQuoteCharacter:
 		if !c.escaped {
 			c.revertContext()
 			tok.End = t.pos
@@ -426,7 +426,7 @@ func (c *context) doubleQuoteMatching(t *Tokenizer, r rune) (token.Token, bool) 
 
 func (c *context) tagMatching(t *Tokenizer, r rune) (token.Token, bool) {
 	tok := token.Token{Start: t.pos}
-	if r == chars.TagCharacter {
+	if r == yamlchar.TagCharacter {
 		tok.End = t.pos
 		tok.Type = token.TagType
 		tok.Origin = string([]rune{r})
@@ -446,16 +446,16 @@ func (c *context) baseMatching(t *Tokenizer, r rune) (token.Token, bool) {
 		tok.End = t.pos
 		tok.Type = token.EOFType
 		return tok, true
-	case chars.ByteOrderMarkCharacter:
+	case yamlchar.ByteOrderMarkCharacter:
 		tok.End = t.pos
 		tok.Type = token.BOMType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.CarriageReturnCharacter:
+	case yamlchar.CarriageReturnCharacter:
 		c.lineBreakRevertContext()
 		origin := []rune{r}
 		if t.lookahead(1, func(runes []rune) bool {
-			return runes[0] == chars.LineFeedCharacter
+			return runes[0] == yamlchar.LineFeedCharacter
 		}) {
 			origin = append(origin, t.ra.Next())
 			t.pos.Column++
@@ -466,7 +466,7 @@ func (c *context) baseMatching(t *Tokenizer, r rune) (token.Token, bool) {
 		tok.Type = token.LineBreakType
 		tok.Origin = string(origin)
 		return tok, true
-	case chars.LineFeedCharacter:
+	case yamlchar.LineFeedCharacter:
 		c.lineBreakRevertContext()
 		tok.End = t.pos
 		t.pos.Column = 0
@@ -474,13 +474,13 @@ func (c *context) baseMatching(t *Tokenizer, r rune) (token.Token, bool) {
 		tok.Type = token.LineBreakType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.SpaceCharacter:
+	case yamlchar.SpaceCharacter:
 		c.whitespaceRevertContext()
 		tok.End = t.pos
 		tok.Type = token.SpaceType
 		tok.Origin = string([]rune{r})
 		return tok, true
-	case chars.TabCharacter:
+	case yamlchar.TabCharacter:
 		c.whitespaceRevertContext()
 		tok.End = t.pos
 		tok.Type = token.TabType

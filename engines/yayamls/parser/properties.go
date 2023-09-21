@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 // YAML specification: [162] c-b-block-header
@@ -44,7 +44,7 @@ func (p *parser) parseChompingIndicator() ast.ChompingType {
 
 // YAML specification: [163] c-indentation-indicator
 func (p *parser) parseIndentationIndicator() (int, error) {
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(chars.DecimalCharSetType) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(yamlchar.DecimalCharSetType) {
 		return 0, nil
 	}
 
@@ -104,7 +104,7 @@ func (p *parser) parseAliasNode() ast.Node {
 		return ast.NewInvalidNode()
 	}
 	p.next()
-	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.AnchorCharSetType) {
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.AnchorCharSetType) {
 		text := p.tok.Origin
 		p.next()
 		return ast.NewAliasNode(text)
@@ -119,7 +119,7 @@ func (p *parser) parseAnchorProperty() ast.Node {
 	}
 	p.setCheckpoint()
 	p.next()
-	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.AnchorCharSetType) {
+	if p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.AnchorCharSetType) {
 		anchor := ast.NewAnchorNode(p.tok.Origin)
 		p.next()
 		p.commit()
@@ -139,7 +139,7 @@ func (p *parser) parseTagProperty() ast.Node {
 	// shorthand tag
 	// YAML specification: [99] c-ns-shorthand-tag
 	if ast.ValidNode(p.parseTagHandle()) && p.tok.Type == token.StringType &&
-		p.tok.ConformsCharSet(chars.TagCharSetType) {
+		p.tok.ConformsCharSet(yamlchar.TagCharSetType) {
 		p.commit()
 		text := p.tok.Origin
 		p.next()
@@ -164,7 +164,7 @@ func (p *parser) parseTagProperty() ast.Node {
 			End:    p.tok.End,
 			Origin: p.tok.Origin[1 : len(p.tok.Origin)-1],
 		}
-		if len(cutToken.Origin) > 0 && cutToken.ConformsCharSet(chars.URICharSetType) &&
+		if len(cutToken.Origin) > 0 && cutToken.ConformsCharSet(yamlchar.URICharSetType) &&
 			p.tok.Origin[len(p.tok.Origin)-1] == '>' {
 			p.next()
 			return ast.NewTagNode(cutToken.Origin)

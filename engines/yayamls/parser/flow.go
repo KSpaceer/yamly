@@ -4,8 +4,8 @@ import (
 	"bytes"
 
 	"github.com/KSpaceer/yamly/engines/yayamls/ast"
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"github.com/KSpaceer/yamly/engines/yayamls/token"
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 // YAML specification: [197] s-l+flow-in-block
@@ -169,7 +169,7 @@ func (p *parser) parseDoubleOneLine() ast.Node {
 		return ast.NewInvalidNode()
 	}
 	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -186,7 +186,7 @@ func (p *parser) parseDoubleMultiLine(ind *indentation) ast.Node {
 		return ast.NewInvalidNode()
 	}
 	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -223,7 +223,7 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 
 	p.setCheckpoint()
 
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(yamlchar.DoubleQuotedCharSetType) {
 		p.rollback()
 		return ast.NewBasicNode(ast.TextType)
 	}
@@ -231,7 +231,7 @@ func (p *parser) parseDoubleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	buf.WriteString(p.tok.Origin)
 	p.next()
 
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.DoubleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.DoubleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -344,7 +344,7 @@ func (p *parser) parseSingleOneLine() ast.Node {
 		return ast.NewInvalidNode()
 	}
 	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.SingleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -361,7 +361,7 @@ func (p *parser) parseSingleMultiLine(ind *indentation) ast.Node {
 		return ast.NewInvalidNode()
 	}
 	buf := bufsPool.Get().(*bytes.Buffer) // nolint: forcetypeassert
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.SingleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -396,7 +396,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	}
 	p.setCheckpoint()
 
-	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(chars.SingleQuotedCharSetType) {
+	if p.tok.Type != token.StringType || !p.tok.ConformsCharSet(yamlchar.SingleQuotedCharSetType) {
 		p.rollback()
 		return ast.NewBasicNode(ast.TextType)
 	}
@@ -404,7 +404,7 @@ func (p *parser) parseSingleNextLine(ind *indentation, buf *bytes.Buffer) ast.No
 	buf.WriteString(p.tok.Origin)
 	p.next()
 
-	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(chars.SingleQuotedCharSetType)) ||
+	for (p.tok.Type == token.StringType && p.tok.ConformsCharSet(yamlchar.SingleQuotedCharSetType)) ||
 		token.IsWhiteSpace(p.tok) {
 		buf.WriteString(p.tok.Origin)
 		p.next()
@@ -1085,7 +1085,7 @@ func isPlainSafeToken(tok token.Token, ctx context) bool {
 	case flowInContext, flowOutContext:
 		return tok.Type == token.StringType
 	case blockKeyContext, flowKeyContext:
-		return tok.Type == token.StringType && tok.ConformsCharSet(chars.PlainSafeCharSetType)
+		return tok.Type == token.StringType && tok.ConformsCharSet(yamlchar.PlainSafeCharSetType)
 	default:
 		return false
 	}

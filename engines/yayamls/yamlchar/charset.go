@@ -1,4 +1,4 @@
-package chars
+package yamlchar
 
 // CharSetType defines a limited set of characters used in YAML specification definitions.
 type CharSetType int16

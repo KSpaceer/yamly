@@ -1,15 +1,16 @@
-package chars_test
+package yamlchar_test
 
 import (
 	"testing"
 
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 func TestCharSetConformation(t *testing.T) {
 	type tcase struct {
 		name         string
 		str          string
-		charset      chars.CharSetType
+		yamlcharet   yamlchar.CharSetType
 		wantedResult bool
 	}
 
@@ -17,110 +18,110 @@ func TestCharSetConformation(t *testing.T) {
 		{
 			name:         "valid decimal",
 			str:          "1230049583920",
-			charset:      chars.DecimalCharSetType,
+			yamlcharet:   yamlchar.DecimalCharSetType,
 			wantedResult: true,
 		},
 		{
 			name:         "invalid decimal",
 			str:          "2121490141519ww",
-			charset:      chars.DecimalCharSetType,
+			yamlcharet:   yamlchar.DecimalCharSetType,
 			wantedResult: false,
 		},
 		{
 			name:         "valid word",
 			str:          "word-123",
-			charset:      chars.WordCharSetType,
+			yamlcharet:   yamlchar.WordCharSetType,
 			wantedResult: true,
 		},
 		{
 			name:         "invalid word",
 			str:          "word-123/\\",
-			charset:      chars.WordCharSetType,
+			yamlcharet:   yamlchar.WordCharSetType,
 			wantedResult: false,
 		},
 		{
 			name:         "valid URI",
 			str:          "foo://example.com:8042/path/here?name=yaml&d=%AF%FE#meme",
-			charset:      chars.URICharSetType,
+			yamlcharet:   yamlchar.URICharSetType,
 			wantedResult: true,
 		},
 		{
 			name:         "invalid URI",
 			str:          "foo://example.com:8042/path/here?name=yaml&d=%AF%AE#meme%l",
-			charset:      chars.URICharSetType,
+			yamlcharet:   yamlchar.URICharSetType,
 			wantedResult: false,
 		},
 		{
 			name:         "valid tag",
 			str:          "%aa++ia23='",
-			charset:      chars.TagCharSetType,
+			yamlcharet:   yamlchar.TagCharSetType,
 			wantedResult: true,
 		},
 		{
 			name:         "invalid tag",
 			str:          "%aa++ia23='}",
-			charset:      chars.TagCharSetType,
+			yamlcharet:   yamlchar.TagCharSetType,
 			wantedResult: false,
 		},
 		{
 			name:         "valid anchor",
 			str:          "13-33_12anchor",
-			charset:      chars.AnchorCharSetType,
+			yamlcharet:   yamlchar.AnchorCharSetType,
 			wantedResult: true,
 		},
 		{
 			name:         "invalid anchor",
 			str:          "13-33_12anchor,",
-			charset:      chars.AnchorCharSetType,
+			yamlcharet:   yamlchar.AnchorCharSetType,
 			wantedResult: false,
 		},
 		{
 			name:         "valid plain-safe",
 			str:          "p1a|n-sAf3",
-			charset:      chars.PlainSafeCharSetType,
+			yamlcharet:   yamlchar.PlainSafeCharSetType,
 			wantedResult: true,
 		},
 		{
 			name:         "invalid plain-safe",
 			str:          "{p1a|n-uИsAf3}",
-			charset:      chars.PlainSafeCharSetType,
+			yamlcharet:   yamlchar.PlainSafeCharSetType,
 			wantedResult: false,
 		},
 		{
 			name:         "valid single quoted",
 			str:          "''hehe\uAAAA",
-			charset:      chars.SingleQuotedCharSetType,
+			yamlcharet:   yamlchar.SingleQuotedCharSetType,
 			wantedResult: true,
 		},
 		{
 			name:         "invalid single quoted",
 			str:          "''hehe\uAAAA'",
-			charset:      chars.SingleQuotedCharSetType,
+			yamlcharet:   yamlchar.SingleQuotedCharSetType,
 			wantedResult: false,
 		},
 		{
 			name:         "valid double quoted",
 			str:          "\\\\escaping\\n\\\"\\xFF\\uABCDcharacters\\UAAAAAAAA",
-			charset:      chars.DoubleQuotedCharSetType,
+			yamlcharet:   yamlchar.DoubleQuotedCharSetType,
 			wantedResult: true,
 		},
 		{
 			name:         "invalid double quoted",
 			str:          "\\\\escaping\\n\\\"characters\\g",
-			charset:      chars.DoubleQuotedCharSetType,
+			yamlcharet:   yamlchar.DoubleQuotedCharSetType,
 			wantedResult: false,
 		},
 		{
 			name:         "invalid double quoted 2",
 			str:          "\\\\escaping\\n\\\"characters\"",
-			charset:      chars.DoubleQuotedCharSetType,
+			yamlcharet:   yamlchar.DoubleQuotedCharSetType,
 			wantedResult: false,
 		},
 	}
 
 	for _, tc := range tcases {
 		t.Run(tc.name, func(t *testing.T) {
-			if result := chars.ConformsCharSet(tc.str, tc.charset); result != tc.wantedResult {
+			if result := yamlchar.ConformsCharSet(tc.str, tc.yamlcharet); result != tc.wantedResult {
 				t.Errorf("mismatch results: expected %t but got %t", tc.wantedResult, result)
 			}
 		})

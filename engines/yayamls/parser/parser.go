@@ -131,7 +131,7 @@ func Parse(cts ConfigurableTokenStream) (ast.Node, error) {
 	return p.Parse()
 }
 
-// Parse parses the contained tokens and constructs an YAML AST>
+// Parse parses the contained tokens and constructs an YAML AST.
 func (p *parser) Parse() (ast.Node, error) {
 	p.next()
 	p.startOfLine = true

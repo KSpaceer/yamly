@@ -1,22 +1,23 @@
 package token
 
 import (
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"testing"
+
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 func TestConformationBitmap(t *testing.T) {
 	t.Parallel()
 
-	sets := []chars.CharSetType{
-		chars.DecimalCharSetType,
-		chars.WordCharSetType,
-		chars.URICharSetType,
-		chars.TagCharSetType,
-		chars.AnchorCharSetType,
-		chars.PlainSafeCharSetType,
-		chars.SingleQuotedCharSetType,
-		chars.DoubleQuotedCharSetType,
+	sets := []yamlchar.CharSetType{
+		yamlchar.DecimalCharSetType,
+		yamlchar.WordCharSetType,
+		yamlchar.URICharSetType,
+		yamlchar.TagCharSetType,
+		yamlchar.AnchorCharSetType,
+		yamlchar.PlainSafeCharSetType,
+		yamlchar.SingleQuotedCharSetType,
+		yamlchar.DoubleQuotedCharSetType,
 	}
 
 	t.Run("set true", func(t *testing.T) {

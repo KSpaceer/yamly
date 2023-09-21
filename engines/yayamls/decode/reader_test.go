@@ -9,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/KSpaceer/yamly"
+	"github.com/KSpaceer/yamly/engines/yayamls/ast"
+	"github.com/KSpaceer/yamly/engines/yayamls/decode"
+	"github.com/KSpaceer/yamly/engines/yayamls/parser"
 )
 
 func TestReader_Simple(t *testing.T) {

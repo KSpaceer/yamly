@@ -1,20 +1,21 @@
 package token
 
 import (
-	"github.com/KSpaceer/yamly/engines/yayamls/chars"
 	"math/bits"
+
+	"github.com/KSpaceer/yamly/engines/yayamls/yamlchar"
 )
 
 type conformationBitmap uint16
 
-func (b conformationBitmap) Set(cst chars.CharSetType, val bool) conformationBitmap {
+func (b conformationBitmap) Set(cst yamlchar.CharSetType, val bool) conformationBitmap {
 	if val {
 		return b.setTrue(cst)
 	}
 	return b.setFalse(cst)
 }
 
-func (b conformationBitmap) Get(cst chars.CharSetType) (bool, bool) {
+func (b conformationBitmap) Get(cst yamlchar.CharSetType) (bool, bool) {
 	shift := 2 * bits.TrailingZeros16(uint16(cst))
 	val := (b & (3 << shift)) >> shift
 	switch val {
@@ -28,14 +29,14 @@ func (b conformationBitmap) Get(cst chars.CharSetType) (bool, bool) {
 	return false, false
 }
 
-func (b conformationBitmap) setTrue(cst chars.CharSetType) conformationBitmap {
+func (b conformationBitmap) setTrue(cst yamlchar.CharSetType) conformationBitmap {
 	shift := 2 * bits.TrailingZeros16(uint16(cst))
 	// remove false
 	b &= ^(1 << (1 + shift))
 	return b | (1 << shift)
 }
 
-func (b conformationBitmap) setFalse(cst chars.CharSetType) conformationBitmap {
+func (b conformationBitmap) setFalse(cst yamlchar.CharSetType) conformationBitmap {
 	shift := 1 + 2*bits.TrailingZeros16(uint16(cst))
 	// remove true
 	b &= ^(1 << (shift - 1))

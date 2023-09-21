@@ -1,5 +1,5 @@
-// Package chars contains functions related to YAML characters and keywords specification.
-package chars
+// Package yamlchar contains functions related to YAML characters and keywords specification.
+package yamlchar
 
 import (
 	"strings"
@@ -119,7 +119,7 @@ func IsTagString(s string) bool {
 
 // YAML specification: [102] ns-anchor-char
 func IsAnchorString(s string) bool {
-	// has same definition with plain safe chars
+	// has same definition with plain safe yamlchar
 	return IsPlainSafeString(s)
 }
 

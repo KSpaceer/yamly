@@ -1,4 +1,4 @@
-package chars
+package yamlchar
 
 import (
 	"fmt"
