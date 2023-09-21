@@ -53,6 +53,6 @@ jobs:
         with:
           version: v1.54
           working-directory: ${{ matrix.module }}
-          args: --timeout=5m --config=./.golangci.yaml -v
+          args: --timeout=5m -v
         
   
