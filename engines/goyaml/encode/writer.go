@@ -2,10 +2,11 @@ package encode
 
 import (
 	"bytes"
-	"github.com/KSpaceer/yamly"
-	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
+
+	"github.com/KSpaceer/yamly"
+	"gopkg.in/yaml.v3"
 )
 
 var _ yamly.TreeWriter[*yaml.Node] = (*ASTWriter)(nil)

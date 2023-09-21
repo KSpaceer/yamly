@@ -3,6 +3,7 @@ package parser_test
 import (
 	"testing"
 
+	"github.com/KSpaceer/yamly/generator/parser"
 )
 
 func TestParser_Parse(t *testing.T) {

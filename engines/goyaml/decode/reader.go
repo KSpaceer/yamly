@@ -3,10 +3,11 @@ package decode
 import (
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/goyaml/schema"
 	"gopkg.in/yaml.v3"
-	"time"
 )
 
 var _ yamly.ExtendedDecoder[*yaml.Node] = (*ASTReader)(nil)
@@ -168,6 +169,7 @@ func (r *ASTReader) Integer(bitSize int) int64 {
 	}
 	return v
 }
+
 func (r *ASTReader) Unsigned(bitSize int) uint64 {
 	if r.hasFatalError() {
 		return 0
@@ -411,8 +413,7 @@ func (r *ASTReader) visitScalarNode(n *yaml.Node) {
 		r.appendError(fmt.Errorf("unexpected conclusion: %v", point.visitingResult.conclusion))
 	}
 
-	switch point.visitingResult.action {
-	case visitingActionExtract:
+	if point.visitingResult.action == visitingActionExtract {
 		r.extractedCollectionState = nil
 		r.extractedValue = n.Value
 	}
@@ -459,8 +460,7 @@ func (r *ASTReader) processComplexPoint(point routePoint, childrenSize int, opts
 		r.appendError(fmt.Errorf("unexpected conclusion: %s", point.visitingResult.conclusion))
 	}
 
-	switch point.visitingResult.action {
-	case visitingActionExtract:
+	if point.visitingResult.action == visitingActionExtract {
 		r.extractedCollectionState = newCollectionState(point.iter, childrenSize)
 		r.extractedValue = ""
 	}

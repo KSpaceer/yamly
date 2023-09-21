@@ -19,7 +19,6 @@ linters:
     - forcetypeassert
     - gocritic
     - gofumpt
-    - goimports
     - gosec
     - govet
     - ineffassign

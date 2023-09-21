@@ -382,7 +382,7 @@ func isComplex(n ast.Node) bool {
 	case ast.SequenceType, ast.MappingType:
 		return true
 	case ast.ContentType:
-		return isComplex(n.(*ast.ContentNode).Content())
+		return isComplex(n.(*ast.ContentNode).Content()) // nolint: forcetypeassert
 	default:
 		return false
 	}

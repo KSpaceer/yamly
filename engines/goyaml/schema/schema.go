@@ -1,9 +1,10 @@
 package schema
 
 import (
+	"time"
+
 	"github.com/KSpaceer/yamly/engines/pkg/schema"
 	"gopkg.in/yaml.v3"
-	"time"
 )
 
 const (

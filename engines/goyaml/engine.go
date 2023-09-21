@@ -4,11 +4,12 @@ package goyaml
 
 import (
 	"fmt"
-	"github.com/KSpaceer/yamly/generator"
-	"gopkg.in/yaml.v3"
 	"io"
 	"reflect"
 	"strings"
+
+	"github.com/KSpaceer/yamly/generator"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -33,7 +34,7 @@ func (engineGenerator) WarningSuppressors() []string {
 	return []string{"*encode.ASTWriter", "*decode.ASTReader", "yaml.Marshaler"}
 }
 
-func (engineGenerator) GenerateUnmarshalers(dst io.Writer, decodeFuncName string, typeName string) error {
+func (engineGenerator) GenerateUnmarshalers(dst io.Writer, decodeFuncName, typeName string) error {
 	fmt.Fprintln(dst, "// UnmarshalYAML supports yaml.Unmarshaler interface")
 	fmt.Fprintln(dst, "func (v *"+typeName+") UnmarshalYAML(value *yaml.Node) error {")
 	fmt.Fprintln(dst, "  in := decode.NewASTReader(value)")
@@ -43,7 +44,7 @@ func (engineGenerator) GenerateUnmarshalers(dst io.Writer, decodeFuncName string
 	return nil
 }
 
-func (engineGenerator) GenerateMarshalers(dst io.Writer, encodeFuncName string, typeName string) error {
+func (engineGenerator) GenerateMarshalers(dst io.Writer, encodeFuncName, typeName string) error {
 	fmt.Fprintln(dst, "// MarshalYAML support yaml.Marshaler interface")
 	fmt.Fprintln(dst, "func (v "+typeName+") MarshalYAML() (any, error) {")
 	fmt.Fprintln(dst, "out := encode.NewASTBuilder()")

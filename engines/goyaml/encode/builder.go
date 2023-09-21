@@ -2,11 +2,12 @@ package encode
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/KSpaceer/yamly"
 	"github.com/KSpaceer/yamly/engines/pkg/schema"
 	"gopkg.in/yaml.v3"
-	"strings"
-	"time"
 )
 
 var _ yamly.TreeBuilder[*yaml.Node] = (*ASTBuilder)(nil)

@@ -7,6 +7,8 @@ import (
 )
 
 func TestCharSetConformation(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name         string
 		str          string
@@ -120,7 +122,9 @@ func TestCharSetConformation(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			if result := yamlchar.ConformsCharSet(tc.str, tc.yamlcharet); result != tc.wantedResult {
 				t.Errorf("mismatch results: expected %t but got %t", tc.wantedResult, result)
 			}

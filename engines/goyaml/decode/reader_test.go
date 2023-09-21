@@ -4,16 +4,19 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/KSpaceer/yamly"
-	"github.com/KSpaceer/yamly/engines/goyaml/decode"
-	"gopkg.in/yaml.v3"
 	"math"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/KSpaceer/yamly"
+	"github.com/KSpaceer/yamly/engines/goyaml/decode"
+	"gopkg.in/yaml.v3"
 )
 
 func TestReader_Simple(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name       string
 		src        []byte
@@ -309,7 +312,10 @@ func TestReader_Simple(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			var tree yaml.Node
 			if err := yaml.Unmarshal(tc.src, &tree); err != nil {
 				t.Fatalf("parsing failed: %v", err)
@@ -334,6 +340,8 @@ func TestReader_Simple(t *testing.T) {
 }
 
 func TestReader_Complex(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name       string
 		src        string
@@ -506,7 +514,7 @@ func TestReader_Complex(t *testing.T) {
 				mapState := r.Mapping()
 				key1 := r.String()
 				vs.Add(key1)
-				_ = r.(yamly.ExtendedDecoder[*yaml.Node]).Node()
+				_ = r.(yamly.ExtendedDecoder[*yaml.Node]).Node() // nolint: forcetypeassert
 				key2 := r.String()
 				vs.Add(key2)
 				value2 := r.String()
@@ -521,7 +529,9 @@ func TestReader_Complex(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			var tree yaml.Node
 			if err := yaml.Unmarshal([]byte(tc.src), &tree); err != nil {
 				t.Fatalf("parsing failed: %v", err)
@@ -545,6 +555,8 @@ func TestReader_Complex(t *testing.T) {
 }
 
 func TestReader_SequencesWithNulls(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name       string
 		src        string
@@ -600,7 +612,10 @@ func TestReader_SequencesWithNulls(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			var tree yaml.Node
 			if err := yaml.Unmarshal([]byte(tc.src), &tree); err != nil {
 				t.Fatalf("parsing failed: %v", err)
@@ -655,6 +670,8 @@ func TestReader_SequencesWithNulls(t *testing.T) {
 }
 
 func TestReader_ExpectAny(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name     string
 		src      string
@@ -772,7 +789,9 @@ func TestReader_ExpectAny(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			var tree yaml.Node
 			if err := yaml.Unmarshal([]byte(tc.src), &tree); err != nil {
 				t.Fatalf("parsing failed: %v", err)
@@ -790,6 +809,8 @@ func TestReader_ExpectAny(t *testing.T) {
 }
 
 func TestReader_ExpectRaw(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name     string
 		src      string
@@ -825,7 +846,9 @@ func TestReader_ExpectRaw(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			var tree yaml.Node
 			if err := yaml.Unmarshal([]byte(tc.src), &tree); err != nil {
 				t.Fatalf("parsing failed: %v", err)
@@ -843,6 +866,8 @@ func TestReader_ExpectRaw(t *testing.T) {
 }
 
 func TestReader_K8SManifest(t *testing.T) {
+	t.Parallel()
+
 	const pvcManifest = `
     apiVersion: v1
     kind: PersistentVolumeClaim

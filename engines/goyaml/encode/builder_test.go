@@ -2,16 +2,18 @@ package encode_test
 
 import (
 	"encoding/json"
-	"github.com/KSpaceer/yamly"
-	"github.com/KSpaceer/yamly/engines/goyaml/encode"
-	"gopkg.in/yaml.v3"
 	"math"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/KSpaceer/yamly"
+	"github.com/KSpaceer/yamly/engines/goyaml/encode"
+	"gopkg.in/yaml.v3"
 )
 
 func TestBuilder_Simple(t *testing.T) {
+	t.Parallel()
 	type tcase struct {
 		name      string
 		calls     func(b yamly.TreeBuilder[*yaml.Node])
@@ -100,7 +102,9 @@ func TestBuilder_Simple(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			b := encode.NewASTBuilder()
 			tc.calls(b)
 			result, err := b.Result()
@@ -128,6 +132,7 @@ func TestBuilder_Simple(t *testing.T) {
 }
 
 func TestBuilder_Complex(t *testing.T) {
+	t.Parallel()
 	type tcase struct {
 		name      string
 		calls     func(b yamly.TreeBuilder[*yaml.Node])
@@ -203,7 +208,9 @@ func TestBuilder_Complex(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			b := encode.NewASTBuilder()
 			tc.calls(b)
 			result, err := b.Result()
@@ -231,6 +238,7 @@ func TestBuilder_Complex(t *testing.T) {
 }
 
 func TestBuilder_InsertRaw(t *testing.T) {
+	t.Parallel()
 	type tcase struct {
 		name     string
 		src      []byte
@@ -283,7 +291,9 @@ func TestBuilder_InsertRaw(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			b := encode.NewASTBuilder()
 
 			b.StartMapping()
@@ -299,8 +309,9 @@ func TestBuilder_InsertRaw(t *testing.T) {
 			if err = result.Decode(mapValuePtr.Interface()); err != nil {             // result.Decode(m)
 				t.Errorf("failed to decode tree: %v", err)
 			}
-			mapValue := mapValuePtr.Elem()                                                              // mp := *m
-			if !reflect.DeepEqual(tc.expected, mapValue.MapIndex(reflect.ValueOf("raw")).Interface()) { // mp["raw"] == tc.expected
+			mapValue := mapValuePtr.Elem() // mp := *m
+			if !reflect.DeepEqual(tc.expected, mapValue.MapIndex(reflect.ValueOf("raw")).Interface()) {
+				// mp["raw"] != tc.expected
 				t.Errorf(
 					"values are not equal:\nexpected: %[1]v with type %[1]T\ngot: %[2]v with type %[2]T",
 					tc.expected,
@@ -312,6 +323,8 @@ func TestBuilder_InsertRaw(t *testing.T) {
 }
 
 func TestBuilder_K8SManifest(t *testing.T) {
+	t.Parallel()
+
 	/*
 			apiVersion: v1
 		    kind: PersistentVolumeClaim
@@ -325,6 +338,7 @@ func TestBuilder_K8SManifest(t *testing.T) {
 		        requests:
 		          storage: 3Gi
 	*/
+
 	type (
 		Metadata struct {
 			Name string `yaml:"name"`

@@ -16,6 +16,8 @@ import (
 )
 
 func TestReader_Simple(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name       string
 		ast        ast.Node
@@ -467,8 +469,7 @@ func TestReader_Simple(t *testing.T) {
 				},
 			),
 			calls: func(r yamly.Decoder, vs *valueStore) error {
-				if r.TryNull() {
-				} else {
+				if !r.TryNull() {
 					state := r.Mapping()
 					vs.Add(state.HasUnprocessedItems())
 					vs.Add(state.Size())
@@ -481,7 +482,9 @@ func TestReader_Simple(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			r := decode.NewASTReader(tc.ast)
 			vs := valueStore{}
 			err := tc.calls(r, &vs)
@@ -502,6 +505,8 @@ func TestReader_Simple(t *testing.T) {
 }
 
 func TestReader_Complex(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name       string
 		src        string
@@ -706,7 +711,10 @@ func TestReader_Complex(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			tree, err := parser.ParseString(tc.src)
 			if err != nil {
 				t.Fatalf("parsing failed: %v", err)
@@ -730,6 +738,8 @@ func TestReader_Complex(t *testing.T) {
 }
 
 func TestReader_SequencesWithNulls(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name       string
 		src        string
@@ -785,7 +795,10 @@ func TestReader_SequencesWithNulls(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			tree, err := parser.ParseString(tc.src)
 			if err != nil {
 				t.Fatalf("parser failed: %v", err)
@@ -840,6 +853,8 @@ func TestReader_SequencesWithNulls(t *testing.T) {
 }
 
 func TestReader_ExpectAny(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name     string
 		src      string
@@ -957,7 +972,10 @@ func TestReader_ExpectAny(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			tree, err := parser.ParseString(tc.src)
 			if err != nil {
 				t.Fatalf("parser failed: %v", err)
@@ -975,6 +993,8 @@ func TestReader_ExpectAny(t *testing.T) {
 }
 
 func TestReader_ExpectRaw(t *testing.T) {
+	t.Parallel()
+
 	type tcase struct {
 		name     string
 		src      string
@@ -1010,7 +1030,9 @@ func TestReader_ExpectRaw(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			tree, err := parser.ParseString(tc.src)
 			if err != nil {
 				t.Fatalf("parser failed: %v", err)
@@ -1031,6 +1053,8 @@ func TestReader_ExpectRaw(t *testing.T) {
 }
 
 func TestReader_K8SManifest(t *testing.T) {
+	t.Parallel()
+
 	const pvcManifest = `
     apiVersion: v1
     kind: PersistentVolumeClaim

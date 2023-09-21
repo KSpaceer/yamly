@@ -3,6 +3,7 @@ package decode
 import (
 	"errors"
 	"fmt"
+
 	"github.com/KSpaceer/yamly/engines/goyaml/schema"
 	"gopkg.in/yaml.v3"
 )
@@ -96,11 +97,12 @@ func (a *anyBuilder) visitMappingNode(n *yaml.Node) {
 		}
 	}
 
-	if a.extractMergeMap {
+	switch {
+	case a.extractMergeMap:
 		a.mergeMap = m
-	} else if a.extractString {
+	case a.extractString:
 		a.stringValue = fmt.Sprint(m)
-	} else {
+	default:
 		a.value = m
 	}
 }
