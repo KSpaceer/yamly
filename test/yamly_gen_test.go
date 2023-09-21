@@ -17,7 +17,8 @@ import (
 )
 
 func TestGenerator_EngineGoYAML(t *testing.T) {
-	var mainCode = `
+	t.Parallel()
+	mainCode := `
 package main
 
 import (
@@ -55,9 +56,9 @@ func main() {
 }
 `
 
-	var mainCodeTemplate = template.Must(template.New("maincode").Parse(mainCode))
+	mainCodeTemplate := template.Must(template.New("maincode").Parse(mainCode))
 
-	var typeDefinitionCode = `
+	typeDefinitionCode := `
 package {{ .PkgName }}
 
 {{ if .Imports }}
@@ -75,13 +76,14 @@ type ExtraType{{ $i }} {{ $typedef }}
 {{ end }}
 `
 
-	var typeDefinitionCodeTemplate = template.Must(template.New("typedef").Parse(typeDefinitionCode))
+	typeDefinitionCodeTemplate := template.Must(template.New("typedef").Parse(typeDefinitionCode))
 
 	runEngineTest(t, mainCodeTemplate, typeDefinitionCodeTemplate, "goyaml")
 }
 
 func TestGenerator_EngineYAYAMLS(t *testing.T) {
-	var mainCode = `
+	t.Parallel()
+	mainCode := `
 package main
 
 import (
@@ -120,9 +122,9 @@ func main() {
 }
 `
 
-	var mainCodeTemplate = template.Must(template.New("maincode").Parse(mainCode))
+	mainCodeTemplate := template.Must(template.New("maincode").Parse(mainCode))
 
-	var typeDefinitionCode = `
+	typeDefinitionCode := `
 package {{ .PkgName }}
 
 {{ if .Imports }}
@@ -140,7 +142,7 @@ type ExtraType{{ $i }} {{ $typedef }}
 {{ end }}
 `
 
-	var typeDefinitionCodeTemplate = template.Must(template.New("typedef").Parse(typeDefinitionCode))
+	typeDefinitionCodeTemplate := template.Must(template.New("typedef").Parse(typeDefinitionCode))
 
 	runEngineTest(t, mainCodeTemplate, typeDefinitionCodeTemplate, "yayamls")
 }
@@ -228,14 +230,16 @@ func runEngineTest(
 			name:    "linked list",
 			PkgName: "linkedlist",
 			TypeDef: "struct{ Value int; Next *TestType; }",
-			Value:   "linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: &linkedlist.TestType{Value: 1000}}}",
+			Value: "linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: " +
+				"&linkedlist.TestType{Value: 1000}}}",
 		},
 		{
-			name:       "linked list (with flags)",
-			flags:      []string{"--encode-pointer-receiver", "--disallow-unknown-fields", "--omitempty"},
-			PkgName:    "linkedlist",
-			TypeDef:    "struct{ Value int; Next *TestType; }",
-			Value:      "&linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: &linkedlist.TestType{Value: 1000}}}",
+			name:    "linked list (with flags)",
+			flags:   []string{"--encode-pointer-receiver", "--disallow-unknown-fields", "--omitempty"},
+			PkgName: "linkedlist",
+			TypeDef: "struct{ Value int; Next *TestType; }",
+			Value: "&linkedlist.TestType{Value: 10, Next: &linkedlist.TestType{Value: 100, Next: " +
+				"&linkedlist.TestType{Value: 1000}}}",
 			UsePointer: true,
 		},
 		{
@@ -272,17 +276,17 @@ func runEngineTest(
 
 			root = path.Clean(root)
 
-			if err := os.Mkdir(root+"/cmd", 0755); err != nil {
+			if err := os.Mkdir(root+"/cmd", 0o755); err != nil {
 				t.Fatalf("failed to create directory for main package: %v", err)
 			}
 
-			if err := os.Mkdir(root+"/"+tc.PkgName, 0755); err != nil {
+			if err := os.Mkdir(root+"/"+tc.PkgName, 0o755); err != nil {
 				t.Fatalf("failed to create directory for type package: %v", err)
 			}
 
 			tc.TmpRoot = root
 
-			mainFile, err := os.OpenFile(root+"/cmd/main.go", os.O_CREATE|os.O_WRONLY, 0755)
+			mainFile, err := os.OpenFile(root+"/cmd/main.go", os.O_CREATE|os.O_WRONLY, 0o755)
 			if err != nil {
 				t.Fatalf("failed to create main.go: %v", err)
 			}
@@ -292,7 +296,7 @@ func runEngineTest(
 				t.Fatalf("failed to execute main code template: %v", err)
 			}
 
-			typeFile, err := os.OpenFile(root+"/"+tc.PkgName+"/type.go", os.O_CREATE|os.O_WRONLY, 0755)
+			typeFile, err := os.OpenFile(root+"/"+tc.PkgName+"/type.go", os.O_CREATE|os.O_WRONLY, 0o755)
 			if err != nil {
 				t.Fatalf("failed to create type.go: %v", err)
 			}
@@ -323,7 +327,7 @@ func runEngineTest(
 				t.Logf("GENERATED DATA:\n\n\n%s\n\n\n===========", string(data))
 			}
 
-			cmd = exec.Command("go", "run", root+"/cmd/main.go")
+			cmd = exec.Command("go", "run", root+"/cmd/main.go") // nolint: gosec
 			cmd.Stdout = &stdout
 			cmd.Stderr = &stderr
 
@@ -338,5 +342,4 @@ func runEngineTest(
 			}
 		})
 	}
-
 }
