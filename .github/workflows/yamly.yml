@@ -30,13 +30,18 @@ jobs:
       run: find ./engines -type f -name go.mod -execdir go build -v ./... \;
 
     - name: Test
-      run: go test -race -v ./...
+      run: go test -race -covermode=atomic -coverprofile=yamly-coverage.out -v ./...
 
     - name: Test engines
-      run: find ./engines -type f -name go.mod -execdir go test -race -v ./... \;
+      run: find ./engines -type f -name go.mod -execdir go test -covermode=atomic -coverprofile=engine-{}-coverage.out -race -v ./... \;
 
     - name: Test integration
       run: cd ./test && go test -race -v ./...
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   lint:
     runs-on: ubuntu-latest
     strategy:
