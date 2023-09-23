@@ -33,7 +33,7 @@ jobs:
       run: go test -race -covermode=atomic -coverprofile=yamly-coverage.out -v ./...
 
     - name: Test engines
-      run: find ./engines -type f -name go.mod -execdir go test -covermode=atomic -coverprofile=engine-{}-coverage.out -race -v ./... \;
+      run: find ./engines -type f -name go.mod -execdir go test -covermode=atomic -coverprofile=engine-coverage.out -race -v ./... \;
 
     - name: Test integration
       run: cd ./test && go test -race -v ./...
