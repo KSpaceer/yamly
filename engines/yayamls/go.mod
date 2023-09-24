@@ -4,4 +4,4 @@ go 1.21.1
 
 replace github.com/KSpaceer/yamly => ../..
 
-require github.com/KSpaceer/yamly v0.1.0
+require github.com/KSpaceer/yamly v0.1.1
