@@ -1,4 +1,4 @@
-//go:build !nounsafe
+//go:build !nounsafe && !appengine
 
 package strslice
 
