@@ -1,4 +1,4 @@
-# yamly ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/KSpaceer/yamly/yamly.yml) ![Codecov](https://img.shields.io/codecov/c/gh/KSpaceer/yamly) [![Go Report Card](https://goreportcard.com/badge/github.com/KSpaceer/yamly)](https://goreportcard.com/report/github.com/KSpaceer/yamly)
+# yamly [![Go Reference](https://pkg.go.dev/badge/github.com/KSpaceer/yamly.svg)](https://pkg.go.dev/github.com/KSpaceer/yamly) ![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/KSpaceer/yamly/yamly.yml) ![Codecov](https://img.shields.io/codecov/c/gh/KSpaceer/yamly) [![Go Report Card](https://goreportcard.com/badge/github.com/KSpaceer/yamly)](https://goreportcard.com/report/github.com/KSpaceer/yamly)
 
 Package yamly provides a new way for YAML marshalling/unmarshalling, using code generation instead of runtime reflection. In this terms yamly is similar to ![easyjson](https://github.com/mailru/easyjson).
 However, currently yamly is more proof of concept than really competitive and production-ready library.
